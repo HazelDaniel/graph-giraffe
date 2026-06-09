@@ -1,0 +1,2 @@
+- I did not change the current stacking-order behavior; selection still does not automatically reorder draw priority.
+- undo/redo doesn't apply to group positions

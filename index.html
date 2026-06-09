@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2.2 — Draggable 2D Node Editor</title>
+    <link rel="stylesheet" href="index.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="../../lib/cuon-matrix.js"></script>
+    <script type="module" src="../dist/scripts/task.js"></script>
+    <script type="module" src="../dist/components/select.js"></script>
+    <script type="module" src="../dist/components/ui-controls.js"></script>
+    <script type="module" src="../dist/components/action-pane.js"></script>
+  </head>
+  <body>
+    <!-- WebGL Canvas -->
+    <canvas id="2d-bg-canvas"></canvas>
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Hidden 2D Canvas for Text to Texture generation -->
+    <canvas id="2d-text-canvas" class="hidden"></canvas>
+
+    <!-- Overlay 2D Canvas for crisp floating labels -->
+    <canvas
+      id="2d-label-canvas"
+      style="pointer-events: none; z-index: 5"
+    ></canvas>
+
+    <!-- Screen Reader Only Node List -->
+    <ul
+      id="sr-node-list"
+      class="sr-only"
+      aria-label="Workflow graph nodes"
+      role="list"
+    ></ul>
+
+    <div id="undo-redo-wrapper">
+      <button id="btn-undo" class="secondary" disabled>Undo</button>
+      <button id="btn-redo" class="secondary" disabled>Redo</button>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <gg-ui-controls id="sidebar" class="sidebar" part="gg-ui-control-host"> </gg-ui-controls>
+
+    <!-- Action Pane -->
+    <gg-action-pane id="tool-panel"></gg-action-pane>
+
+    <script type="x-shader/vertex" id="v-shader">
+      attribute vec4 a_Position;
+      attribute vec2 a_TexCoord;
+      uniform mat4 u_ModelMatrix;
+      uniform mat4 u_ViewMatrix;
+      uniform mat4 u_ProjMatrix;
+      varying vec2 v_TexCoord;
+      void main() {
+        gl_Position = u_ProjMatrix * u_ViewMatrix * u_ModelMatrix * a_Position;
+        v_TexCoord = a_TexCoord;
+      }
+    </script>
+
+    <script type="x-shader/fragment" id="f-shader">
+      precision mediump float;
+      varying vec2 v_TexCoord;
+      uniform sampler2D u_Sampler;
+      uniform bool u_UseTexture;
+      uniform vec4 u_Color;
+      void main() {
+        if (u_UseTexture) {
+          vec4 texColor = texture2D(u_Sampler, v_TexCoord);
+          gl_FragColor = texColor * u_Color;
+        } else {
+          gl_FragColor = u_Color;
+        }
+      }
+    </script>
+
+    <script type="x-shader/vertex" id="bg-v-shader">
+      attribute vec4 a_Position;
+      void main() {
+        gl_Position = a_Position;
+        gl_PointSize = 4.0;
+      }
+    </script>
+
+    <script type="x-shader/fragment" id="bg-f-shader">
+      precision mediump float;
+      uniform vec4 u_Color;
+      uniform bool u_UsePointMask;
+      void main() {
+        if (u_UsePointMask) {
+          float dist = distance(gl_PointCoord, vec2(0.5));
+          if (dist > 0.5) {
+            discard;
+          } else {
+            gl_FragColor = u_Color;
+          }
+        } else {
+          gl_FragColor = u_Color;
+        }
+      }
+    </script>
+  </body>
+</html>
