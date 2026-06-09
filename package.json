@@ -5,7 +5,7 @@
     "start": "lite-server -c ../../bs-config.json",
     "build": "tsc",
     "start:dev": "tsc -w & npm start",
-		"build:prod": ""
+		"build:prod": "echo ''"
   },
   "devDependencies": {
     "lite-server": "^2.6.1",
