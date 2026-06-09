@@ -14,6 +14,7 @@
     <script type="module" src="../dist/components/select.js"></script>
     <script type="module" src="../dist/components/ui-controls.js"></script>
     <script type="module" src="../dist/components/action-pane.js"></script>
+    <script type="module" src="../dist/components/history-pane.js"></script>
   </head>
   <body>
     <!-- WebGL Canvas -->
@@ -37,10 +38,8 @@
       role="list"
     ></ul>
 
-    <div id="undo-redo-wrapper">
-      <button id="btn-undo" class="secondary" disabled>Undo</button>
-      <button id="btn-redo" class="secondary" disabled>Redo</button>
-    </div>
+    <!-- History Pane -->
+    <gg-history-pane id="undo-redo-wrapper"></gg-history-pane>
 
     <!-- Sidebar Overlay -->
     <gg-ui-controls

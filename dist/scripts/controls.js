@@ -22,8 +22,8 @@ export class UIControls {
         this.addGroupButton = toolPane.shadowRoot?.querySelector("#btn-add-group");
         this.addCompositionButton = toolPane.shadowRoot?.querySelector("#btn-add-composition");
         this.multiSelectButton = toolPane.shadowRoot?.querySelector("#btn-multi-select");
-        this.undoButton = historyPane.querySelector("#btn-undo");
-        this.redoButton = historyPane.querySelector("#btn-redo");
+        this.undoButton = historyPane.shadowRoot?.querySelector("#btn-undo");
+        this.redoButton = historyPane.shadowRoot?.querySelector("#btn-redo");
         this.deleteNodeButton = toolPane.shadowRoot?.querySelector("#btn-delete-node");
         this.sidebarToggle = container.shadowRoot?.querySelector("#sidebar-toggle");
         this.nodeProperties = container.shadowRoot?.querySelector("#node-properties");

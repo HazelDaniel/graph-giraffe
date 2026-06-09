@@ -59,10 +59,10 @@ export class UIControls {
     this.multiSelectButton = toolPane.shadowRoot?.querySelector(
       "#btn-multi-select"
     )! as HTMLButtonElement;
-    this.undoButton = historyPane.querySelector(
+    this.undoButton = historyPane.shadowRoot?.querySelector(
       "#btn-undo"
     )! as HTMLButtonElement;
-    this.redoButton = historyPane.querySelector(
+    this.redoButton = historyPane.shadowRoot?.querySelector(
       "#btn-redo"
     )! as HTMLButtonElement;
     this.deleteNodeButton = toolPane.shadowRoot?.querySelector(

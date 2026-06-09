@@ -11,7 +11,7 @@ const STYLE_TEMPLATE = `
     background-color: #161616e6;
     padding: 1px 4px;
     padding-right: 0;
-    z-index: 9;
+    z-index: 10;
   }
 
   :host>.root {

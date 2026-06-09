@@ -177,51 +177,6 @@ canvas {
   gap: 10px;
 }
 
-button {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  color: var(--text-main);
-  padding: 10px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-button:active {
-  transform: scale(0.98);
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-#undo-redo-wrapper {
-  position: fixed;
-  top: 0.8rem;
-  left: 2rem;
-  display: flex;
-  padding: 0.8rem 1rem;
-  z-index: 10;
-  gap: 0.8rem;
-}
-
-#undo-redo-wrapper button {
-  border-radius: 1rem;
-}
-
-#undo-redo-wrapper button::selection {
-  background: transparent;
-}
-
 .hidden {
   display: none !important;
 }
@@ -243,23 +198,6 @@ button:disabled {
   font-size: 0.85rem;
   color: var(--text-secondary);
   font-weight: 500;
-}
-
-#bg-color-picker {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  width: 30px;
-  height: 30px;
-  background-color: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-}
-
-#bg-color-picker::-webkit-color-swatch {
-  border-radius: 50%;
-  border: 1px solid var(--glass-border);
 }
 
 .text-input {
