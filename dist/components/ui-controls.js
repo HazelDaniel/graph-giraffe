@@ -102,7 +102,7 @@ const STYLE_TEMPLATE = `
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--text-tertiary);
+        color: rgb(95, 95, 95);
         border-bottom: 1px solid var(--glass-border);
         padding-bottom: 6px;
         margin-bottom: 4px;
