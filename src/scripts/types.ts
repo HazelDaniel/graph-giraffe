@@ -82,7 +82,7 @@ export const NODE_SIZE = {
   node: { width: 180, height: 150 },
   group: { width: 240, height: 200 },
   composition: { width: 240, height: 200 },
-  compositionChild: { width: 180, height: 92 },
+  compositionChild: { width: 180, height: NODE_LAYOUT.headerHeight },
 } as const;
 
 export function isContainerNodeType(nodeType: NodeType): nodeType is ContainerNodeType {

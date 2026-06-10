@@ -125,13 +125,15 @@ export function createTextTexture(
     : NODE_THEMES[theme];
 
   // Background
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = s.bgFill;
-  if (isContainerNodeType(nodeType)) ctx.globalAlpha = 0.5;
-  ctx.beginPath();
-  ctx.roundRect(0, 0, width, height, 8);
-  ctx.fill();
-  ctx.globalAlpha = 1.0;
+  if (nodeType !== 'composition-child') {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = s.bgFill;
+    if (isContainerNodeType(nodeType)) ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, width, height, 8);
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+  }
 
   // Border
   ctx.strokeStyle = s.borderStroke;
@@ -144,7 +146,8 @@ export function createTextTexture(
   if (nodeType === 'node' || nodeType === 'composition-child') {
     ctx.fillStyle = s.headerFill;
     ctx.beginPath();
-    ctx.roundRect(0, 0, width, NODE_LAYOUT.headerHeight, [8, 8, 0, 0]);
+    if (nodeType === 'composition-child') ctx.roundRect(0, 0, width, NODE_LAYOUT.headerHeight, 8);
+    else ctx.roundRect(0, 0, width, NODE_LAYOUT.headerHeight, [8, 8, 0, 0]);
     ctx.fill();
   }
 
