@@ -1,2 +1,3 @@
 - I did not change the current stacking-order behavior; selection still does not automatically reorder draw priority.
 - undo/redo doesn't apply to group positions
+- placing a multi-selection (whose selectionRep isn't a group node) doesn't highlight the group node as a drop target for placement - same with when moving a selectionRep out of a group node

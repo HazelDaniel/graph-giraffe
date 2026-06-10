@@ -101,6 +101,21 @@ interface ActiveLabelEdit {
   previousLabel: string;
 }
 
+interface SelectionDragEntry {
+  nodeId: number;
+  beforePlacement: NodePlacementSnapshot;
+  beforeWorld: {
+    x: number;
+    y: number;
+  };
+}
+
+interface SelectionDragState {
+  startWorldX: number;
+  startWorldY: number;
+  entries: SelectionDragEntry[];
+}
+
 /**
  * NodeEditor is the single public class exposed to the entry point.
  * It owns every internal module and wires them together via callbacks.
@@ -137,6 +152,8 @@ export class NodeEditor {
   private selectionKind: SelectionKind = null;
   private isMultiSelectMode: boolean = false;
   private activeLabelEdit: ActiveLabelEdit | null = null;
+  private selectionRep: NodeData | null = null;
+  private draggingSelection: SelectionDragState | null = null;
 
   private activeTouches = new Map<number, PointerEvent>();
   private gestureMode = false;
@@ -339,6 +356,7 @@ export class NodeEditor {
     this.selectedNodeIds.clear();
     this.selectedEdgeIds.clear();
     this.selectionKind = null;
+    this.selectionRep = null;
   }
 
   private syncSelectionKind(): void {
@@ -393,6 +411,272 @@ export class NodeEditor {
   private selectOnlyEdge(edgeId: number): void {
     this.clearSelectionState();
     this.setEdgeSelected(edgeId, true);
+  }
+
+  private captureNodePlacement(node: NodeData): NodePlacementSnapshot {
+    return {
+      localX: node.localX,
+      localY: node.localY,
+      parentId: node.parentId,
+    };
+  }
+
+  private collectSubtreeIds(rootIds: Iterable<number>): number[] {
+    const collected = new Set<number>();
+
+    const visit = (nodeId: number): void => {
+      if (collected.has(nodeId)) return;
+      const node = this.store.get(nodeId);
+      if (!node) return;
+
+      collected.add(nodeId);
+      for (const childId of node.childIds) {
+        visit(childId);
+      }
+    };
+
+    for (const rootId of rootIds) {
+      visit(rootId);
+    }
+
+    return [...collected];
+  }
+
+  private pickIgnoringNodeIds(
+    screenX: number,
+    screenY: number,
+    hiddenNodeIds: Iterable<number>
+  ): number {
+    const hiddenIds = new Set(hiddenNodeIds);
+    const hiddenNodes: NodeData[] = [];
+
+    for (const nodeId of hiddenIds) {
+      const node = this.store.get(nodeId);
+      if (!node || !node.visible) continue;
+      node.visible = false;
+      hiddenNodes.push(node);
+    }
+
+    const pickedId = this.pick(screenX, screenY);
+
+    for (const node of hiddenNodes) {
+      node.visible = true;
+    }
+
+    return pickedId;
+  }
+
+  private getSelectionDragRoots(): NodeData[] {
+    if (this.selectedNodeIds.size === 0 || this.selectedEdgeIds.size > 0) {
+      return [];
+    }
+
+    const selectedIds = new Set(this.selectedNodeIds);
+    const roots: NodeData[] = [];
+
+    for (const nodeId of this.selectedNodeIds) {
+      const node = this.store.get(nodeId);
+      if (!node) continue;
+
+      let currentParentId = node.parentId;
+      let isDescendantOfSelection = false;
+
+      while (currentParentId !== null) {
+        if (selectedIds.has(currentParentId)) {
+          isDescendantOfSelection = true;
+          break;
+        }
+
+        const parent = this.store.get(currentParentId);
+        currentParentId = parent?.parentId ?? null;
+      }
+
+      if (!isDescendantOfSelection) {
+        roots.push(node);
+      }
+    }
+
+    return roots;
+  }
+
+  private startSelectionDrag(
+    worldX: number,
+    worldY: number,
+    selectionRep: NodeData
+  ): void {
+    const roots = this.getSelectionDragRoots();
+    if (roots.length === 0) return;
+
+    this.selectionRep = selectionRep;
+    this.draggingSelection = {
+      startWorldX: worldX,
+      startWorldY: worldY,
+      entries: roots.map((node) => ({
+        nodeId: node.id,
+        beforePlacement: this.captureNodePlacement(node),
+        beforeWorld: getWorldPosition(node.id, this.store.allNodesMap),
+      })),
+    };
+  }
+
+  private moveSelectionDrag(worldX: number, worldY: number): void {
+    const selectionDrag = this.draggingSelection;
+    if (!selectionDrag) return;
+
+    const deltaX = worldX - selectionDrag.startWorldX;
+    const deltaY = worldY - selectionDrag.startWorldY;
+
+    for (const entry of selectionDrag.entries) {
+      const node = this.store.get(entry.nodeId);
+      if (!node) continue;
+
+      const targetX = entry.beforeWorld.x + deltaX;
+      const targetY = entry.beforeWorld.y + deltaY;
+
+      if (entry.beforePlacement.parentId === null) {
+        node.localX = targetX;
+        node.localY = targetY;
+        continue;
+      }
+
+      const parentWorld = getWorldPosition(
+        entry.beforePlacement.parentId,
+        this.store.allNodesMap
+      );
+      node.localX = targetX - parentWorld.x;
+      node.localY = targetY - parentWorld.y;
+    }
+
+    this.store.clearDropTargets();
+  }
+
+  private inferSelectionDropTarget(
+    screenX: number,
+    screenY: number,
+    selectionDrag: SelectionDragState
+  ): NodeData | null {
+    if (!this.selectionRep || this.selectionRep.nodeType === "group") {
+      return null;
+    }
+
+    const hiddenIds = this.collectSubtreeIds(
+      selectionDrag.entries.map((entry) => entry.nodeId)
+    );
+    const pickedId = this.pickIgnoringNodeIds(screenX, screenY, hiddenIds);
+    if (pickedId === 0) return null;
+
+    let pickedNode = this.store.get(pickedId);
+    while (pickedNode) {
+      if (
+        pickedNode.id !== this.selectionRep.id &&
+        isContainerNodeType(pickedNode.nodeType)
+      ) {
+        if (this.selectionRep.nodeType === "composition") {
+          return pickedNode.nodeType === "group" ? pickedNode : null;
+        }
+
+        return pickedNode;
+      }
+
+      if (pickedNode.parentId === null) break;
+      pickedNode = this.store.get(pickedNode.parentId);
+    }
+
+    return null;
+  }
+
+  private applySelectionDrop(
+    selectionDrag: SelectionDragState,
+    hoveredContainer: NodeData | null
+  ): {
+    beforeSnapshots: NodeHistorySnapshot[];
+    afterSnapshots: NodeHistorySnapshot[];
+    cloneSnapshots: NodeHistorySnapshot[];
+    affectedParentIds: number[];
+    didChange: boolean;
+  } {
+    const rootIds = selectionDrag.entries.map((entry) => entry.nodeId);
+    const beforeSnapshots = this.captureNodeSnapshots(rootIds);
+    const cloneSnapshots: NodeHistorySnapshot[] = [];
+    const affectedParents = new Set<number>();
+    const cloneIds: number[] = [];
+    let didChange = false;
+
+    if (hoveredContainer?.nodeType === "composition") {
+      if (this.selectionRep && this.selectionRep.nodeType !== "group") {
+        for (const entry of selectionDrag.entries) {
+          const node = this.store.get(entry.nodeId);
+          if (!node || node.nodeType !== "node") continue;
+
+          const clone = this.store.duplicateIntoComposition(
+            node.id,
+            hoveredContainer.id,
+            this.theme
+          );
+          if (!clone) continue;
+
+          cloneIds.push(clone.id);
+          affectedParents.add(hoveredContainer.id);
+          didChange = true;
+        }
+      }
+    } else if (hoveredContainer?.nodeType === "group") {
+      if (this.selectionRep && this.selectionRep.nodeType !== "group") {
+        for (const entry of selectionDrag.entries) {
+          const node = this.store.get(entry.nodeId);
+          if (!node) continue;
+
+          const oldParentId = node.parentId;
+          if (!this.store.setParent(node.id, hoveredContainer.id)) continue;
+
+          if (oldParentId !== null) {
+            affectedParents.add(oldParentId);
+          }
+          affectedParents.add(hoveredContainer.id);
+          didChange = true;
+        }
+      }
+    } else {
+      for (const entry of selectionDrag.entries) {
+        const node = this.store.get(entry.nodeId);
+        if (!node) continue;
+        if (node.parentId === null) continue;
+
+        const parent = this.store.get(node.parentId);
+        if (!parent || !isContainerNodeType(parent.nodeType)) continue;
+
+        const oldParentId = node.parentId;
+
+        if (node.nodeType === "node") {
+          if (!this.store.setParent(node.id, null)) continue;
+          affectedParents.add(oldParentId);
+          didChange = true;
+          continue;
+        }
+
+        if (node.nodeType === "composition" || node.nodeType === "composition-child") {
+          affectedParents.add(oldParentId);
+          didChange = true;
+        }
+      }
+    }
+
+    this.refreshContainerChains(affectedParents);
+
+    const afterSnapshots = this.captureNodeSnapshots(rootIds);
+    for (const cloneId of cloneIds) {
+      const clone = this.store.get(cloneId);
+      if (!clone) continue;
+      cloneSnapshots.push(this.captureNodeSnapshot(clone));
+    }
+
+    return {
+      beforeSnapshots,
+      afterSnapshots,
+      cloneSnapshots,
+      affectedParentIds: [...affectedParents],
+      didChange,
+    };
   }
 
   private getSingleSelectedNode(): NodeData | null {
@@ -1007,13 +1291,12 @@ export class NodeEditor {
   private getHoveredContainer(
     screenX: number,
     screenY: number,
-    source: NodeData
+    source: NodeData,
+    hiddenNodeIds: Iterable<number> = [source.id]
   ): NodeData | null {
     if (source.nodeType === "composition-child") return null;
 
-    source.visible = false;
-    const pickedId = this.pick(screenX, screenY);
-    source.visible = true;
+    const pickedId = this.pickIgnoringNodeIds(screenX, screenY, hiddenNodeIds);
 
     if (pickedId === 0) return null;
     let pickedNode = this.store.get(pickedId);
@@ -1069,6 +1352,22 @@ export class NodeEditor {
       if (!current || !isContainerNodeType(current.nodeType)) return;
       this.store.updateContainerBounds(currentId, this.theme);
       currentId = current.parentId;
+    }
+  }
+
+  private refreshContainerChains(containerIds: Iterable<number | null>): void {
+    const visited = new Set<number>();
+
+    for (const containerId of containerIds) {
+      let currentId = containerId;
+      while (currentId !== null && !visited.has(currentId)) {
+        const current = this.store.get(currentId);
+        if (!current || !isContainerNodeType(current.nodeType)) break;
+
+        visited.add(currentId);
+        this.store.updateContainerBounds(currentId, this.theme);
+        currentId = current.parentId;
+      }
     }
   }
 
@@ -1234,6 +1533,22 @@ export class NodeEditor {
       }
     }
 
+    const canDragSelection =
+      this.isMultiSelectMode &&
+      this.selectionKind === "node" &&
+      this.selectedNodeIds.size > 1 &&
+      this.selectedNodeIds.has(node.id);
+
+    if (canDragSelection) {
+      this.controls.hideProperties();
+      this.draggingNode = null;
+      this.dragSnapshot = null;
+      this.startSelectionDrag(worldX, worldY, node);
+      this.hoveredHandle = null;
+      this.syncToolbarState();
+      return;
+    }
+
     this.controls.hideProperties();
     this.selectNodeByClick(node.id);
     this.hoveredHandle = null;
@@ -1310,6 +1625,10 @@ export class NodeEditor {
     const { left, top } = canvas.getBoundingClientRect();
     const screenX = e.clientX - left;
     const screenY = e.clientY - top;
+    const { x: worldX, y: worldY } = this.camera.screenToWorld(
+      screenX,
+      screenY
+    );
 
     if (this.activeConnectionDrag) {
       this.activeConnectionDrag.screenX = screenX;
@@ -1318,12 +1637,13 @@ export class NodeEditor {
       return;
     }
 
+    if (this.draggingSelection) {
+      this.moveSelectionDrag(worldX, worldY);
+      return;
+    }
+
     if (!this.draggingNode) return;
 
-    const { x: worldX, y: worldY } = this.camera.screenToWorld(
-      screenX,
-      screenY
-    );
     const targetX = worldX - this.dragOffsetX;
     const targetY = worldY - this.dragOffsetY;
 
@@ -1450,6 +1770,56 @@ export class NodeEditor {
 
       this.activeConnectionDrag = null;
       this.hoveredHandle = null;
+      this.syncToolbarState();
+      return;
+    }
+
+    if (this.draggingSelection) {
+      const { left, top } = canvas.getBoundingClientRect();
+      const screenX = e.clientX - left;
+      const screenY = e.clientY - top;
+      const selectionDrag = this.draggingSelection;
+      const selectionBefore = this.captureSelectionSnapshot();
+      const hoveredContainer = this.inferSelectionDropTarget(
+        screenX,
+        screenY,
+        selectionDrag
+      );
+      const dropResult = this.applySelectionDrop(selectionDrag, hoveredContainer);
+
+      this.draggingSelection = null;
+      this.draggingNode = null;
+      this.dragSnapshot = null;
+      this.selectionRep = null;
+      this.store.clearDropTargets();
+
+      if (dropResult.didChange) {
+        this.pushHistory({
+          undo: () => {
+            for (const snapshot of dropResult.cloneSnapshots) {
+              this.removeNodeAndIncidentEdges(snapshot.id);
+            }
+            this.restoreNodeSnapshots(dropResult.beforeSnapshots);
+            this.restoreSelectionSnapshot(selectionBefore);
+            for (const parentId of dropResult.affectedParentIds) {
+              this.refreshContainerChain(parentId);
+            }
+            this.syncToolbarState();
+          },
+          redo: () => {
+            this.restoreNodeSnapshots(dropResult.afterSnapshots);
+            for (const snapshot of dropResult.cloneSnapshots) {
+              this.restoreNodeSnapshots([snapshot]);
+            }
+            this.restoreSelectionSnapshot(selectionBefore);
+            for (const parentId of dropResult.affectedParentIds) {
+              this.refreshContainerChain(parentId);
+            }
+            this.syncToolbarState();
+          },
+        });
+      }
+
       this.syncToolbarState();
       return;
     }
