@@ -29,7 +29,11 @@ import {
   isCandidateNodeType,
   isContainerNodeType,
 } from "./types.js";
-import { HandleHit, getHandleScreenGeometry, isPointInsideHandle } from "./handle-geometry.js";
+import {
+  HandleHit,
+  getHandleScreenGeometry,
+  isPointInsideHandle,
+} from "./handle-geometry.js";
 import { getWorldPosition } from "./scene-graph.js";
 
 interface DragSnapshot {
@@ -111,7 +115,12 @@ export class NodeEditor {
   private controls: UIControls;
   private history: HistoryStack;
 
-  private bgColor: [number, number, number, number] = [7 / 255, 7 / 255, 8 / 255, 1.0];
+  private bgColor: [number, number, number, number] = [
+    7 / 255,
+    7 / 255,
+    8 / 255,
+    1.0,
+  ];
   private theme: ThemeName = "dark";
   private draggingNode: NodeData | null = null;
   private dragSnapshot: DragSnapshot | null = null;
@@ -128,6 +137,10 @@ export class NodeEditor {
   private selectionKind: SelectionKind = null;
   private isMultiSelectMode: boolean = false;
   private activeLabelEdit: ActiveLabelEdit | null = null;
+
+  private activeTouches = new Map<number, PointerEvent>();
+  private gestureMode = false;
+  private pinchDistance: number | null = null;
 
   private static _instance: NodeEditor | null = null;
 
@@ -166,15 +179,20 @@ export class NodeEditor {
     options: NodeEditorConfig = {}
   ) {
     const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-    const textCanvas = document.getElementById(textCanvasId) as HTMLCanvasElement;
+    const textCanvas = document.getElementById(
+      textCanvasId
+    ) as HTMLCanvasElement;
     const backgroundCanvas = document.getElementById(
       backgroundCanvasId
     ) as HTMLCanvasElement;
-    const labelCanvas = document.getElementById("2d-label-canvas") as HTMLCanvasElement;
+    const labelCanvas = document.getElementById(
+      "2d-label-canvas"
+    ) as HTMLCanvasElement;
 
     if (!canvas) throw new Error(`Canvas "${canvasId}" not found`);
     if (!textCanvas) throw new Error(`Canvas "${textCanvasId}" not found`);
-    if (!backgroundCanvas) throw new Error(`Canvas "${backgroundCanvasId}" not found`);
+    if (!backgroundCanvas)
+      throw new Error(`Canvas "${backgroundCanvasId}" not found`);
     if (!labelCanvas) throw new Error(`Canvas "2d-label-canvas" not found`);
 
     const gl = canvas.getContext("webgl2") as WebGL2RenderingContext;
@@ -238,9 +256,10 @@ export class NodeEditor {
         }
       },
       onLabelCommit: () => this.commitLabelEdit(),
-      onMouseDown: (e) => this.handleMouseDown(e, canvas),
-      onMouseMove: (e) => this.handleMouseMove(e, canvas),
-      onMouseUp: (e) => this.handleMouseUp(e, canvas),
+      onPointerDown: (e) => this.handlePointerDown(e, canvas),
+      onPointerMove: (e) => this.handlePointerMove(e, canvas),
+      onPointerUp: (e) => this.handlePointerUp(e, canvas),
+      onPointerCancel: (e) => this.handlePointerCancel(e, canvas),
       onWheel: (e) => this.handleWheel(e, canvas),
     });
     this.controls.setMultiSelectActive(this.isMultiSelectMode);
@@ -249,6 +268,23 @@ export class NodeEditor {
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
     this.handleResize(canvas);
     this.syncToolbarState();
+  }
+
+  private distance(p1: PointerEvent, p2: PointerEvent): number {
+    const dx = p2.clientX - p1.clientX;
+    const dy = p2.clientY - p1.clientY;
+
+    return Math.hypot(dx, dy);
+  }
+
+  private midpoint(
+    p1: PointerEvent,
+    p2: PointerEvent
+  ): { x: number; y: number } {
+    return {
+      x: (p1.clientX + p2.clientX) / 2,
+      y: (p1.clientY + p2.clientY) / 2,
+    };
   }
 
   render(): void {
@@ -364,7 +400,9 @@ export class NodeEditor {
       return null;
     }
 
-    const nodeId = this.selectedNodeIds.values().next().value as number | undefined;
+    const nodeId = this.selectedNodeIds.values().next().value as
+      | number
+      | undefined;
     if (nodeId === undefined) return null;
     return this.store.get(nodeId) ?? null;
   }
@@ -416,7 +454,8 @@ export class NodeEditor {
 
   private selectNodeByClick(nodeId: number): void {
     const canExtendSelection =
-      this.isMultiSelectMode && (this.selectionKind === null || this.selectionKind === "node");
+      this.isMultiSelectMode &&
+      (this.selectionKind === null || this.selectionKind === "node");
 
     if (!canExtendSelection) {
       this.clearSelectionState();
@@ -438,7 +477,8 @@ export class NodeEditor {
 
   private selectEdgeByClick(edgeId: number): void {
     const canExtendSelection =
-      this.isMultiSelectMode && (this.selectionKind === null || this.selectionKind === "edge");
+      this.isMultiSelectMode &&
+      (this.selectionKind === null || this.selectionKind === "edge");
 
     if (!canExtendSelection) {
       this.clearSelectionState();
@@ -477,14 +517,20 @@ export class NodeEditor {
     this.pushHistory({
       undo: () => {
         this.store.updateLabel(node.id, session.previousLabel, this.theme);
-        if (this.getSingleSelectedNode()?.id === node.id && node.nodeType !== "composition") {
+        if (
+          this.getSingleSelectedNode()?.id === node.id &&
+          node.nodeType !== "composition"
+        ) {
           this.controls.showProperties(session.previousLabel);
         }
         this.syncToolbarState();
       },
       redo: () => {
         this.store.updateLabel(node.id, nextLabel, this.theme);
-        if (this.getSingleSelectedNode()?.id === node.id && node.nodeType !== "composition") {
+        if (
+          this.getSingleSelectedNode()?.id === node.id &&
+          node.nodeType !== "composition"
+        ) {
           this.controls.showProperties(nextLabel);
         }
         this.syncToolbarState();
@@ -530,7 +576,9 @@ export class NodeEditor {
     return snapshots;
   }
 
-  private captureNodeSnapshots(nodeIds: Iterable<number>): NodeHistorySnapshot[] {
+  private captureNodeSnapshots(
+    nodeIds: Iterable<number>
+  ): NodeHistorySnapshot[] {
     const snapshots: NodeHistorySnapshot[] = [];
     const visited = new Set<number>();
 
@@ -554,7 +602,9 @@ export class NodeEditor {
     return snapshots;
   }
 
-  private captureEdgeSnapshots(nodeIds: Iterable<number>): EdgeHistorySnapshot[] {
+  private captureEdgeSnapshots(
+    nodeIds: Iterable<number>
+  ): EdgeHistorySnapshot[] {
     const nodeIdSet = new Set(nodeIds);
     return this.edgeStore
       .allEdges()
@@ -574,7 +624,11 @@ export class NodeEditor {
     const snapshots: EdgeHistorySnapshot[] = [];
 
     for (const edge of this.edgeStore.allEdges()) {
-      if (edgeIdSet.has(edge.id) || nodeIdSet.has(edge.sourceNodeId) || nodeIdSet.has(edge.targetNodeId)) {
+      if (
+        edgeIdSet.has(edge.id) ||
+        nodeIdSet.has(edge.sourceNodeId) ||
+        nodeIdSet.has(edge.targetNodeId)
+      ) {
         snapshots.push({ ...edge });
       }
     }
@@ -608,8 +662,8 @@ export class NodeEditor {
     node.handles = node.handles.map((handle) => ({
       ...handle,
       isConnected:
-        snapshot.handleStates.find((entry) => entry.side === handle.side)?.isConnected ??
-        false,
+        snapshot.handleStates.find((entry) => entry.side === handle.side)
+          ?.isConnected ?? false,
     }));
     this.store.refreshNodeTexture(node, this.theme);
 
@@ -756,7 +810,10 @@ export class NodeEditor {
         removedIds.add(removedId);
       }
     }
-    const edgeSnapshots = this.captureEdgeSnapshotsForSelection(removedIds, edgeIds);
+    const edgeSnapshots = this.captureEdgeSnapshotsForSelection(
+      removedIds,
+      edgeIds
+    );
     const parentIds = new Set<number>();
     for (const nodeId of nodeIds) {
       const node = this.store.get(nodeId);
@@ -899,7 +956,8 @@ export class NodeEditor {
     this.pickFBO.bind();
     this.renderer["gl"].clearColor(1.0, 1.0, 1.0, 1.0);
     this.renderer["gl"].clear(
-      this.renderer["gl"].COLOR_BUFFER_BIT | this.renderer["gl"].DEPTH_BUFFER_BIT
+      this.renderer["gl"].COLOR_BUFFER_BIT |
+        this.renderer["gl"].DEPTH_BUFFER_BIT
     );
     this.renderer.drawNodes(true);
 
@@ -1014,6 +1072,43 @@ export class NodeEditor {
     }
   }
 
+  private handlePointerDown(e: PointerEvent, canvas: HTMLCanvasElement): void {
+    if (e.pointerType === "mouse") {
+      this.handleMouseDown(e, canvas);
+      return;
+    }
+
+    if (e.pointerType !== "touch") return;
+
+    this.activeTouches.set(e.pointerId, e);
+
+    if (this.activeTouches.size === 1) {
+      this.handleMouseDown(e as MouseEvent, canvas);
+    }
+
+    if (this.activeTouches.size === 2) {
+      /*
+       * Switch to gesture mode.
+       */
+      this.gestureMode = true;
+
+      this.isPanning = false;
+      this.draggingNode = null;
+      this.activeConnectionDrag = null;
+
+      const touches = [...this.activeTouches.values()];
+
+      this.pinchDistance = this.distance(touches[0], touches[1]);
+
+      const center = this.midpoint(touches[0], touches[1]);
+      this.draggingNode = null;
+      this.dragSnapshot = null;
+      this.activeConnectionDrag = null;
+
+      this.startPan(center.x, center.y);
+    }
+  }
+
   private handleMouseDown(e: MouseEvent, canvas: HTMLCanvasElement): void {
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
       this.startPan(e.clientX, e.clientY);
@@ -1069,7 +1164,10 @@ export class NodeEditor {
       return;
     }
 
-    const { x: worldX, y: worldY } = this.camera.screenToWorld(screenX, screenY);
+    const { x: worldX, y: worldY } = this.camera.screenToWorld(
+      screenX,
+      screenY
+    );
     const nodeWorld = getWorldPosition(node.id, this.store.allNodesMap);
     const localClickX = worldX - nodeWorld.x;
     const localClickY = worldY - nodeWorld.y;
@@ -1091,7 +1189,11 @@ export class NodeEditor {
       return;
     }
 
-    if (node.nodeType === "node" || node.nodeType === "composition-child" || node.nodeType === "group") {
+    if (
+      node.nodeType === "node" ||
+      node.nodeType === "composition-child" ||
+      node.nodeType === "group"
+    ) {
       const editX = node.width - NODE_LAYOUT.editBtnPaddingRight;
       const editY = isContainerNodeType(node.nodeType)
         ? 20
@@ -1147,6 +1249,47 @@ export class NodeEditor {
     this.lastMouseY = clientY;
   }
 
+  private handlePointerMove(e: PointerEvent, canvas: HTMLCanvasElement): void {
+    if (e.pointerType === "mouse") {
+      this.handleMouseMove(e, canvas);
+      return;
+    }
+
+    if (e.pointerType !== "touch") return;
+
+    this.activeTouches.set(e.pointerId, e);
+
+    if (!this.gestureMode) {
+      if (this.activeTouches.size === 1) {
+        this.handleMouseMove(e as MouseEvent, canvas);
+        return;
+      }
+    } else {
+      if (this.activeTouches.size === 2) {
+        const touches = [...this.activeTouches.values()];
+
+        const center = this.midpoint(touches[0], touches[1]);
+
+        this.camera.pan(center.x - this.lastMouseX, center.y - this.lastMouseY);
+
+        this.lastMouseX = center.x;
+        this.lastMouseY = center.y;
+
+        const distance = this.distance(touches[0], touches[1]);
+
+        if (this.pinchDistance !== null) {
+          const delta = this.pinchDistance - distance;
+
+          const rect = canvas.getBoundingClientRect();
+
+          this.camera.zoomAt(center.x - rect.left, center.y - rect.top, delta);
+        }
+
+        this.pinchDistance = distance;
+      }
+    }
+  }
+
   private handleMouseMove(e: MouseEvent, canvas: HTMLCanvasElement): void {
     if (this.isPanning) {
       this.camera.pan(e.clientX - this.lastMouseX, e.clientY - this.lastMouseY);
@@ -1168,7 +1311,10 @@ export class NodeEditor {
 
     if (!this.draggingNode) return;
 
-    const { x: worldX, y: worldY } = this.camera.screenToWorld(screenX, screenY);
+    const { x: worldX, y: worldY } = this.camera.screenToWorld(
+      screenX,
+      screenY
+    );
     const targetX = worldX - this.dragOffsetX;
     const targetY = worldY - this.dragOffsetY;
 
@@ -1185,12 +1331,39 @@ export class NodeEditor {
     }
 
     this.store.clearDropTargets();
-    if (this.draggingNode.nodeType === "node" || this.draggingNode.nodeType === "composition") {
-      const hoveredContainer = this.getHoveredContainer(screenX, screenY, this.draggingNode);
+    if (
+      this.draggingNode.nodeType === "node" ||
+      this.draggingNode.nodeType === "composition"
+    ) {
+      const hoveredContainer = this.getHoveredContainer(
+        screenX,
+        screenY,
+        this.draggingNode
+      );
       if (hoveredContainer) {
         hoveredContainer.isDropTarget = true;
       }
     }
+  }
+
+  private handlePointerUp(e: PointerEvent, canvas: HTMLCanvasElement): void {
+    if (e.pointerType === "mouse") {
+      this.handleMouseUp(e, canvas);
+      return;
+    }
+    this.activeTouches.delete(e.pointerId);
+    if (this.gestureMode && this.activeTouches.size < 2) {
+      this.gestureMode = false;
+      this.pinchDistance = null;
+      this.isPanning = false;
+    }
+    if (this.activeTouches.size === 0) {
+      this.handleMouseUp(e as MouseEvent, canvas);
+    }
+  }
+
+  private handlePointerCancel(e: PointerEvent, canvas: HTMLCanvasElement): void {
+    this.handlePointerUp(e, canvas);;
   }
 
   private handleMouseUp(e: MouseEvent, canvas: HTMLCanvasElement): void {
@@ -1260,7 +1433,11 @@ export class NodeEditor {
       let historyEntry: HistoryEntry | null = null;
 
       if (source.nodeType === "node") {
-        const hoveredContainer = this.getHoveredContainer(screenX, screenY, source);
+        const hoveredContainer = this.getHoveredContainer(
+          screenX,
+          screenY,
+          source
+        );
         if (hoveredContainer?.nodeType === "composition") {
           const clone = this.store.duplicateIntoComposition(
             source.id,
@@ -1421,7 +1598,11 @@ export class NodeEditor {
           }
         }
       } else if (source.nodeType === "composition") {
-        const hoveredContainer = this.getHoveredContainer(screenX, screenY, source);
+        const hoveredContainer = this.getHoveredContainer(
+          screenX,
+          screenY,
+          source
+        );
         if (hoveredContainer?.nodeType === "group") {
           const oldParentId = source.parentId;
           const beforePlacement: NodePlacementSnapshot = {
@@ -1512,8 +1693,10 @@ export class NodeEditor {
     const targetNode = this.store.get(targetNodeId);
     if (!sourceNode || !targetNode) return false;
 
-    if (this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide)) return false;
-    if (this.edgeStore.hasConnection(targetNodeId, targetHandleSide)) return false;
+    if (this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide))
+      return false;
+    if (this.edgeStore.hasConnection(targetNodeId, targetHandleSide))
+      return false;
 
     return true;
   }
@@ -1522,7 +1705,11 @@ export class NodeEditor {
     const edges = this.edgeStore.allEdges().filter((edge) => edge.visible);
 
     for (let i = edges.length - 1; i >= 0; i--) {
-      const geometry = buildEdgeRouteGeometry(edges[i], this.store, this.camera);
+      const geometry = buildEdgeRouteGeometry(
+        edges[i],
+        this.store,
+        this.camera
+      );
       if (!geometry) continue;
       if (hitTestEdgePolyline(screenX, screenY, geometry.screenPoints)) {
         return { id: edges[i].id };
@@ -1532,7 +1719,10 @@ export class NodeEditor {
     return null;
   }
 
-  private removeNodesAndEdges(nodeIds: Iterable<number>, edgeIds: Iterable<number>): void {
+  private removeNodesAndEdges(
+    nodeIds: Iterable<number>,
+    edgeIds: Iterable<number>
+  ): void {
     const removedNodeIds = new Set<number>();
     for (const nodeId of nodeIds) {
       for (const removedId of this.store.collectRemovedIds(nodeId)) {
@@ -1577,13 +1767,13 @@ export class NodeEditor {
   private syncHandleStates(nodeId: number): void {
     this.store.updateHandleConnectionState(
       nodeId,
-      'left',
-      this.edgeStore.hasConnection(nodeId, 'left')
+      "left",
+      this.edgeStore.hasConnection(nodeId, "left")
     );
     this.store.updateHandleConnectionState(
       nodeId,
-      'right',
-      this.edgeStore.hasConnection(nodeId, 'right')
+      "right",
+      this.edgeStore.hasConnection(nodeId, "right")
     );
   }
 
@@ -1608,10 +1798,12 @@ export class NodeEditor {
       return;
     }
 
-    const isUndo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey;
+    const isUndo =
+      (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey;
     const isRedo =
       (e.ctrlKey || e.metaKey) &&
-      (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey));
+      (e.key.toLowerCase() === "y" ||
+        (e.key.toLowerCase() === "z" && e.shiftKey));
 
     if (isUndo) {
       e.preventDefault();

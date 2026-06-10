@@ -60,9 +60,10 @@ export class UIControls {
                 this.nodeLabelInput.blur();
             }
         });
-        canvas.addEventListener("mousedown", (e) => callbacks.onMouseDown(e));
-        window.addEventListener("mousemove", (e) => callbacks.onMouseMove(e));
-        window.addEventListener("mouseup", (e) => callbacks.onMouseUp(e));
+        canvas.addEventListener("pointerdown", (e) => callbacks.onPointerDown(e));
+        window.addEventListener("pointermove", (e) => callbacks.onPointerMove(e));
+        window.addEventListener("pointerup", (e) => callbacks.onPointerUp(e));
+        window.addEventListener("pointercancel", (e) => callbacks.onPointerCancel(e));
         canvas.addEventListener("wheel", (e) => callbacks.onWheel(e), {
             passive: false,
         });

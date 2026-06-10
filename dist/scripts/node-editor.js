@@ -9,7 +9,7 @@ import { Renderer } from "./renderer.js";
 import { UIControls } from "./controls.js";
 import { HistoryStack } from "./history.js";
 import { DEFAULT_HANDLE_STYLE, NODE_LAYOUT, isCandidateNodeType, isContainerNodeType, } from "./types.js";
-import { getHandleScreenGeometry, isPointInsideHandle } from "./handle-geometry.js";
+import { getHandleScreenGeometry, isPointInsideHandle, } from "./handle-geometry.js";
 import { getWorldPosition } from "./scene-graph.js";
 /**
  * NodeEditor is the single public class exposed to the entry point.
@@ -24,7 +24,12 @@ export class NodeEditor {
     renderer;
     controls;
     history;
-    bgColor = [7 / 255, 7 / 255, 8 / 255, 1.0];
+    bgColor = [
+        7 / 255,
+        7 / 255,
+        8 / 255,
+        1.0,
+    ];
     theme = "dark";
     draggingNode = null;
     dragSnapshot = null;
@@ -41,6 +46,9 @@ export class NodeEditor {
     selectionKind = null;
     isMultiSelectMode = false;
     activeLabelEdit = null;
+    activeTouches = new Map();
+    gestureMode = false;
+    pinchDistance = null;
     static _instance = null;
     static create(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}) {
         if (this._instance)
@@ -110,9 +118,10 @@ export class NodeEditor {
                 }
             },
             onLabelCommit: () => this.commitLabelEdit(),
-            onMouseDown: (e) => this.handleMouseDown(e, canvas),
-            onMouseMove: (e) => this.handleMouseMove(e, canvas),
-            onMouseUp: (e) => this.handleMouseUp(e, canvas),
+            onPointerDown: (e) => this.handlePointerDown(e, canvas),
+            onPointerMove: (e) => this.handlePointerMove(e, canvas),
+            onPointerUp: (e) => this.handlePointerUp(e, canvas),
+            onPointerCancel: (e) => this.handlePointerCancel(e, canvas),
             onWheel: (e) => this.handleWheel(e, canvas),
         });
         this.controls.setMultiSelectActive(this.isMultiSelectMode);
@@ -120,6 +129,17 @@ export class NodeEditor {
         window.addEventListener("keydown", (e) => this.handleKeyDown(e));
         this.handleResize(canvas);
         this.syncToolbarState();
+    }
+    distance(p1, p2) {
+        const dx = p2.clientX - p1.clientX;
+        const dy = p2.clientY - p1.clientY;
+        return Math.hypot(dx, dy);
+    }
+    midpoint(p1, p2) {
+        return {
+            x: (p1.clientX + p2.clientX) / 2,
+            y: (p1.clientY + p2.clientY) / 2,
+        };
     }
     render() {
         this.renderer.startLoop();
@@ -268,7 +288,8 @@ export class NodeEditor {
         this.controls.setMultiSelectActive(this.isMultiSelectMode);
     }
     selectNodeByClick(nodeId) {
-        const canExtendSelection = this.isMultiSelectMode && (this.selectionKind === null || this.selectionKind === "node");
+        const canExtendSelection = this.isMultiSelectMode &&
+            (this.selectionKind === null || this.selectionKind === "node");
         if (!canExtendSelection) {
             this.clearSelectionState();
             this.setNodeSelected(nodeId, true);
@@ -286,7 +307,8 @@ export class NodeEditor {
         this.setNodeSelected(nodeId, true);
     }
     selectEdgeByClick(edgeId) {
-        const canExtendSelection = this.isMultiSelectMode && (this.selectionKind === null || this.selectionKind === "edge");
+        const canExtendSelection = this.isMultiSelectMode &&
+            (this.selectionKind === null || this.selectionKind === "edge");
         if (!canExtendSelection) {
             this.clearSelectionState();
             this.setEdgeSelected(edgeId, true);
@@ -321,14 +343,16 @@ export class NodeEditor {
         this.pushHistory({
             undo: () => {
                 this.store.updateLabel(node.id, session.previousLabel, this.theme);
-                if (this.getSingleSelectedNode()?.id === node.id && node.nodeType !== "composition") {
+                if (this.getSingleSelectedNode()?.id === node.id &&
+                    node.nodeType !== "composition") {
                     this.controls.showProperties(session.previousLabel);
                 }
                 this.syncToolbarState();
             },
             redo: () => {
                 this.store.updateLabel(node.id, nextLabel, this.theme);
-                if (this.getSingleSelectedNode()?.id === node.id && node.nodeType !== "composition") {
+                if (this.getSingleSelectedNode()?.id === node.id &&
+                    node.nodeType !== "composition") {
                     this.controls.showProperties(nextLabel);
                 }
                 this.syncToolbarState();
@@ -405,7 +429,9 @@ export class NodeEditor {
         const edgeIdSet = new Set(edgeIds);
         const snapshots = [];
         for (const edge of this.edgeStore.allEdges()) {
-            if (edgeIdSet.has(edge.id) || nodeIdSet.has(edge.sourceNodeId) || nodeIdSet.has(edge.targetNodeId)) {
+            if (edgeIdSet.has(edge.id) ||
+                nodeIdSet.has(edge.sourceNodeId) ||
+                nodeIdSet.has(edge.targetNodeId)) {
                 snapshots.push({ ...edge });
             }
         }
@@ -428,8 +454,8 @@ export class NodeEditor {
         node.childIds = [...snapshot.childIds];
         node.handles = node.handles.map((handle) => ({
             ...handle,
-            isConnected: snapshot.handleStates.find((entry) => entry.side === handle.side)?.isConnected ??
-                false,
+            isConnected: snapshot.handleStates.find((entry) => entry.side === handle.side)
+                ?.isConnected ?? false,
         }));
         this.store.refreshNodeTexture(node, this.theme);
         this.store.forceRestoreNodePlacement(snapshot.id, snapshot.localX, snapshot.localY, snapshot.parentId);
@@ -669,7 +695,8 @@ export class NodeEditor {
     pick(screenX, screenY) {
         this.pickFBO.bind();
         this.renderer["gl"].clearColor(1.0, 1.0, 1.0, 1.0);
-        this.renderer["gl"].clear(this.renderer["gl"].COLOR_BUFFER_BIT | this.renderer["gl"].DEPTH_BUFFER_BIT);
+        this.renderer["gl"].clear(this.renderer["gl"].COLOR_BUFFER_BIT |
+            this.renderer["gl"].DEPTH_BUFFER_BIT);
         this.renderer.drawNodes(true);
         const pixels = this.pickFBO.readPixel(screenX, screenY);
         this.pickFBO.unbind();
@@ -759,6 +786,34 @@ export class NodeEditor {
             currentId = current.parentId;
         }
     }
+    handlePointerDown(e, canvas) {
+        if (e.pointerType === "mouse") {
+            this.handleMouseDown(e, canvas);
+            return;
+        }
+        if (e.pointerType !== "touch")
+            return;
+        this.activeTouches.set(e.pointerId, e);
+        if (this.activeTouches.size === 1) {
+            this.handleMouseDown(e, canvas);
+        }
+        if (this.activeTouches.size === 2) {
+            /*
+             * Switch to gesture mode.
+             */
+            this.gestureMode = true;
+            this.isPanning = false;
+            this.draggingNode = null;
+            this.activeConnectionDrag = null;
+            const touches = [...this.activeTouches.values()];
+            this.pinchDistance = this.distance(touches[0], touches[1]);
+            const center = this.midpoint(touches[0], touches[1]);
+            this.draggingNode = null;
+            this.dragSnapshot = null;
+            this.activeConnectionDrag = null;
+            this.startPan(center.x, center.y);
+        }
+    }
     handleMouseDown(e, canvas) {
         if (e.button === 1 || (e.button === 0 && e.altKey)) {
             this.startPan(e.clientX, e.clientY);
@@ -827,7 +882,9 @@ export class NodeEditor {
             this.hoveredHandle = null;
             return;
         }
-        if (node.nodeType === "node" || node.nodeType === "composition-child" || node.nodeType === "group") {
+        if (node.nodeType === "node" ||
+            node.nodeType === "composition-child" ||
+            node.nodeType === "group") {
             const editX = node.width - NODE_LAYOUT.editBtnPaddingRight;
             const editY = isContainerNodeType(node.nodeType)
                 ? 20
@@ -875,6 +932,37 @@ export class NodeEditor {
         this.lastMouseX = clientX;
         this.lastMouseY = clientY;
     }
+    handlePointerMove(e, canvas) {
+        if (e.pointerType === "mouse") {
+            this.handleMouseMove(e, canvas);
+            return;
+        }
+        if (e.pointerType !== "touch")
+            return;
+        this.activeTouches.set(e.pointerId, e);
+        if (!this.gestureMode) {
+            if (this.activeTouches.size === 1) {
+                this.handleMouseMove(e, canvas);
+                return;
+            }
+        }
+        else {
+            if (this.activeTouches.size === 2) {
+                const touches = [...this.activeTouches.values()];
+                const center = this.midpoint(touches[0], touches[1]);
+                this.camera.pan(center.x - this.lastMouseX, center.y - this.lastMouseY);
+                this.lastMouseX = center.x;
+                this.lastMouseY = center.y;
+                const distance = this.distance(touches[0], touches[1]);
+                if (this.pinchDistance !== null) {
+                    const delta = this.pinchDistance - distance;
+                    const rect = canvas.getBoundingClientRect();
+                    this.camera.zoomAt(center.x - rect.left, center.y - rect.top, delta);
+                }
+                this.pinchDistance = distance;
+            }
+        }
+    }
     handleMouseMove(e, canvas) {
         if (this.isPanning) {
             this.camera.pan(e.clientX - this.lastMouseX, e.clientY - this.lastMouseY);
@@ -906,12 +994,32 @@ export class NodeEditor {
             this.draggingNode.localY = targetY - parentWorld.y;
         }
         this.store.clearDropTargets();
-        if (this.draggingNode.nodeType === "node" || this.draggingNode.nodeType === "composition") {
+        if (this.draggingNode.nodeType === "node" ||
+            this.draggingNode.nodeType === "composition") {
             const hoveredContainer = this.getHoveredContainer(screenX, screenY, this.draggingNode);
             if (hoveredContainer) {
                 hoveredContainer.isDropTarget = true;
             }
         }
+    }
+    handlePointerUp(e, canvas) {
+        if (e.pointerType === "mouse") {
+            this.handleMouseUp(e, canvas);
+            return;
+        }
+        this.activeTouches.delete(e.pointerId);
+        if (this.gestureMode && this.activeTouches.size < 2) {
+            this.gestureMode = false;
+            this.pinchDistance = null;
+            this.isPanning = false;
+        }
+        if (this.activeTouches.size === 0) {
+            this.handleMouseUp(e, canvas);
+        }
+    }
+    handlePointerCancel(e, canvas) {
+        this.handlePointerUp(e, canvas);
+        ;
     }
     handleMouseUp(e, canvas) {
         this.isPanning = false;
@@ -1198,8 +1306,8 @@ export class NodeEditor {
         this.removeNodesAndEdges([nodeId], []);
     }
     syncHandleStates(nodeId) {
-        this.store.updateHandleConnectionState(nodeId, 'left', this.edgeStore.hasConnection(nodeId, 'left'));
-        this.store.updateHandleConnectionState(nodeId, 'right', this.edgeStore.hasConnection(nodeId, 'right'));
+        this.store.updateHandleConnectionState(nodeId, "left", this.edgeStore.hasConnection(nodeId, "left"));
+        this.store.updateHandleConnectionState(nodeId, "right", this.edgeStore.hasConnection(nodeId, "right"));
     }
     hasSelection() {
         return this.selectedNodeIds.size > 0 || this.selectedEdgeIds.size > 0;
@@ -1219,7 +1327,8 @@ export class NodeEditor {
         }
         const isUndo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey;
         const isRedo = (e.ctrlKey || e.metaKey) &&
-            (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey));
+            (e.key.toLowerCase() === "y" ||
+                (e.key.toLowerCase() === "z" && e.shiftKey));
         if (isUndo) {
             e.preventDefault();
             this.undo();
