@@ -787,6 +787,10 @@ export class NodeEditor {
         }
     }
     handlePointerDown(e, canvas) {
+        if (e.pointerType !== "mouse") {
+            e.preventDefault();
+        }
+        this.capturePointer(canvas, e);
         if (e.pointerType === "mouse") {
             this.handleMouseDown(e, canvas);
             return;
@@ -933,6 +937,9 @@ export class NodeEditor {
         this.lastMouseY = clientY;
     }
     handlePointerMove(e, canvas) {
+        if (e.pointerType !== "mouse") {
+            e.preventDefault();
+        }
         if (e.pointerType === "mouse") {
             this.handleMouseMove(e, canvas);
             return;
@@ -1005,6 +1012,7 @@ export class NodeEditor {
     handlePointerUp(e, canvas) {
         if (e.pointerType === "mouse") {
             this.handleMouseUp(e, canvas);
+            this.releasePointer(canvas, e);
             return;
         }
         this.activeTouches.delete(e.pointerId);
@@ -1016,10 +1024,31 @@ export class NodeEditor {
         if (this.activeTouches.size === 0) {
             this.handleMouseUp(e, canvas);
         }
+        this.releasePointer(canvas, e);
     }
     handlePointerCancel(e, canvas) {
         this.handlePointerUp(e, canvas);
         ;
+    }
+    capturePointer(canvas, e) {
+        if (!canvas.setPointerCapture)
+            return;
+        try {
+            canvas.setPointerCapture(e.pointerId);
+        }
+        catch {
+            // Some browsers may reject capture if the pointer is no longer active.
+        }
+    }
+    releasePointer(canvas, e) {
+        if (!canvas.hasPointerCapture?.(e.pointerId))
+            return;
+        try {
+            canvas.releasePointerCapture(e.pointerId);
+        }
+        catch {
+            // Ignore release failures during pointer cancellation teardown.
+        }
     }
     handleMouseUp(e, canvas) {
         this.isPanning = false;
