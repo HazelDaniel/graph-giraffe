@@ -1,5 +1,5 @@
 import { DEFAULT_HANDLE_STYLE, getDefaultNodeSize, isContainerNodeType, isCandidateNodeType, } from './types.js';
-import { createTextTexture } from './texture.js';
+import { createTextTexture, } from './texture.js';
 import { getWorldPosition, reparent } from './scene-graph.js';
 import { AccessibilityTree } from './accessibility.js';
 /**
@@ -208,6 +208,47 @@ export class NodeStore {
             return;
         handle.isConnected = isConnected;
     }
+    setCompositionReference(nodeId, compositionId, theme) {
+        const node = this.get(nodeId);
+        const composition = this.get(compositionId);
+        if (!node || !composition)
+            return false;
+        if (node.nodeType !== 'node' || composition.nodeType !== 'composition')
+            return false;
+        if (node.parentId === null)
+            return false;
+        node.compositionRefId = compositionId;
+        this.currentTheme = theme;
+        this.syncNodePresentation(nodeId);
+        this.refreshNodeTexture(node, theme);
+        return true;
+    }
+    clearCompositionReference(nodeId, theme) {
+        const node = this.get(nodeId);
+        if (!node || node.nodeType !== 'node' || node.compositionRefId === null) {
+            return false;
+        }
+        node.compositionRefId = null;
+        this.currentTheme = theme;
+        this.syncNodePresentation(nodeId);
+        this.refreshNodeTexture(node, theme);
+        return true;
+    }
+    getCompositionReferenceNodes(compositionId) {
+        const refs = [];
+        for (const node of this.nodes.values()) {
+            if (node.nodeType === 'node' && node.compositionRefId === compositionId) {
+                refs.push(node);
+            }
+        }
+        return refs;
+    }
+    refreshCompositionReferences(compositionId, theme) {
+        for (const node of this.getCompositionReferenceNodes(compositionId)) {
+            this.syncNodePresentation(node.id);
+            this.refreshNodeTexture(node, theme);
+        }
+    }
     /** Assign a new parent to a child node, preserving world position. */
     setParent(childId, newParentId) {
         const changed = reparent(childId, newParentId, this.allNodesMap);
@@ -344,7 +385,7 @@ export class NodeStore {
     }
     refreshNodeTexture(node, theme) {
         const oldTexture = node.texture;
-        node.texture = createTextTexture(this.gl, this.ctx, this.textCanvas, node.text, node.width, node.height, theme ?? this.currentTheme, node.nodeType, this.shouldCollapseNode(node));
+        node.texture = createTextTexture(this.gl, this.ctx, this.textCanvas, node.text, node.width, node.height, theme ?? this.currentTheme, node.nodeType, this.shouldCollapseNode(node), this.getCompositionReferencePreviewChildren(node));
         this.gl.deleteTexture(oldTexture);
     }
     syncNodePresentation(nodeId) {
@@ -355,7 +396,7 @@ export class NodeStore {
             return;
         }
         const shouldCollapse = this.shouldCollapseNode(node);
-        const { width, height } = getDefaultNodeSize(node.nodeType, shouldCollapse);
+        const { width, height } = this.getPresentedNodeSize(node, shouldCollapse);
         if (node.width === width && node.height === height)
             return;
         node.width = width;
@@ -363,6 +404,8 @@ export class NodeStore {
         this.refreshNodeTexture(node, this.currentTheme);
     }
     shouldCollapseNode(node) {
+        if (node.compositionRefId !== null)
+            return false;
         if (node.nodeType === 'composition-child')
             return true;
         if (node.nodeType !== 'node')
@@ -371,6 +414,36 @@ export class NodeStore {
             return false;
         const parent = this.get(node.parentId);
         return parent?.nodeType === 'group';
+    }
+    getPresentedNodeSize(node, shouldCollapse) {
+        if (node.nodeType === 'node' && node.compositionRefId !== null) {
+            const composition = this.get(node.compositionRefId);
+            if (composition?.nodeType === 'composition') {
+                return {
+                    width: composition.width,
+                    height: composition.height,
+                };
+            }
+            return getDefaultNodeSize('composition');
+        }
+        return getDefaultNodeSize(node.nodeType, shouldCollapse);
+    }
+    getCompositionReferencePreviewChildren(node) {
+        if (node.nodeType !== 'node' || node.compositionRefId === null) {
+            return null;
+        }
+        const composition = this.get(node.compositionRefId);
+        if (!composition || composition.nodeType !== 'composition') {
+            return [];
+        }
+        return composition.childIds
+            .map((childId) => this.get(childId))
+            .filter((child) => Boolean(child))
+            .map((child) => ({
+            text: child.text,
+            width: child.width,
+            height: child.height,
+        }));
     }
     createHandleState(candidateId, nodeType, existingHandles = []) {
         if (!isCandidateNodeType(nodeType, this.connectionMode))
@@ -402,6 +475,7 @@ export class NodeStore {
             parentId,
             childIds: [],
             nodeType,
+            compositionRefId: null,
             isDropTarget,
             handles,
         };

@@ -2,3 +2,5 @@
 - undo/redo doesn't apply to group positions
 - placing a multi-selection (whose selectionRep isn't a group node) doesn't highlight the group node as a drop target for placement - same with when moving a selectionRep out of a group node
 - on history traversal, the texture color of the headers of nodes in a group changed back to the color they had when the node was detached from a group
+- a change in the label of a composition-child doesn't reflect to that of the composition-refrence children referencing the composition.
+  no real-time change needed, just make sure that the input is throttled so that the final update is the only one propagated (to avoid excess repainting)

@@ -375,6 +375,7 @@ export class NodeEditor {
         const cloneSnapshots = [];
         const affectedParents = new Set();
         const cloneIds = [];
+        const removedReferenceEdgeSnapshots = [];
         let didChange = false;
         if (hoveredContainer?.nodeType === "composition") {
             if (this.selectionRep && this.selectionRep.nodeType !== "group") {
@@ -422,6 +423,7 @@ export class NodeEditor {
                 if (node.nodeType === "node") {
                     if (!this.store.setParent(node.id, null))
                         continue;
+                    removedReferenceEdgeSnapshots.push(...this.removeCompositionReferenceEdgesForNode(node.id));
                     affectedParents.add(oldParentId);
                     didChange = true;
                     continue;
@@ -444,6 +446,7 @@ export class NodeEditor {
             beforeSnapshots,
             afterSnapshots,
             cloneSnapshots,
+            removedReferenceEdgeSnapshots,
             affectedParentIds: [...affectedParents],
             didChange,
         };
@@ -583,6 +586,7 @@ export class NodeEditor {
             isDropTarget: Boolean(node.isDropTarget),
             parentId: node.parentId,
             childIds: [...node.childIds],
+            compositionRefId: node.compositionRefId,
             handleStates: node.handles.map((handle) => ({
                 side: handle.side,
                 isConnected: handle.isConnected,
@@ -662,6 +666,7 @@ export class NodeEditor {
         node.isSelected = snapshot.isSelected;
         node.isDropTarget = snapshot.isDropTarget;
         node.childIds = [...snapshot.childIds];
+        node.compositionRefId = snapshot.compositionRefId;
         node.handles = node.handles.map((handle) => ({
             ...handle,
             isConnected: snapshot.handleStates.find((entry) => entry.side === handle.side)
@@ -693,8 +698,78 @@ export class NodeEditor {
             if (edge) {
                 this.syncHandleStates(edge.sourceNodeId);
                 this.syncHandleStates(edge.targetNodeId);
+                this.applyCompositionReferenceForEdge(edge);
             }
         }
+    }
+    isCompositionReferenceEdge(edge) {
+        const source = this.store.get(edge.sourceNodeId);
+        const target = this.store.get(edge.targetNodeId);
+        return source?.nodeType === "node" && target?.nodeType === "composition";
+    }
+    canCreateCompositionReference(sourceNodeId, targetCompositionId) {
+        const source = this.store.get(sourceNodeId);
+        const target = this.store.get(targetCompositionId);
+        if (!source || !target)
+            return false;
+        if (source.nodeType !== "node" || target.nodeType !== "composition") {
+            return false;
+        }
+        if (source.parentId === null)
+            return false;
+        const parent = this.store.get(source.parentId);
+        if (parent?.nodeType !== "group")
+            return false;
+        return (source.compositionRefId === null ||
+            source.compositionRefId === targetCompositionId);
+    }
+    applyCompositionReferenceForEdge(edge) {
+        if (!this.isCompositionReferenceEdge(edge))
+            return;
+        if (!this.canCreateCompositionReference(edge.sourceNodeId, edge.targetNodeId)) {
+            return;
+        }
+        const source = this.store.get(edge.sourceNodeId);
+        const oldParentId = source?.parentId ?? null;
+        if (this.store.setCompositionReference(edge.sourceNodeId, edge.targetNodeId, this.theme)) {
+            this.refreshContainerChain(oldParentId);
+        }
+    }
+    clearCompositionReferenceForEdge(edge) {
+        if (!this.isCompositionReferenceEdge(edge))
+            return;
+        const source = this.store.get(edge.sourceNodeId);
+        if (!source || source.compositionRefId !== edge.targetNodeId)
+            return;
+        const oldParentId = source.parentId;
+        if (this.store.clearCompositionReference(source.id, this.theme)) {
+            this.refreshContainerChain(oldParentId);
+        }
+    }
+    refreshCompositionReferenceNodes(compositionId) {
+        const refs = this.store.getCompositionReferenceNodes(compositionId);
+        this.store.refreshCompositionReferences(compositionId, this.theme);
+        for (const ref of refs) {
+            this.refreshContainerChain(ref.parentId);
+        }
+    }
+    removeCompositionReferenceEdgesForNode(nodeId) {
+        const removed = [];
+        for (const edge of this.edgeStore.allEdges()) {
+            if (edge.sourceNodeId !== nodeId)
+                continue;
+            if (!this.isCompositionReferenceEdge(edge))
+                continue;
+            const snapshot = { ...edge };
+            const removedEdge = this.edgeStore.remove(edge.id);
+            if (!removedEdge)
+                continue;
+            this.clearCompositionReferenceForEdge(snapshot);
+            this.syncHandleStates(snapshot.sourceNodeId);
+            this.syncHandleStates(snapshot.targetNodeId);
+            removed.push(snapshot);
+        }
+        return removed;
     }
     refreshAfterRestoration(rootParentId) {
         if (rootParentId !== null) {
@@ -742,6 +817,7 @@ export class NodeEditor {
         const selectionBefore = this.captureSelectionSnapshot();
         const snapshot = { ...edge };
         this.edgeStore.remove(edgeId);
+        this.clearCompositionReferenceForEdge(snapshot);
         this.syncHandleStates(edge.sourceNodeId);
         this.syncHandleStates(edge.targetNodeId);
         this.clearSelectionAndHideProperties();
@@ -754,6 +830,7 @@ export class NodeEditor {
                 if (restored) {
                     this.syncHandleStates(restored.sourceNodeId);
                     this.syncHandleStates(restored.targetNodeId);
+                    this.applyCompositionReferenceForEdge(restored);
                 }
                 this.restoreSelectionSnapshot(selectionBefore);
                 this.syncToolbarState();
@@ -761,6 +838,7 @@ export class NodeEditor {
             redo: () => {
                 const removed = this.edgeStore.remove(edgeId);
                 if (removed) {
+                    this.clearCompositionReferenceForEdge(removed);
                     this.syncHandleStates(removed.sourceNodeId);
                     this.syncHandleStates(removed.targetNodeId);
                 }
@@ -993,6 +1071,9 @@ export class NodeEditor {
             if (!current || !isContainerNodeType(current.nodeType))
                 return;
             this.store.updateContainerBounds(currentId, this.theme);
+            if (current.nodeType === "composition") {
+                this.refreshCompositionReferenceNodes(current.id);
+            }
             currentId = current.parentId;
         }
     }
@@ -1006,6 +1087,9 @@ export class NodeEditor {
                     break;
                 visited.add(currentId);
                 this.store.updateContainerBounds(currentId, this.theme);
+                if (current.nodeType === "composition") {
+                    this.refreshCompositionReferenceNodes(current.id);
+                }
                 currentId = current.parentId;
             }
         }
@@ -1307,11 +1391,13 @@ export class NodeEditor {
                 if (edge) {
                     this.syncHandleStates(edge.sourceNodeId);
                     this.syncHandleStates(edge.targetNodeId);
+                    this.applyCompositionReferenceForEdge(edge);
                     const snapshot = { ...edge };
                     this.pushHistory({
                         undo: () => {
                             const removed = this.edgeStore.remove(snapshot.id);
                             if (removed) {
+                                this.clearCompositionReferenceForEdge(removed);
                                 this.syncHandleStates(removed.sourceNodeId);
                                 this.syncHandleStates(removed.targetNodeId);
                             }
@@ -1325,6 +1411,7 @@ export class NodeEditor {
                             if (restored) {
                                 this.syncHandleStates(restored.sourceNodeId);
                                 this.syncHandleStates(restored.targetNodeId);
+                                this.applyCompositionReferenceForEdge(restored);
                             }
                             this.syncToolbarState();
                         },
@@ -1356,6 +1443,7 @@ export class NodeEditor {
                             this.removeNodeAndIncidentEdges(snapshot.id);
                         }
                         this.restoreNodeSnapshots(dropResult.beforeSnapshots);
+                        this.restoreEdgeSnapshots(dropResult.removedReferenceEdgeSnapshots);
                         this.restoreSelectionSnapshot(selectionBefore);
                         for (const parentId of dropResult.affectedParentIds) {
                             this.refreshContainerChain(parentId);
@@ -1364,6 +1452,14 @@ export class NodeEditor {
                     },
                     redo: () => {
                         this.restoreNodeSnapshots(dropResult.afterSnapshots);
+                        for (const snapshot of dropResult.removedReferenceEdgeSnapshots) {
+                            const removed = this.edgeStore.remove(snapshot.id);
+                            if (removed) {
+                                this.clearCompositionReferenceForEdge(removed);
+                                this.syncHandleStates(removed.sourceNodeId);
+                                this.syncHandleStates(removed.targetNodeId);
+                            }
+                        }
                         for (const snapshot of dropResult.cloneSnapshots) {
                             this.restoreNodeSnapshots([snapshot]);
                         }
@@ -1466,6 +1562,7 @@ export class NodeEditor {
                         parentId: snapshot.parentId,
                     };
                     if (this.store.setParent(source.id, null)) {
+                        const removedReferenceEdgeSnapshots = this.removeCompositionReferenceEdgesForNode(source.id);
                         const afterPlacement = {
                             localX: source.localX,
                             localY: source.localY,
@@ -1480,6 +1577,7 @@ export class NodeEditor {
                             historyEntry = {
                                 undo: () => {
                                     this.store.restoreNodePlacement(source.id, beforePlacement.localX, beforePlacement.localY, beforePlacement.parentId);
+                                    this.restoreEdgeSnapshots(removedReferenceEdgeSnapshots);
                                     this.refreshContainerChain(afterPlacement.parentId);
                                     this.refreshContainerChain(beforePlacement.parentId);
                                     this.restoreSelectionSnapshot(selectionBefore);
@@ -1487,6 +1585,14 @@ export class NodeEditor {
                                 },
                                 redo: () => {
                                     this.store.restoreNodePlacement(source.id, afterPlacement.localX, afterPlacement.localY, afterPlacement.parentId);
+                                    for (const edgeSnapshot of removedReferenceEdgeSnapshots) {
+                                        const removed = this.edgeStore.remove(edgeSnapshot.id);
+                                        if (removed) {
+                                            this.clearCompositionReferenceForEdge(removed);
+                                            this.syncHandleStates(removed.sourceNodeId);
+                                            this.syncHandleStates(removed.targetNodeId);
+                                        }
+                                    }
                                     this.refreshContainerChain(beforePlacement.parentId);
                                     this.refreshContainerChain(afterPlacement.parentId);
                                     this.restoreSelectionSnapshot(selectionBefore);
@@ -1566,6 +1672,11 @@ export class NodeEditor {
         const targetNode = this.store.get(targetNodeId);
         if (!sourceNode || !targetNode)
             return false;
+        if (sourceNode.nodeType === "node" &&
+            targetNode.nodeType === "composition" &&
+            !this.canCreateCompositionReference(sourceNodeId, targetNodeId)) {
+            return false;
+        }
         if (this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide))
             return false;
         if (this.edgeStore.hasConnection(targetNodeId, targetHandleSide))
@@ -1602,6 +1713,9 @@ export class NodeEditor {
             }
         }
         for (const edge of removedEdges) {
+            if (!removedIdSet.has(edge.sourceNodeId)) {
+                this.clearCompositionReferenceForEdge(edge);
+            }
             if (!removedIdSet.has(edge.sourceNodeId)) {
                 affectedNodeIds.add(edge.sourceNodeId);
             }

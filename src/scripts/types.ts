@@ -142,6 +142,8 @@ export interface BGShaderLocations {
 export interface NodeData {
   id: number;
   nodeType: NodeType;
+  /** Referenced composition id when an ordinary node is promoted visually. */
+  compositionRefId: number | null;
   isDropTarget?: boolean;
   /** Position relative to parent node (or world origin if parentId is null). */
   localX: number;

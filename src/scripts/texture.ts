@@ -15,6 +15,12 @@ interface ThemeStyle {
   borderWidth: number;
 }
 
+export interface CompositionReferencePreviewChild {
+  text: string;
+  width: number;
+  height: number;
+}
+
 export function drawHandle(
   ctx: CanvasRenderingContext2D,
   handle: NodeHandleData,
@@ -115,7 +121,8 @@ export function createTextTexture(
   height: number,
   theme: ThemeName = 'dark',
   nodeType: NodeType = 'node',
-  isCollapsed: boolean = false
+  isCollapsed: boolean = false,
+  compositionReferenceChildren: CompositionReferencePreviewChild[] | null = null
 ): WebGLTexture {
   canvas.width = width;
   canvas.height = height;
@@ -123,10 +130,20 @@ export function createTextTexture(
   const s = isContainerNodeType(nodeType)
     ? G_NODE_THEMES[theme]
     : NODE_THEMES[theme];
+  const isCompositionReference =
+    nodeType === 'node' && compositionReferenceChildren !== null;
   const headOnly = nodeType === 'composition-child' || isCollapsed;
 
   // Background
-  if (!headOnly) {
+  if (isCompositionReference) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = theme === 'light'
+      ? 'rgba(236, 253, 245, 0.9)'
+      : 'rgba(6, 78, 59, 0.55)';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, width, height, 8);
+    ctx.fill();
+  } else if (!headOnly) {
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = s.bgFill;
     if (isContainerNodeType(nodeType)) ctx.globalAlpha = 0.5;
@@ -143,15 +160,17 @@ export function createTextTexture(
   }
 
   // Border
-  ctx.strokeStyle = s.borderStroke;
-  ctx.lineWidth = s.borderWidth;
-  if (isContainerNodeType(nodeType)) ctx.setLineDash([8, 8]);
+  ctx.strokeStyle = isCompositionReference ? '#34d399' : s.borderStroke;
+  ctx.lineWidth = isCompositionReference ? 2 : s.borderWidth;
+  if (isContainerNodeType(nodeType) && !isCompositionReference) ctx.setLineDash([8, 8]);
   ctx.stroke();
   ctx.setLineDash([]);
 
   // Header bar (only for leaf nodes)
   if (nodeType === 'node' || nodeType === 'composition-child' || isCollapsed) {
-    ctx.fillStyle = s.headerFill;
+    ctx.fillStyle = isCompositionReference
+      ? (theme === 'light' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.35)')
+      : s.headerFill;
     ctx.beginPath();
     ctx.roundRect(0, 0, width, headOnly ? height : NODE_LAYOUT.headerHeight, 8);
     ctx.fill();
@@ -214,9 +233,13 @@ export function createTextTexture(
   }
 
   // Body hint
-  ctx.fillStyle = s.bodyFill;
-  ctx.font = '12px Geist, sans-serif';
-  if (nodeType === 'node' && !isCollapsed) ctx.fillText('Drag to move', 10, 50);
+  if (isCompositionReference) {
+    drawCompositionReferenceChildren(ctx, compositionReferenceChildren ?? [], theme, width);
+  } else {
+    ctx.fillStyle = s.bodyFill;
+    ctx.font = '12px Geist, sans-serif';
+    if (nodeType === 'node' && !isCollapsed) ctx.fillText('Drag to move', 10, 50);
+  }
 
   // Upload to WebGL
   const tex = gl.createTexture()!;
@@ -229,4 +252,50 @@ export function createTextTexture(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
   return tex;
+}
+
+function drawCompositionReferenceChildren(
+  ctx: CanvasRenderingContext2D,
+  children: CompositionReferencePreviewChild[],
+  theme: ThemeName,
+  width: number
+): void {
+  const childHeaderFill = theme === 'light'
+    ? 'rgba(20, 184, 166, 0.28)'
+    : 'rgba(20, 184, 166, 0.5)';
+  const childFill = theme === 'light'
+    ? 'rgba(240, 253, 250, 0.78)'
+    : 'rgba(15, 118, 110, 0.34)';
+  const childStroke = theme === 'light'
+    ? 'rgba(13, 148, 136, 0.8)'
+    : 'rgba(94, 234, 212, 0.72)';
+  const titleFill = theme === 'light' ? '#0f172a' : '#ecfeff';
+
+  let y = 50;
+  for (const child of children) {
+    const childWidth = Math.min(child.width, width - 40);
+    const childHeight = Math.max(NODE_LAYOUT.headerHeight, child.height);
+    const x = (width - childWidth) / 2;
+
+    ctx.fillStyle = childFill;
+    ctx.beginPath();
+    ctx.roundRect(x, y, childWidth, childHeight, 8);
+    ctx.fill();
+
+    ctx.strokeStyle = childStroke;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = childHeaderFill;
+    ctx.beginPath();
+    ctx.roundRect(x, y, childWidth, NODE_LAYOUT.headerHeight, 8);
+    ctx.fill();
+
+    ctx.fillStyle = titleFill;
+    ctx.font = '600 13px Geist, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(child.text, x + 12, y + NODE_LAYOUT.headerHeight / 2);
+
+    y += childHeight + 10;
+  }
 }

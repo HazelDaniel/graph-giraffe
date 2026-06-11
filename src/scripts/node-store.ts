@@ -10,7 +10,10 @@ import {
   ThemeName,
   NodeType,
 } from './types.js';
-import { createTextTexture } from './texture.js';
+import {
+  CompositionReferencePreviewChild,
+  createTextTexture,
+} from './texture.js';
 import { getWorldPosition, reparent } from './scene-graph.js';
 import { AccessibilityTree } from './accessibility.js';
 
@@ -253,6 +256,50 @@ export class NodeStore {
     handle.isConnected = isConnected;
   }
 
+  setCompositionReference(nodeId: number, compositionId: number, theme: ThemeName): boolean {
+    const node = this.get(nodeId);
+    const composition = this.get(compositionId);
+    if (!node || !composition) return false;
+    if (node.nodeType !== 'node' || composition.nodeType !== 'composition') return false;
+    if (node.parentId === null) return false;
+
+    node.compositionRefId = compositionId;
+    this.currentTheme = theme;
+    this.syncNodePresentation(nodeId);
+    this.refreshNodeTexture(node, theme);
+    return true;
+  }
+
+  clearCompositionReference(nodeId: number, theme: ThemeName): boolean {
+    const node = this.get(nodeId);
+    if (!node || node.nodeType !== 'node' || node.compositionRefId === null) {
+      return false;
+    }
+
+    node.compositionRefId = null;
+    this.currentTheme = theme;
+    this.syncNodePresentation(nodeId);
+    this.refreshNodeTexture(node, theme);
+    return true;
+  }
+
+  getCompositionReferenceNodes(compositionId: number): NodeData[] {
+    const refs: NodeData[] = [];
+    for (const node of this.nodes.values()) {
+      if (node.nodeType === 'node' && node.compositionRefId === compositionId) {
+        refs.push(node);
+      }
+    }
+    return refs;
+  }
+
+  refreshCompositionReferences(compositionId: number, theme: ThemeName): void {
+    for (const node of this.getCompositionReferenceNodes(compositionId)) {
+      this.syncNodePresentation(node.id);
+      this.refreshNodeTexture(node, theme);
+    }
+  }
+
   /** Assign a new parent to a child node, preserving world position. */
   setParent(childId: number, newParentId: number | null): boolean {
     const changed = reparent(childId, newParentId, this.allNodesMap);
@@ -450,7 +497,8 @@ export class NodeStore {
       node.height,
       theme ?? this.currentTheme,
       node.nodeType,
-      this.shouldCollapseNode(node)
+      this.shouldCollapseNode(node),
+      this.getCompositionReferencePreviewChildren(node)
     );
     this.gl.deleteTexture(oldTexture);
   }
@@ -464,7 +512,7 @@ export class NodeStore {
     }
 
     const shouldCollapse = this.shouldCollapseNode(node);
-    const { width, height } = getDefaultNodeSize(node.nodeType, shouldCollapse);
+    const { width, height } = this.getPresentedNodeSize(node, shouldCollapse);
 
     if (node.width === width && node.height === height) return;
 
@@ -474,12 +522,53 @@ export class NodeStore {
   }
 
   private shouldCollapseNode(node: NodeData): boolean {
+    if (node.compositionRefId !== null) return false;
     if (node.nodeType === 'composition-child') return true;
     if (node.nodeType !== 'node') return false;
     if (node.parentId === null) return false;
 
     const parent = this.get(node.parentId);
     return parent?.nodeType === 'group';
+  }
+
+  private getPresentedNodeSize(
+    node: NodeData,
+    shouldCollapse: boolean
+  ): { width: number; height: number } {
+    if (node.nodeType === 'node' && node.compositionRefId !== null) {
+      const composition = this.get(node.compositionRefId);
+      if (composition?.nodeType === 'composition') {
+        return {
+          width: composition.width,
+          height: composition.height,
+        };
+      }
+      return getDefaultNodeSize('composition');
+    }
+
+    return getDefaultNodeSize(node.nodeType, shouldCollapse);
+  }
+
+  private getCompositionReferencePreviewChildren(
+    node: NodeData
+  ): CompositionReferencePreviewChild[] | null {
+    if (node.nodeType !== 'node' || node.compositionRefId === null) {
+      return null;
+    }
+
+    const composition = this.get(node.compositionRefId);
+    if (!composition || composition.nodeType !== 'composition') {
+      return [];
+    }
+
+    return composition.childIds
+      .map((childId) => this.get(childId))
+      .filter((child): child is NodeData => Boolean(child))
+      .map((child) => ({
+        text: child.text,
+        width: child.width,
+        height: child.height,
+      }));
   }
 
   private createHandleState(
@@ -555,6 +644,7 @@ export class NodeStore {
       parentId,
       childIds: [],
       nodeType,
+      compositionRefId: null,
       isDropTarget,
       handles,
     };
