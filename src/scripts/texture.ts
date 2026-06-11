@@ -114,18 +114,19 @@ export function createTextTexture(
   width: number,
   height: number,
   theme: ThemeName = 'dark',
-  nodeType: NodeType = 'node'
+  nodeType: NodeType = 'node',
+  isCollapsed: boolean = false
 ): WebGLTexture {
   canvas.width = width;
   canvas.height = height;
 
-
   const s = isContainerNodeType(nodeType)
     ? G_NODE_THEMES[theme]
     : NODE_THEMES[theme];
+  const headOnly = nodeType === 'composition-child' || isCollapsed;
 
   // Background
-  if (nodeType !== 'composition-child') {
+  if (!headOnly) {
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = s.bgFill;
     if (isContainerNodeType(nodeType)) ctx.globalAlpha = 0.5;
@@ -133,6 +134,12 @@ export function createTextTexture(
     ctx.roundRect(0, 0, width, height, 8);
     ctx.fill();
     ctx.globalAlpha = 1.0;
+  } else {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = s.headerFill;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, width, height, 8);
+    ctx.fill();
   }
 
   // Border
@@ -143,17 +150,18 @@ export function createTextTexture(
   ctx.setLineDash([]);
 
   // Header bar (only for leaf nodes)
-  if (nodeType === 'node' || nodeType === 'composition-child') {
+  if (nodeType === 'node' || nodeType === 'composition-child' || isCollapsed) {
     ctx.fillStyle = s.headerFill;
     ctx.beginPath();
-    if (nodeType === 'composition-child') ctx.roundRect(0, 0, width, NODE_LAYOUT.headerHeight, 8);
-    else ctx.roundRect(0, 0, width, NODE_LAYOUT.headerHeight, [8, 8, 0, 0]);
+    ctx.roundRect(0, 0, width, headOnly ? height : NODE_LAYOUT.headerHeight, 8);
     ctx.fill();
   }
 
   // Title (only for leaf nodes, group/composition labels are handled elsewhere)
-  const titleY = isContainerNodeType(nodeType) ? 20 : NODE_LAYOUT.headerHeight / 2;
-  if (nodeType === 'node' || nodeType === 'composition-child') {
+  const titleY = isContainerNodeType(nodeType)
+    ? 20
+    : (headOnly ? height / 2 : NODE_LAYOUT.headerHeight / 2);
+  if (nodeType === 'node' || nodeType === 'composition-child' || isCollapsed) {
     ctx.fillStyle = s.titleFill;
     ctx.font = '600 14px Geist, sans-serif';
     ctx.textBaseline = 'middle';
@@ -165,7 +173,12 @@ export function createTextTexture(
   ctx.font = '14px Geist, sans-serif';
   ctx.fillText('✕', width - NODE_LAYOUT.closeBtnPaddingRight, titleY);
 
-  if (nodeType === 'node' || nodeType === 'composition-child' || nodeType === 'group') {
+  if (
+    nodeType === 'node' ||
+    nodeType === 'composition-child' ||
+    nodeType === 'group' ||
+    isCollapsed
+  ) {
     // Edit icon
     ctx.fillStyle = s.titleFill;
     ctx.font = '14px Geist, sans-serif';
@@ -200,16 +213,10 @@ export function createTextTexture(
     ctx.textAlign = 'left'; // restore
   }
 
-  if (nodeType === 'composition-child') {
-    ctx.fillStyle = s.titleFill;
-    ctx.font = '14px Geist, sans-serif';
-    ctx.fillText('✎', width - NODE_LAYOUT.editBtnPaddingRight, titleY);
-  }
-
   // Body hint
   ctx.fillStyle = s.bodyFill;
   ctx.font = '12px Geist, sans-serif';
-  if (nodeType === "node") ctx.fillText('Drag to move', 10, 50);
+  if (nodeType === 'node' && !isCollapsed) ctx.fillText('Drag to move', 10, 50);
 
   // Upload to WebGL
   const tex = gl.createTexture()!;

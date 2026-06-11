@@ -1,27 +1,34 @@
-#MINOR
-- deleting a group node should cascade to children nodes
-- a plus icon at the bottom of a group node to provide a better UX to node creation
-
-
 #MAJOR
 - a computation stack for undo-redo
 - multi-node selection
 - a composition node (can only nest inside of a group node, and can only contain ordinary nodes)
 - texture picker (with preview list) for both group nodes and nodes
 - other primitives like:
-		* node handles
-		* labels (types: group and node)
-		* edges (types: cubic, line, line-curve)
-		* edge labels 
-		* checkboxes (determines whether a node contributes to the business logic - could be useful in things like settings simulator)
-		* edge heads
-		* node buttons (types: functional, inert) (to be displayed on the node header, max 3)
+		* node handles []
+		* labels (types: group and node) []
+		* edges (types: cubic, line, line-curve) [)
+		* edge labels  ()
+		* edge heads []
+		* node heads
+			(they represent the header portion of the nodes,
+			they come in different variants based on the buttons they allow (max 3),
+			and they will have different textures from the node body, node heads only apply to ordinary nodes and composite-child nodes - composite child nodes will use whatever node heads the node chooses)
+* node buttons (types: functional, inert) (to be displayed on the node header,comes with chosen texture, max 3)
 - handle-to-handle animation of edge labels
-
+- Group dragging of multiple selected nodes. (Right now multi-select is mainly for selection and bulk actions, not moving the whole selection as a unit)
+- node spotlight (lerp camera movement to show current node. keeps track of a new camera system - in collaboration contexts)
+- resizing of composite-child nodes to show just the head
+- collapsibility of nodes to show just the head when placed in a group, and expandability when moved out
+- introduce another primitive called composition-reference
 
 - EVENT ACTIONS (undoable/redoable):
 	* connection
-	* deletion (node, edge, groupnode)
-	* creation (node, edge, groupnode)
+	* deletion (node, edge, groupnode, composition)
+	* creation (node, edge, groupnode, composition)
 	* model matrix translation
 	* label update
+    * [others not yet mapped out]
+
+- TEXTURE BUTTON ACTIONS (the events that canvas triggers)
+	* edit
+	* delete

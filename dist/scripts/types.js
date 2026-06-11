@@ -21,6 +21,7 @@ export const DEFAULT_HANDLE_STYLE = {
 };
 export const NODE_SIZE = {
     node: { width: 180, height: 150 },
+    nodeCollapsed: { width: 180, height: NODE_LAYOUT.headerHeight },
     group: { width: 240, height: 200 },
     composition: { width: 240, height: 200 },
     compositionChild: { width: 180, height: NODE_LAYOUT.headerHeight },
@@ -37,7 +38,7 @@ export function isCandidateNodeType(nodeType, connectionMode) {
     }
     return nodeType === 'node' || nodeType === 'composition';
 }
-export function getDefaultNodeSize(nodeType) {
+export function getDefaultNodeSize(nodeType, isCollapsed = false) {
     switch (nodeType) {
         case 'group':
         case 'composition':
@@ -45,6 +46,7 @@ export function getDefaultNodeSize(nodeType) {
         case 'composition-child':
             return NODE_SIZE.compositionChild;
         case 'node':
+            return isCollapsed ? NODE_SIZE.nodeCollapsed : NODE_SIZE.node;
         default:
             return NODE_SIZE.node;
     }

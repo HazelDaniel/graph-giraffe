@@ -143,8 +143,10 @@ export class NodeStore {
             for (const childId of childrenToReparent) {
                 reparent(childId, node.parentId, allNodes);
                 const child = allNodes.get(childId);
-                if (child)
+                if (child) {
+                    this.syncNodePresentation(childId);
                     this.syncToMap(child);
+                }
             }
         }
         if (node.parentId !== null) {
@@ -208,7 +210,11 @@ export class NodeStore {
     }
     /** Assign a new parent to a child node, preserving world position. */
     setParent(childId, newParentId) {
-        return reparent(childId, newParentId, this.allNodesMap);
+        const changed = reparent(childId, newParentId, this.allNodesMap);
+        if (!changed)
+            return false;
+        this.syncNodePresentation(childId);
+        return true;
     }
     /** Restore a node to an exact local position and parent. */
     restoreNodePlacement(childId, localX, localY, parentId) {
@@ -235,6 +241,7 @@ export class NodeStore {
                 parent.childIds.push(childId);
             }
         }
+        this.syncNodePresentation(childId);
         return true;
     }
     /** Restore a node without re-validating the historical parent relationship. */
@@ -257,6 +264,7 @@ export class NodeStore {
                 parent.childIds.push(childId);
             }
         }
+        this.syncNodePresentation(childId);
         return true;
     }
     /**
@@ -336,8 +344,33 @@ export class NodeStore {
     }
     refreshNodeTexture(node, theme) {
         const oldTexture = node.texture;
-        node.texture = createTextTexture(this.gl, this.ctx, this.textCanvas, node.text, node.width, node.height, theme ?? this.currentTheme, node.nodeType);
+        node.texture = createTextTexture(this.gl, this.ctx, this.textCanvas, node.text, node.width, node.height, theme ?? this.currentTheme, node.nodeType, this.shouldCollapseNode(node));
         this.gl.deleteTexture(oldTexture);
+    }
+    syncNodePresentation(nodeId) {
+        const node = this.get(nodeId);
+        if (!node)
+            return;
+        if (node.nodeType !== 'node') {
+            return;
+        }
+        const shouldCollapse = this.shouldCollapseNode(node);
+        const { width, height } = getDefaultNodeSize(node.nodeType, shouldCollapse);
+        if (node.width === width && node.height === height)
+            return;
+        node.width = width;
+        node.height = height;
+        this.refreshNodeTexture(node, this.currentTheme);
+    }
+    shouldCollapseNode(node) {
+        if (node.nodeType === 'composition-child')
+            return true;
+        if (node.nodeType !== 'node')
+            return false;
+        if (node.parentId === null)
+            return false;
+        const parent = this.get(node.parentId);
+        return parent?.nodeType === 'group';
     }
     createHandleState(candidateId, nodeType, existingHandles = []) {
         if (!isCandidateNodeType(nodeType, this.connectionMode))

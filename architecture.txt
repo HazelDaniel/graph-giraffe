@@ -1,0 +1,24 @@
+  - NodeEditor is the main orchestrator. It wires camera, stores, picking, rendering, controls, selection, pointer gestures, and history in one place,
+    which is the right boundary for adding new editor behaviors later. See src/scripts/node-editor.ts:119, src/scripts/node-editor.ts:254, src/scripts/
+    node-editor.ts:1374.
+
+  - The data model already distinguishes node, group, composition, and composition-child, with helpers for container and leaf behavior plus connection-
+    mode gating. See src/scripts/types.ts:4, src/scripts/types.ts:88, src/scripts/types.ts:96.
+
+  - Parenting and reparenting are already implemented with world-position preservation and cycle guards, including the special rules around composition
+    nesting. See src/scripts/scene-graph.ts:32, src/scripts/scene-graph.ts:39.
+
+  - Undo/redo exists, but it is still a minimal closure stack, not a richer computation stack yet. See src/scripts/history.ts:6.
+  - Multi-select and multi-node drag are already present, with selection-root extraction, selection snapshots, and drop-target inference for groups and
+    compositions. See src/scripts/node-editor.ts:469, src/scripts/node-editor.ts:588, src/scripts/node-editor.ts:1777.
+
+  - Edge creation, deletion, hit-testing, labels, and head rendering already exist. The edge router supports line, cubic, and line-curve. See src/
+    scripts/edge-store.ts:54, src/scripts/edge-geometry.ts:30, src/scripts/renderer.ts:216.
+
+  - Node rendering already has texture generation for different node kinds, plus close/edit icons and the group plus button. See src/scripts/
+    texture.ts:109, src/scripts/node-editor.ts:1479.
+
+  - The UI chrome is already split into custom elements for the sidebar, history pane, action pane, and select control, which is a good scaling
+    boundary for future editor UI. See src/components/ui-controls.ts:29, src/components/history-pane.ts:70, src/components/action-pane.ts:111, src/
+    components/select.ts:195.
+

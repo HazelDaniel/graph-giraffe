@@ -177,7 +177,10 @@ export class NodeStore {
       for (const childId of childrenToReparent) {
         reparent(childId, node.parentId, allNodes);
         const child = allNodes.get(childId);
-        if (child) this.syncToMap(child);
+        if (child) {
+          this.syncNodePresentation(childId);
+          this.syncToMap(child);
+        }
       }
     }
 
@@ -252,7 +255,11 @@ export class NodeStore {
 
   /** Assign a new parent to a child node, preserving world position. */
   setParent(childId: number, newParentId: number | null): boolean {
-    return reparent(childId, newParentId, this.allNodesMap);
+    const changed = reparent(childId, newParentId, this.allNodesMap);
+    if (!changed) return false;
+
+    this.syncNodePresentation(childId);
+    return true;
   }
 
   /** Restore a node to an exact local position and parent. */
@@ -290,6 +297,7 @@ export class NodeStore {
       }
     }
 
+    this.syncNodePresentation(childId);
     return true;
   }
 
@@ -323,6 +331,7 @@ export class NodeStore {
       }
     }
 
+    this.syncNodePresentation(childId);
     return true;
   }
 
@@ -440,9 +449,37 @@ export class NodeStore {
       node.width,
       node.height,
       theme ?? this.currentTheme,
-      node.nodeType
+      node.nodeType,
+      this.shouldCollapseNode(node)
     );
     this.gl.deleteTexture(oldTexture);
+  }
+
+  private syncNodePresentation(nodeId: number): void {
+    const node = this.get(nodeId);
+    if (!node) return;
+
+    if (node.nodeType !== 'node') {
+      return;
+    }
+
+    const shouldCollapse = this.shouldCollapseNode(node);
+    const { width, height } = getDefaultNodeSize(node.nodeType, shouldCollapse);
+
+    if (node.width === width && node.height === height) return;
+
+    node.width = width;
+    node.height = height;
+    this.refreshNodeTexture(node, this.currentTheme);
+  }
+
+  private shouldCollapseNode(node: NodeData): boolean {
+    if (node.nodeType === 'composition-child') return true;
+    if (node.nodeType !== 'node') return false;
+    if (node.parentId === null) return false;
+
+    const parent = this.get(node.parentId);
+    return parent?.nodeType === 'group';
   }
 
   private createHandleState(

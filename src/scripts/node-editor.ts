@@ -949,14 +949,15 @@ export class NodeEditor {
         snapshot.handleStates.find((entry) => entry.side === handle.side)
           ?.isConnected ?? false,
     }));
-    this.store.refreshNodeTexture(node, this.theme);
-
     this.store.forceRestoreNodePlacement(
       snapshot.id,
       snapshot.localX,
       snapshot.localY,
       snapshot.parentId
     );
+    node.width = snapshot.width;
+    node.height = snapshot.height;
+    this.store.refreshNodeTexture(node, this.theme);
   }
 
   private restoreNodeSnapshots(snapshots: NodeHistorySnapshot[]): void {
@@ -2017,7 +2018,7 @@ export class NodeEditor {
               localY: source.localY,
               parentId: source.parentId,
             };
-            this.refreshContainerChain(hoveredContainer.id);
+            this.refreshContainerChain(source.id);
             if (oldParentId !== null && oldParentId !== hoveredContainer.id) {
               this.refreshContainerChain(oldParentId);
             }
@@ -2034,7 +2035,7 @@ export class NodeEditor {
                     beforePlacement.localY,
                     beforePlacement.parentId
                   );
-                  this.refreshContainerChain(afterPlacement.parentId);
+                  this.refreshContainerChain(source.id);
                   this.refreshContainerChain(beforePlacement.parentId);
                   this.restoreSelectionSnapshot(selectionBefore);
                   this.syncToolbarState();
@@ -2046,8 +2047,8 @@ export class NodeEditor {
                     afterPlacement.localY,
                     afterPlacement.parentId
                   );
+                  this.refreshContainerChain(source.id);
                   this.refreshContainerChain(beforePlacement.parentId);
-                  this.refreshContainerChain(afterPlacement.parentId);
                   this.restoreSelectionSnapshot(selectionBefore);
                   this.syncToolbarState();
                 },
@@ -2060,6 +2061,7 @@ export class NodeEditor {
               snapshot.localY,
               snapshot.parentId
             );
+            this.refreshContainerChain(source.id);
           }
         } else {
           this.store.restoreNodePlacement(
@@ -2068,6 +2070,7 @@ export class NodeEditor {
             snapshot.localY,
             snapshot.parentId
           );
+          this.refreshContainerChain(source.id);
         }
       }
 
