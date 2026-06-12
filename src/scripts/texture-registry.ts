@@ -67,7 +67,9 @@ const DEFAULT_TEXTURE_SOURCES: TextureSource[] = [
   ),
 ];
 
-const NODE_ID_TEXTURE_LOOKUP: Record<NodeType, NodeTextureIds> = {
+type TextureLookupKeys = NodeType | 'composition-reference';
+
+const NODE_ID_TEXTURE_LOOKUP: Record<TextureLookupKeys, NodeTextureIds> = {
   node: {
     body: "gg-node-body-glass",
     head: "gg-node-head-graphite",
@@ -83,6 +85,10 @@ const NODE_ID_TEXTURE_LOOKUP: Record<NodeType, NodeTextureIds> = {
   "composition-child": {
     body: "gg-node-body-glass",
     head: "gg-composition-child-head-teal",
+  },
+  "composition-reference": {
+    body: "gg-composition-reference-body",
+    head: "gg-composition-reference-child-head",
   },
 };
 
@@ -116,8 +122,9 @@ class textureRegistry {
       const kind = customEvent.detail.kind;
       const prefixKey = kind.substring(0, kind.lastIndexOf("-"));
       const suffixKey = kind.substring(prefixKey.length + 1, kind.length);
-      NODE_ID_TEXTURE_LOOKUP[prefixKey as NodeType] = {
-        ...NODE_ID_TEXTURE_LOOKUP[prefixKey as NodeType],
+      const lookupKey = prefixKey as TextureLookupKeys;
+      NODE_ID_TEXTURE_LOOKUP[lookupKey] = {
+        ...NODE_ID_TEXTURE_LOOKUP[lookupKey],
         [suffixKey]: customEvent.detail.value,
       };
     });
@@ -202,6 +209,11 @@ class textureRegistry {
 
 export function getDefaultTextureIds(nodeType: NodeType): NodeTextureIds {
   const defaults = NODE_ID_TEXTURE_LOOKUP[nodeType];
+  return { ...defaults };
+}
+
+export function getCompositionReferenceTextureIds(): NodeTextureIds {
+  const defaults = NODE_ID_TEXTURE_LOOKUP['composition-reference'];
   return { ...defaults };
 }
 

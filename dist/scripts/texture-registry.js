@@ -26,6 +26,10 @@ const NODE_ID_TEXTURE_LOOKUP = {
         body: "gg-node-body-glass",
         head: "gg-composition-child-head-teal",
     },
+    "composition-reference": {
+        body: "gg-composition-reference-body",
+        head: "gg-composition-reference-child-head",
+    },
 };
 /**
  * Durable texture source registry.
@@ -52,8 +56,9 @@ class textureRegistry {
             const kind = customEvent.detail.kind;
             const prefixKey = kind.substring(0, kind.lastIndexOf("-"));
             const suffixKey = kind.substring(prefixKey.length + 1, kind.length);
-            NODE_ID_TEXTURE_LOOKUP[prefixKey] = {
-                ...NODE_ID_TEXTURE_LOOKUP[prefixKey],
+            const lookupKey = prefixKey;
+            NODE_ID_TEXTURE_LOOKUP[lookupKey] = {
+                ...NODE_ID_TEXTURE_LOOKUP[lookupKey],
                 [suffixKey]: customEvent.detail.value,
             };
         });
@@ -125,6 +130,10 @@ class textureRegistry {
 }
 export function getDefaultTextureIds(nodeType) {
     const defaults = NODE_ID_TEXTURE_LOOKUP[nodeType];
+    return { ...defaults };
+}
+export function getCompositionReferenceTextureIds() {
+    const defaults = NODE_ID_TEXTURE_LOOKUP['composition-reference'];
     return { ...defaults };
 }
 function createDefaultSource(id, label, kind, fill, stroke) {

@@ -14,7 +14,7 @@ import {
   CompositionReferencePreviewChild,
   createOverlayTexture,
 } from './texture.js';
-import { getDefaultTextureIds } from './texture-registry.js';
+import { getDefaultTextureIds, getCompositionReferenceTextureIds } from './texture-registry.js';
 import { getWorldPosition, reparent } from './scene-graph.js';
 import { AccessibilityTree } from './accessibility.js';
 
@@ -265,6 +265,7 @@ export class NodeStore {
     if (node.parentId === null) return false;
 
     node.compositionRefId = compositionId;
+    node.textureIds = getCompositionReferenceTextureIds();
     this.currentTheme = theme;
     this.syncNodePresentation(nodeId);
     this.refreshNodeTexture(node, theme);
@@ -278,6 +279,7 @@ export class NodeStore {
     }
 
     node.compositionRefId = null;
+    node.textureIds = getDefaultTextureIds('node');
     this.currentTheme = theme;
     this.syncNodePresentation(nodeId);
     this.refreshNodeTexture(node, theme);
