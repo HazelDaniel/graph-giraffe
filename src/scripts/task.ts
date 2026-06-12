@@ -7,7 +7,6 @@ async function init(): Promise<void> {
 
   const BGvsSource = document.getElementById("bg-v-shader")?.textContent;
   const BGfsSource = document.getElementById("bg-f-shader")?.textContent;
-
   if (!vsSource || !fsSource) throw new Error("Shader source missing from DOM");
   if (!BGvsSource || !BGfsSource)
     throw new Error("Background shader source missing from DOM");

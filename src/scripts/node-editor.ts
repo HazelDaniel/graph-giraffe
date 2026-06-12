@@ -155,6 +155,7 @@ export class NodeEditor {
   private selectedEdgeIds: Set<number> = new Set();
   private selectionKind: SelectionKind = null;
   private isMultiSelectMode: boolean = false;
+  private isZooming: boolean = false;
   private activeLabelEdit: ActiveLabelEdit | null = null;
   private selectionRep: NodeData | null = null;
   private draggingSelection: SelectionDragState | null = null;
@@ -229,6 +230,8 @@ export class NodeEditor {
     const geometry = new GeometryNode(gl, "rounded-square");
     const bgGeometry = new BGGeometryNode(gl, "grid", backgroundCanvas);
     this.connectionMode = options.connectionMode ?? "node";
+
+    // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
 
     this.camera = new Camera();
     this.store = new NodeStore(
@@ -663,7 +666,10 @@ export class NodeEditor {
           continue;
         }
 
-        if (node.nodeType === "composition" || node.nodeType === "composition-child") {
+        if (
+          node.nodeType === "composition" ||
+          node.nodeType === "composition-child"
+        ) {
           affectedParents.add(oldParentId);
           didChange = true;
         }
@@ -1002,7 +1008,9 @@ export class NodeEditor {
     }
   }
 
-  private isCompositionReferenceEdge(edge: EdgeData | EdgeHistorySnapshot): boolean {
+  private isCompositionReferenceEdge(
+    edge: EdgeData | EdgeHistorySnapshot
+  ): boolean {
     const source = this.store.get(edge.sourceNodeId);
     const target = this.store.get(edge.targetNodeId);
     return source?.nodeType === "node" && target?.nodeType === "composition";
@@ -1033,17 +1041,21 @@ export class NodeEditor {
     edge: EdgeData | EdgeHistorySnapshot
   ): void {
     if (!this.isCompositionReferenceEdge(edge)) return;
-    if (!this.canCreateCompositionReference(edge.sourceNodeId, edge.targetNodeId)) {
+    if (
+      !this.canCreateCompositionReference(edge.sourceNodeId, edge.targetNodeId)
+    ) {
       return;
     }
 
     const source = this.store.get(edge.sourceNodeId);
     const oldParentId = source?.parentId ?? null;
-    if (this.store.setCompositionReference(
-      edge.sourceNodeId,
-      edge.targetNodeId,
-      this.theme
-    )) {
+    if (
+      this.store.setCompositionReference(
+        edge.sourceNodeId,
+        edge.targetNodeId,
+        this.theme
+      )
+    ) {
       this.refreshContainerChain(oldParentId);
     }
   }
@@ -1070,7 +1082,9 @@ export class NodeEditor {
     }
   }
 
-  private removeCompositionReferenceEdgesForNode(nodeId: number): EdgeHistorySnapshot[] {
+  private removeCompositionReferenceEdgesForNode(
+    nodeId: number
+  ): EdgeHistorySnapshot[] {
     const removed: EdgeHistorySnapshot[] = [];
     for (const edge of this.edgeStore.allEdges()) {
       if (edge.sourceNodeId !== nodeId) continue;
@@ -1805,8 +1819,11 @@ export class NodeEditor {
     this.releasePointer(canvas, e);
   }
 
-  private handlePointerCancel(e: PointerEvent, canvas: HTMLCanvasElement): void {
-    this.handlePointerUp(e, canvas);;
+  private handlePointerCancel(
+    e: PointerEvent,
+    canvas: HTMLCanvasElement
+  ): void {
+    this.handlePointerUp(e, canvas);
   }
 
   private capturePointer(canvas: HTMLCanvasElement, e: PointerEvent): void {
@@ -1900,7 +1917,10 @@ export class NodeEditor {
         screenY,
         selectionDrag
       );
-      const dropResult = this.applySelectionDrop(selectionDrag, hoveredContainer);
+      const dropResult = this.applySelectionDrop(
+        selectionDrag,
+        hoveredContainer
+      );
 
       this.draggingSelection = null;
       this.draggingNode = null;
@@ -2333,6 +2353,7 @@ export class NodeEditor {
   private handleWheel(e: WheelEvent, canvas: HTMLCanvasElement): void {
     e.preventDefault();
     const { left, top } = canvas.getBoundingClientRect();
+    this.isZooming = Math.abs(e.deltaY) > 80; // TODO: we'll stop drawing group node labels when isZooming to  optimize rendering
     this.camera.zoomAt(e.clientX - left, e.clientY - top, e.deltaY);
   }
 

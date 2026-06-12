@@ -45,6 +45,7 @@ export class NodeEditor {
     selectedEdgeIds = new Set();
     selectionKind = null;
     isMultiSelectMode = false;
+    isZooming = false;
     activeLabelEdit = null;
     selectionRep = null;
     draggingSelection = null;
@@ -84,6 +85,7 @@ export class NodeEditor {
         const geometry = new GeometryNode(gl, "rounded-square");
         const bgGeometry = new BGGeometryNode(gl, "grid", backgroundCanvas);
         this.connectionMode = options.connectionMode ?? "node";
+        // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
         this.camera = new Camera();
         this.store = new NodeStore(gl, textCtx, textCanvas, this.connectionMode, options.handleStyle ?? DEFAULT_HANDLE_STYLE);
         this.edgeStore = new EdgeStore();
@@ -428,7 +430,8 @@ export class NodeEditor {
                     didChange = true;
                     continue;
                 }
-                if (node.nodeType === "composition" || node.nodeType === "composition-child") {
+                if (node.nodeType === "composition" ||
+                    node.nodeType === "composition-child") {
                     affectedParents.add(oldParentId);
                     didChange = true;
                 }
@@ -1355,7 +1358,6 @@ export class NodeEditor {
     }
     handlePointerCancel(e, canvas) {
         this.handlePointerUp(e, canvas);
-        ;
     }
     capturePointer(canvas, e) {
         if (!canvas.setPointerCapture)
@@ -1745,6 +1747,7 @@ export class NodeEditor {
     handleWheel(e, canvas) {
         e.preventDefault();
         const { left, top } = canvas.getBoundingClientRect();
+        this.isZooming = Math.abs(e.deltaY) > 80; // TODO: we'll stop drawing group node labels when isZooming to  optimize rendering
         this.camera.zoomAt(e.clientX - left, e.clientY - top, e.deltaY);
     }
     handleKeyDown(e) {

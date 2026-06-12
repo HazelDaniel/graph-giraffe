@@ -76,3 +76,14 @@
     kind: TextureKind;
   }
 
+Dimension-Specific Caching & SVG Parsing
+a. Fixed-Size Primitives (Nodes, Heads):
+During the parsing phase (texture-registry.ts), uploaded SVGs will have their width and height attributes overridden to 100% (and preserveAspectRatio="none" if necessary) to ensure they scale fluidly.
+TextureService will cache textures using a dimension-specific key: ${textureId}_${width}x${height}.
+The rendering layer will draw the scalable SVG image directly onto a 2D canvas of the exact node dimensions, then upload to WebGL. This eliminates the need for an intermediate DOM div.
+
+b. Growable Containers (Groups, Compositions)
+For containers that resize dynamically as children are added, the SVG will be drawn at a fixed size and used to create a repeating pattern (ctx.createPattern).
+The 2D canvas (sized to the container's new dimensions) will be filled with this repeating pattern row-by-row before uploading to WebGL, ensuring patterns like grid or dots remain crisp and uniform regardless of the container's size.
+
+

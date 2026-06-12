@@ -94,6 +94,7 @@ export class Renderer {
         for (const node of this.store.visibleNodes()) {
             this.drawHandles(node);
         }
+        //TODO: conditionally call based on '!isZooming'
         this.drawGroupLabels();
     }
     drawConnectionPreview() {

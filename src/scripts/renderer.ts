@@ -108,6 +108,7 @@ export class Renderer {
       this.drawHandles(node);
     }
 
+    //TODO: conditionally call based on '!isZooming'
     this.drawGroupLabels();
   }
 
