@@ -11,6 +11,31 @@ export type HandleShape = 'circle' | 'square';
 export type EdgeType = 'line' | 'cubic' | 'line-curve';
 export type EdgeHeadType = 'none' | 'arrow';
 export type EdgeHeadSkinId = 'arrow' | 'chevron' | 'diamond' | 'pill';
+export type TextureKind =
+  | 'node-body'
+  | 'node-head'
+  | 'group-body'
+  | 'group-head'
+  | 'composition-body'
+  | 'composition-head'
+  | 'composition-child-head'
+  | 'composition-reference-body'
+  | 'composition-reference-child-head';
+export type TextureSourceType = 'default' | 'upload';
+
+export interface TextureSource {
+  id: string;
+  label: string;
+  kind: TextureKind;
+  sourceType: TextureSourceType;
+  svgText: string;
+  previewUrl?: string;
+}
+
+export interface NodeTextureIds {
+  body: string;
+  head: string;
+}
 
 export interface HandleStyle {
   shape: HandleShape;
@@ -151,6 +176,8 @@ export interface NodeData {
   width: number;
   height: number;
   text: string;
+  /** Stable texture source ids. Runtime WebGL textures are regenerated from these later. */
+  textureIds: NodeTextureIds;
   texture: WebGLTexture;
   pickColor: [number, number, number];
   isSelected: boolean;

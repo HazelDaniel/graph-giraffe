@@ -22,6 +22,7 @@ import {
   NodeEditorConfig,
   NodeData,
   NodeHandleData,
+  NodeTextureIds,
   HandleSide,
   ThemeName,
   NodeType,
@@ -64,6 +65,7 @@ interface NodeHistorySnapshot {
   width: number;
   height: number;
   text: string;
+  textureIds: NodeTextureIds;
   visible: boolean;
   isSelected: boolean;
   isDropTarget: boolean;
@@ -839,6 +841,7 @@ export class NodeEditor {
       width: node.width,
       height: node.height,
       text: node.text,
+      textureIds: { ...node.textureIds },
       visible: node.visible,
       isSelected: node.isSelected,
       isDropTarget: Boolean(node.isDropTarget),
@@ -948,6 +951,7 @@ export class NodeEditor {
     node.width = snapshot.width;
     node.height = snapshot.height;
     node.text = snapshot.text;
+    node.textureIds = { ...snapshot.textureIds };
     node.visible = snapshot.visible;
     node.isSelected = snapshot.isSelected;
     node.isDropTarget = snapshot.isDropTarget;

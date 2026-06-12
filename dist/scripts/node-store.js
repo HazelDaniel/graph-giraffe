@@ -1,5 +1,6 @@
 import { DEFAULT_HANDLE_STYLE, getDefaultNodeSize, isContainerNodeType, isCandidateNodeType, } from './types.js';
 import { createTextTexture, } from './texture.js';
+import { getDefaultTextureIds } from './texture-registry.js';
 import { getWorldPosition, reparent } from './scene-graph.js';
 import { AccessibilityTree } from './accessibility.js';
 /**
@@ -468,6 +469,7 @@ export class NodeStore {
             width,
             height,
             text,
+            textureIds: getDefaultTextureIds(nodeType),
             texture: createTextTexture(this.gl, this.ctx, this.textCanvas, text, width, height, theme, nodeType),
             pickColor: [r / 255, g / 255, b / 255],
             isSelected,

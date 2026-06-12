@@ -1,24 +1,78 @@
+[CORE]
   - NodeEditor is the main orchestrator. It wires camera, stores, picking, rendering, controls, selection, pointer gestures, and history in one place,
-    which is the right boundary for adding new editor behaviors later. See src/scripts/node-editor.ts:119, src/scripts/node-editor.ts:254, src/scripts/
+    which is the right boundary for adding new editor behaviors later. See src/scripts/node-editor.ts, src/scripts/node-editor.ts, src/scripts/
     node-editor.ts:1374.
 
   - The data model already distinguishes node, group, composition, and composition-child, with helpers for container and leaf behavior plus connection-
-    mode gating. See src/scripts/types.ts:4, src/scripts/types.ts:88, src/scripts/types.ts:96.
+    mode gating. See src/scripts/types.ts, src/scripts/types.ts, src/scripts/types.ts.
 
   - Parenting and reparenting are already implemented with world-position preservation and cycle guards, including the special rules around composition
-    nesting. See src/scripts/scene-graph.ts:32, src/scripts/scene-graph.ts:39.
+    nesting. See src/scripts/scene-graph.ts, src/scripts/scene-graph.ts.
 
-  - Undo/redo exists, but it is still a minimal closure stack, not a richer computation stack yet. See src/scripts/history.ts:6.
+  - Undo/redo exists, but it is still a minimal closure stack, not a richer computation stack yet. See src/scripts/history.ts.
   - Multi-select and multi-node drag are already present, with selection-root extraction, selection snapshots, and drop-target inference for groups and
-    compositions. See src/scripts/node-editor.ts:469, src/scripts/node-editor.ts:588, src/scripts/node-editor.ts:1777.
+    compositions. See src/scripts/node-editor.ts, src/scripts/node-editor.ts, src/scripts/node-editor.ts.
 
   - Edge creation, deletion, hit-testing, labels, and head rendering already exist. The edge router supports line, cubic, and line-curve. See src/
-    scripts/edge-store.ts:54, src/scripts/edge-geometry.ts:30, src/scripts/renderer.ts:216.
+    scripts/edge-store.ts, src/scripts/edge-geometry.ts, src/scripts/renderer.ts.
 
   - Node rendering already has texture generation for different node kinds, plus close/edit icons and the group plus button. See src/scripts/
-    texture.ts:109, src/scripts/node-editor.ts:1479.
+    texture.ts, src/scripts/node-editor.ts.
 
   - The UI chrome is already split into custom elements for the sidebar, history pane, action pane, and select control, which is a good scaling
-    boundary for future editor UI. See src/components/ui-controls.ts:29, src/components/history-pane.ts:70, src/components/action-pane.ts:111, src/
-    components/select.ts:195.
+    boundary for future editor UI. See src/components/ui-controls.ts, src/components/history-pane.ts, src/components/action-pane.ts, src/
+    components/select.ts.
+
+[TEXTURE UPLOAD]
+ The right model is:
+
+  TextureSource -> CanvasImageSource -> WebGLTexture
+
+  Where TextureSource is durable/editor state:
+
+  interface TextureSource {
+    id: string;
+    label: string;
+    kind: "node-body" | "node-head" | "group-body" | "group-head" | "composition-body" | "composition-head";
+    sourceType: "default" | "upload";
+    svgText: string;
+    previewUrl?: string;
+  }
+
+  Then <gg-texture-select> should only be a UI picker. It should not create WebGL textures directly. It should emit a selected textureId, and a texture
+  registry/service should handle SVG parsing, rasterization to canvas, caching, and WebGL upload.
+
+  Important constraints:
+
+  - SVG upload can work, but uploaded SVGs must be sanitized. Raw SVG can contain scripts, external references, embedded styles, remote images, and
+    event handlers.
+
+  - Conversion is async. SVG text becomes a Blob/data URL, then an ImageBitmap or HTMLImageElement, then canvas, then WebGL texture. The UI needs
+    loading/error states.
+
+  - Defaults should be registry entries too, not hardcoded theme branches. That way built-in and uploaded textures follow the same path.
+  - Separate selectors are fine, but they should share one component and differ only by a filter like kind="node-head" or kind="group-body".
+  - Texture IDs should live on node data, not WebGLTexture objects. WebGL textures are runtime resources; node state should store stable IDs like
+    bodyTextureId, headTextureId.
+
+  - Head/body split should happen before a full texture picker rollout. Current createTextTexture draws the whole node into one canvas texture, so
+    selecting separate head/body textures will be awkward until the node visual model has explicit headTextureId and bodyTextureId.
+
+  For <gg-texture-select>, the component API could look like:
+
+  <gg-texture-select
+    id="node-body-texture"
+    name="nodeBodyTexture"
+    kind="node-body"
+    value="glass-dark">
+  </gg-texture-select>
+
+  And it emits something like:
+
+  "gg-texture-select-change" -> {
+    value: string;
+    label: string;
+    name: string;
+    kind: TextureKind;
+  }
 

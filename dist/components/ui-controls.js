@@ -210,6 +210,15 @@ export class UIControls extends HTMLElement {
             </gg-select>
           </div>
 
+          <div class="settings-group vertical">
+            <label for="texture-selector">Texture Theme</label>
+            <gg-texture-select id="texture-selector">
+              <gg-option value="dark" class="option"></gg-option>
+              <gg-option value="light" class="option"></gg-option>
+              <gg-option value="neon" class="option"></gg-option>
+            </gg-texture-select>
+          </div>
+
         </div>
 
         <div id="node-properties" class="sidebar-section" style="display: none">

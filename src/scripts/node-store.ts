@@ -14,6 +14,7 @@ import {
   CompositionReferencePreviewChild,
   createTextTexture,
 } from './texture.js';
+import { getDefaultTextureIds } from './texture-registry.js';
 import { getWorldPosition, reparent } from './scene-graph.js';
 import { AccessibilityTree } from './accessibility.js';
 
@@ -628,6 +629,7 @@ export class NodeStore {
       width,
       height,
       text,
+      textureIds: getDefaultTextureIds(nodeType),
       texture: createTextTexture(
         this.gl,
         this.ctx,
