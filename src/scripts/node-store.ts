@@ -12,7 +12,7 @@ import {
 } from './types.js';
 import {
   CompositionReferencePreviewChild,
-  createTextTexture,
+  createOverlayTexture,
 } from './texture.js';
 import { getDefaultTextureIds } from './texture-registry.js';
 import { getWorldPosition, reparent } from './scene-graph.js';
@@ -195,7 +195,7 @@ export class NodeStore {
       }
     }
 
-    this.gl.deleteTexture(node.texture);
+    this.gl.deleteTexture(node.overlayTexture);
     this.groups.delete(id);
     this.nodes.delete(id);
     this.a11yTree.removeNode(id);
@@ -410,8 +410,8 @@ export class NodeStore {
     if (container.childIds.length === 0) {
       container.width = defaultSize.width;
       container.height = defaultSize.height;
-      this.gl.deleteTexture(container.texture);
-      container.texture = createTextTexture(
+      this.gl.deleteTexture(container.overlayTexture);
+      container.overlayTexture = createOverlayTexture(
         this.gl,
         this.ctx,
         this.textCanvas,
@@ -455,8 +455,8 @@ export class NodeStore {
       currentY += child.height + gapY;
     }
 
-    this.gl.deleteTexture(container.texture);
-    container.texture = createTextTexture(
+    this.gl.deleteTexture(container.overlayTexture);
+    container.overlayTexture = createOverlayTexture(
       this.gl,
       this.ctx,
       this.textCanvas,
@@ -488,8 +488,8 @@ export class NodeStore {
   }
 
   refreshNodeTexture(node: NodeData, theme?: ThemeName): void {
-    const oldTexture = node.texture;
-    node.texture = createTextTexture(
+    const oldTexture = node.overlayTexture;
+    node.overlayTexture = createOverlayTexture(
       this.gl,
       this.ctx,
       this.textCanvas,
@@ -630,7 +630,7 @@ export class NodeStore {
       height,
       text,
       textureIds: getDefaultTextureIds(nodeType),
-      texture: createTextTexture(
+      overlayTexture: createOverlayTexture(
         this.gl,
         this.ctx,
         this.textCanvas,

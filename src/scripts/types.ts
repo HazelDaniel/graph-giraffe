@@ -156,6 +156,10 @@ export interface NodeShaderLocations {
   u_Color: WebGLUniformLocation;
   u_UseTexture: WebGLUniformLocation;
   u_Sampler: WebGLUniformLocation;
+  u_Use9Slice: WebGLUniformLocation;
+  u_Dimensions: WebGLUniformLocation;
+  u_TextureSize: WebGLUniformLocation;
+  u_SliceMargins: WebGLUniformLocation;
 }
 
 export interface BGShaderLocations {
@@ -178,7 +182,7 @@ export interface NodeData {
   text: string;
   /** Stable texture source ids. Runtime WebGL textures are regenerated from these later. */
   textureIds: NodeTextureIds;
-  texture: WebGLTexture;
+  overlayTexture: WebGLTexture;
   pickColor: [number, number, number];
   isSelected: boolean;
   visible: boolean;
@@ -188,4 +192,11 @@ export interface NodeData {
   childIds: number[];
   /** Handle metadata for nodes that can participate in connections. */
   handles: NodeHandleData[];
+}
+
+export interface AddUploadedTextureParams {
+  id?: string;
+  label: string;
+  kind: TextureKind;
+  svgText: string;
 }

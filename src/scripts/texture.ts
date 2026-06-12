@@ -112,7 +112,7 @@ const G_NODE_THEMES: Record<ThemeName, ThemeStyle> = {
  * Renders node UI into an off-screen 2D canvas, then uploads it as a WebGL texture.
  * The caller is responsible for deleting the returned texture when the node is destroyed.
  */
-export function createTextTexture(
+export function createOverlayTexture(
   gl: WebGL2RenderingContext,
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
@@ -134,47 +134,10 @@ export function createTextTexture(
     nodeType === 'node' && compositionReferenceChildren !== null;
   const headOnly = nodeType === 'composition-child' || isCollapsed;
 
-  // Background
-  if (isCompositionReference) {
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = theme === 'light'
-      ? 'rgba(236, 253, 245, 0.9)'
-      : 'rgba(6, 78, 59, 0.55)';
-    ctx.beginPath();
-    ctx.roundRect(0, 0, width, height, 8);
-    ctx.fill();
-  } else if (!headOnly) {
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = s.bgFill;
-    if (isContainerNodeType(nodeType)) ctx.globalAlpha = 0.5;
-    ctx.beginPath();
-    ctx.roundRect(0, 0, width, height, 8);
-    ctx.fill();
-    ctx.globalAlpha = 1.0;
-  } else {
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = s.headerFill;
-    ctx.beginPath();
-    ctx.roundRect(0, 0, width, height, 8);
-    ctx.fill();
-  }
+  // Clear canvas completely to make it transparent
+  ctx.clearRect(0, 0, width, height);
 
-  // Border
-  ctx.strokeStyle = isCompositionReference ? '#34d399' : s.borderStroke;
-  ctx.lineWidth = isCompositionReference ? 2 : s.borderWidth;
-  if (isContainerNodeType(nodeType) && !isCompositionReference) ctx.setLineDash([8, 8]);
-  ctx.stroke();
-  ctx.setLineDash([]);
 
-  // Header bar (only for leaf nodes)
-  if (nodeType === 'node' || nodeType === 'composition-child' || isCollapsed) {
-    ctx.fillStyle = isCompositionReference
-      ? (theme === 'light' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.35)')
-      : s.headerFill;
-    ctx.beginPath();
-    ctx.roundRect(0, 0, width, headOnly ? height : NODE_LAYOUT.headerHeight, 8);
-    ctx.fill();
-  }
 
   // Title (only for leaf nodes, group/composition labels are handled elsewhere)
   const titleY = isContainerNodeType(nodeType)

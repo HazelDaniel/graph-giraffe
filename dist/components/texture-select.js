@@ -1,4 +1,4 @@
-import { textureRegistry } from '../scripts/texture-registry.js';
+import { TextureRegistry } from '../scripts/texture-registry.js';
 const STYLES = /* css */ `
   *, *::before, *::after { box-sizing: border-box; }
 
@@ -469,9 +469,11 @@ export class TextureSelect extends HTMLElement {
         return [...this.dropdownEl.querySelectorAll('.option')];
     }
     getOptions() {
-        if (!this.kind)
-            return textureRegistry.all();
-        return textureRegistry.byKind(this.kind);
+        if (!this.kind) {
+            // console.log(TextureRegistry.all())
+            return TextureRegistry.all();
+        }
+        return TextureRegistry.byKind(this.kind);
     }
     escAttr(value) {
         return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');

@@ -1,5 +1,5 @@
 import { DEFAULT_HANDLE_STYLE, getDefaultNodeSize, isContainerNodeType, isCandidateNodeType, } from './types.js';
-import { createTextTexture, } from './texture.js';
+import { createOverlayTexture, } from './texture.js';
 import { getDefaultTextureIds } from './texture-registry.js';
 import { getWorldPosition, reparent } from './scene-graph.js';
 import { AccessibilityTree } from './accessibility.js';
@@ -156,7 +156,7 @@ export class NodeStore {
                 parent.childIds = parent.childIds.filter((childId) => childId !== id);
             }
         }
-        this.gl.deleteTexture(node.texture);
+        this.gl.deleteTexture(node.overlayTexture);
         this.groups.delete(id);
         this.nodes.delete(id);
         this.a11yTree.removeNode(id);
@@ -338,8 +338,8 @@ export class NodeStore {
         if (container.childIds.length === 0) {
             container.width = defaultSize.width;
             container.height = defaultSize.height;
-            this.gl.deleteTexture(container.texture);
-            container.texture = createTextTexture(this.gl, this.ctx, this.textCanvas, container.text, container.width, container.height, theme, container.nodeType);
+            this.gl.deleteTexture(container.overlayTexture);
+            container.overlayTexture = createOverlayTexture(this.gl, this.ctx, this.textCanvas, container.text, container.width, container.height, theme, container.nodeType);
             return;
         }
         const paddingX = 20;
@@ -364,8 +364,8 @@ export class NodeStore {
             child.localY = currentY;
             currentY += child.height + gapY;
         }
-        this.gl.deleteTexture(container.texture);
-        container.texture = createTextTexture(this.gl, this.ctx, this.textCanvas, container.text, container.width, container.height, theme, container.nodeType);
+        this.gl.deleteTexture(container.overlayTexture);
+        container.overlayTexture = createOverlayTexture(this.gl, this.ctx, this.textCanvas, container.text, container.width, container.height, theme, container.nodeType);
     }
     /** Compatibility wrapper for the previous group-specific API. */
     updateGroupBounds(groupId, theme) {
@@ -385,8 +385,8 @@ export class NodeStore {
         this.a11yTree.addNode(node.id, node.text, node.nodeType);
     }
     refreshNodeTexture(node, theme) {
-        const oldTexture = node.texture;
-        node.texture = createTextTexture(this.gl, this.ctx, this.textCanvas, node.text, node.width, node.height, theme ?? this.currentTheme, node.nodeType, this.shouldCollapseNode(node), this.getCompositionReferencePreviewChildren(node));
+        const oldTexture = node.overlayTexture;
+        node.overlayTexture = createOverlayTexture(this.gl, this.ctx, this.textCanvas, node.text, node.width, node.height, theme ?? this.currentTheme, node.nodeType, this.shouldCollapseNode(node), this.getCompositionReferencePreviewChildren(node));
         this.gl.deleteTexture(oldTexture);
     }
     syncNodePresentation(nodeId) {
@@ -470,7 +470,7 @@ export class NodeStore {
             height,
             text,
             textureIds: getDefaultTextureIds(nodeType),
-            texture: createTextTexture(this.gl, this.ctx, this.textCanvas, text, width, height, theme, nodeType),
+            overlayTexture: createOverlayTexture(this.gl, this.ctx, this.textCanvas, text, width, height, theme, nodeType),
             pickColor: [r / 255, g / 255, b / 255],
             isSelected,
             visible,

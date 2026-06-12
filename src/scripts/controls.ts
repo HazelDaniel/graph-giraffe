@@ -1,3 +1,4 @@
+import { TextureSelect } from "../components/texture-select.js";
 import { ThemeName } from "./types.js";
 
 /** All interaction events the NodeEditor handles, expressed as plain callbacks. */
@@ -11,6 +12,7 @@ export interface ControlCallbacks {
   onDeleteNode(): void;
   onBgColorChange(r: number, g: number, b: number, a: number): void;
   onThemeChange(theme: ThemeName): void;
+  onGlobalTextureChange(kind: string, textureId: string): void;
   onLabelChange(newLabel: string): void;
   onLabelCommit(): void;
   onPointerDown(e: PointerEvent): void;
@@ -110,6 +112,17 @@ export class UIControls {
     themeSelect?.addEventListener("gg-select-change", (e) => {
       callbacks.onThemeChange(
         (e.target as HTMLSelectElement).value as ThemeName
+      );
+    });
+
+    const textureSelect = container.shadowRoot?.querySelector("#texture-selector") as TextureSelect | null;
+    textureSelect?.refresh(); // so that the uploaded textures appear
+
+    container.addEventListener("gg-texture-select-change", (e: Event) => {
+      const customEvent = e as CustomEvent;
+      callbacks.onGlobalTextureChange(
+        customEvent.detail.kind,
+        customEvent.detail.value
       );
     });
 

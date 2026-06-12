@@ -20,6 +20,8 @@ import { NodeStore } from "./node-store.js";
 import { getWorldPosition } from "./scene-graph.js";
 import { drawHandle } from "./texture.js";
 import { getHandleScreenGeometry } from "./handle-geometry.js";
+import { TextureCache } from "./texture-cache.js";
+import { NODE_LAYOUT } from "./types.js";
 
 /**
  * Owns the WebGL draw loop and all rendering logic.
@@ -58,6 +60,10 @@ export class Renderer {
     }
 
     this.edgeHeadTextures = new EdgeHeadTextureLibrary(gl);
+    this.textureCache = new TextureCache(gl, () => {
+      // It's a continuous loop, so we don't strictly need to force a redraw,
+      // but if we were using on-demand rendering we would trigger it here.
+    });
   }
 
   private labelCtx: CanvasRenderingContext2D | null;
@@ -65,6 +71,7 @@ export class Renderer {
   private edgeHeadBuffer: WebGLBuffer;
   private edgeHeadTextures: EdgeHeadTextureLibrary;
   private edgeFrame: EdgeRouteGeometry[] = [];
+  private textureCache: TextureCache;
 
   /** Call once after each canvas resize to update the orthographic projection. */
   resize(width: number, height: number): void {
@@ -556,6 +563,7 @@ export class Renderer {
     if (picking) {
       // Flat color silhouette — the RGB encodes the node id
       gl.uniform1i(this.locations.u_UseTexture, 0);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
       gl.uniform4f(
         this.locations.u_Color,
         node.pickColor[0],
@@ -564,6 +572,7 @@ export class Renderer {
         1.0
       );
       this.setModelMatrix(worldX, worldY, node.width, node.height);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     } else {
       if (node.isDropTarget) {
         this.setModelMatrix(
@@ -573,6 +582,7 @@ export class Renderer {
           node.height + 12
         );
         gl.uniform1i(this.locations.u_UseTexture, 0);
+        gl.uniform1i(this.locations.u_Use9Slice, 0);
         gl.uniform4f(this.locations.u_Color, 0.13, 0.86, 0.39, 0.8); // Green glow
         gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
       } else if (node.isSelected) {
@@ -584,20 +594,59 @@ export class Renderer {
           node.height + 8
         );
         gl.uniform1i(this.locations.u_UseTexture, 0);
+        gl.uniform1i(this.locations.u_Use9Slice, 0);
         gl.uniform4f(this.locations.u_Color, 0.23, 0.51, 0.96, 0.8);
         gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
       }
 
-      // Main node quad with texture
+      // Draw body
+      const bodyCache = this.textureCache.getTexture(node.textureIds.body);
+      if (bodyCache) {
+        this.setModelMatrix(worldX, worldY, node.width, node.height);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
+        gl.uniform1i(this.locations.u_UseTexture, 1);
+        gl.uniform1i(this.locations.u_Use9Slice, 1);
+        gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+        gl.uniform2f(this.locations.u_TextureSize, bodyCache.nativeWidth, bodyCache.nativeHeight);
+        gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
+        gl.uniform1i(this.locations.u_Sampler, 0);
+        gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
+        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+      }
+
+      // Draw head
+      let headHeight = node.height;
+      if (node.nodeType === 'node' || node.nodeType === 'composition-child') {
+        headHeight = NODE_LAYOUT.headerHeight;
+      } else if (node.nodeType === 'group' || node.nodeType === 'composition') {
+        headHeight = node.height; // for containers, "head" might mean the entire background or top bar, depending on SVG
+      }
+      const headCache = this.textureCache.getTexture(node.textureIds.head);
+      if (headCache) {
+        this.setModelMatrix(worldX, worldY, node.width, headHeight);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
+        gl.uniform1i(this.locations.u_UseTexture, 1);
+        gl.uniform1i(this.locations.u_Use9Slice, 1);
+        gl.uniform2f(this.locations.u_Dimensions, node.width, headHeight);
+        gl.uniform2f(this.locations.u_TextureSize, headCache.nativeWidth, headCache.nativeHeight);
+        gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
+        gl.uniform1i(this.locations.u_Sampler, 0);
+        gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
+        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+      }
+
+      // Draw overlay
       this.setModelMatrix(worldX, worldY, node.width, node.height);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, node.texture);
+      gl.bindTexture(gl.TEXTURE_2D, node.overlayTexture);
       gl.uniform1i(this.locations.u_UseTexture, 1);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
       gl.uniform1i(this.locations.u_Sampler, 0);
       gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
-
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
   }
 
   private setModelMatrix(x: number, y: number, w: number, h: number): void {

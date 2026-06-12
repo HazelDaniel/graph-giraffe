@@ -72,9 +72,50 @@
       uniform sampler2D u_Sampler;
       uniform bool u_UseTexture;
       uniform vec4 u_Color;
+      
+      // 9-slice scaling uniforms
+      uniform bool u_Use9Slice;
+      uniform vec2 u_Dimensions;
+      uniform vec2 u_TextureSize;
+      uniform vec4 u_SliceMargins; // x=left, y=top, z=right, w=bottom
+
+      vec2 map9SliceCoord(vec2 uv, vec2 size, vec2 texSize, vec4 margins) {
+        vec2 pixelPos = uv * size;
+        float x = 0.0;
+        
+        if (pixelPos.x < margins.x) {
+          x = pixelPos.x;
+        } else if (pixelPos.x > size.x - margins.z) {
+          x = texSize.x - (size.x - pixelPos.x);
+        } else {
+          float innerQuadWidth = size.x - margins.x - margins.z;
+          float innerTexWidth = texSize.x - margins.x - margins.z;
+          float ratio = (pixelPos.x - margins.x) / innerQuadWidth;
+          x = margins.x + ratio * innerTexWidth;
+        }
+        
+        float y = 0.0;
+        if (pixelPos.y < margins.y) {
+          y = pixelPos.y;
+        } else if (pixelPos.y > size.y - margins.w) {
+          y = texSize.y - (size.y - pixelPos.y);
+        } else {
+          float innerQuadHeight = size.y - margins.y - margins.w;
+          float innerTexHeight = texSize.y - margins.y - margins.w;
+          float ratio = (pixelPos.y - margins.y) / innerQuadHeight;
+          y = margins.y + ratio * innerTexHeight;
+        }
+        
+        return vec2(x / texSize.x, y / texSize.y);
+      }
+
       void main() {
         if (u_UseTexture) {
-          vec4 texColor = texture2D(u_Sampler, v_TexCoord);
+          vec2 sampledUV = v_TexCoord;
+          if (u_Use9Slice && u_Dimensions.x > 0.0 && u_TextureSize.x > 0.0) {
+            sampledUV = map9SliceCoord(v_TexCoord, u_Dimensions, u_TextureSize, u_SliceMargins);
+          }
+          vec4 texColor = texture2D(u_Sampler, sampledUV);
           gl_FragColor = texColor * u_Color;
         } else {
           gl_FragColor = u_Color;

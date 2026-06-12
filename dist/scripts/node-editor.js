@@ -11,12 +11,14 @@ import { HistoryStack } from "./history.js";
 import { DEFAULT_HANDLE_STYLE, NODE_LAYOUT, isCandidateNodeType, isContainerNodeType, } from "./types.js";
 import { getHandleScreenGeometry, isPointInsideHandle, } from "./handle-geometry.js";
 import { getWorldPosition } from "./scene-graph.js";
+import { TextureRegistry } from "./texture-registry.js";
 /**
  * NodeEditor is the single public class exposed to the entry point.
  * It owns every internal module and wires them together via callbacks.
  * No internal type leaks out of this file's public API.
  */
 export class NodeEditor {
+    nodeTextureList;
     camera;
     store;
     edgeStore;
@@ -53,13 +55,14 @@ export class NodeEditor {
     gestureMode = false;
     pinchDistance = null;
     static _instance = null;
-    static create(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}) {
+    static create(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}, nodeTextureList = []) {
         if (this._instance)
             return this._instance;
-        this._instance = new NodeEditor(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options);
+        this._instance = new NodeEditor(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options, nodeTextureList);
         return this._instance;
     }
-    constructor(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}) {
+    constructor(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}, nodeTextureList) {
+        this.nodeTextureList = nodeTextureList;
         const canvas = document.getElementById(canvasId);
         const textCanvas = document.getElementById(textCanvasId);
         const backgroundCanvas = document.getElementById(backgroundCanvasId);
@@ -100,6 +103,7 @@ export class NodeEditor {
             throw new Error('"sidebar" element not found');
         if (!toolPane)
             throw new Error('"tool-panel" element not found');
+        this.uploadTextureSources();
         this.controls = new UIControls(canvas, container, historyPane, toolPane, {
             onAddNode: () => this.handleAddNode(canvas, "node"),
             onAddGroup: () => this.handleAddNode(canvas, "group"),
@@ -114,6 +118,9 @@ export class NodeEditor {
             onThemeChange: (theme) => {
                 this.theme = theme;
                 this.store.regenerateTextures(theme);
+            },
+            onGlobalTextureChange: (kind, textureId) => {
+                this.handleGlobalTextureChange(kind, textureId);
             },
             onLabelChange: (newLabel) => {
                 const selected = this.getSingleSelectedNode();
@@ -145,12 +152,53 @@ export class NodeEditor {
             y: (p1.clientY + p2.clientY) / 2,
         };
     }
+    uploadTextureSources() {
+        for (const textureUpload of this.nodeTextureList) {
+            TextureRegistry.addUploaded(textureUpload);
+        }
+    }
     render() {
         this.renderer.startLoop();
     }
     setConnectionMode(connectionMode) {
         this.connectionMode = connectionMode;
         this.store.setConnectionMode(connectionMode);
+    }
+    handleGlobalTextureChange(kind, textureId) {
+        let didChange = false;
+        // Apply the new texture to all nodes that match the kind logic.
+        // For leaf nodes: 'node-body' maps to body, 'node-head' maps to head, etc.
+        const applyToNodes = (nodes) => {
+            for (const node of nodes) {
+                if ((node.nodeType === 'node' && kind === 'node-body') ||
+                    (node.nodeType === 'group' && kind === 'group-body') ||
+                    (node.nodeType === 'composition' && kind === 'composition-body') ||
+                    (node.nodeType === 'composition-child' && kind === 'node-body') || // fallback for body
+                    (node.nodeType === 'node' && node.compositionRefId !== null && kind === 'composition-reference-body')) {
+                    if (node.textureIds.body !== textureId) {
+                        node.textureIds.body = textureId;
+                        didChange = true;
+                    }
+                }
+                if ((node.nodeType === 'node' && kind === 'node-head') ||
+                    (node.nodeType === 'group' && kind === 'group-head') ||
+                    (node.nodeType === 'composition' && kind === 'composition-head') ||
+                    (node.nodeType === 'composition-child' && kind === 'composition-child-head') ||
+                    (node.nodeType === 'node' && node.compositionRefId !== null && kind === 'composition-reference-child-head')) {
+                    if (node.textureIds.head !== textureId) {
+                        node.textureIds.head = textureId;
+                        didChange = true;
+                    }
+                }
+            }
+        };
+        applyToNodes(this.store.nodes.values());
+        applyToNodes(this.store.groups.values());
+        if (didChange) {
+            // In a real app we might want to push a history entry for the global style change
+            // For now, we just force a re-render. Since we didn't touch overlayTexture,
+            // the renderer will automatically pick up the new textureIds from the cache on the next frame.
+        }
     }
     undo() {
         if (!this.history.undo())

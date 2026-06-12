@@ -1,4 +1,4 @@
-import { textureRegistry } from '../scripts/texture-registry.js';
+import { TextureRegistry } from '../scripts/texture-registry.js';
 import { TextureKind, TextureSource, TextureSourceType } from '../scripts/types.js';
 
 export interface TextureSelectChangeDetail {
@@ -529,8 +529,11 @@ export class TextureSelect extends HTMLElement {
   }
 
   private getOptions(): TextureSource[] {
-    if (!this.kind) return textureRegistry.all();
-    return textureRegistry.byKind(this.kind);
+    if (!this.kind) {
+      // console.log(TextureRegistry.all())
+return TextureRegistry.all();
+    }
+    return TextureRegistry.byKind(this.kind);
   }
 
   private escAttr(value: string): string {

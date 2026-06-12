@@ -47,6 +47,12 @@ export class UIControls {
         themeSelect?.addEventListener("gg-select-change", (e) => {
             callbacks.onThemeChange(e.target.value);
         });
+        const textureSelect = container.shadowRoot?.querySelector("#texture-selector");
+        textureSelect?.refresh(); // so that the uploaded textures appear
+        container.addEventListener("gg-texture-select-change", (e) => {
+            const customEvent = e;
+            callbacks.onGlobalTextureChange(customEvent.detail.kind, customEvent.detail.value);
+        });
         this.sidebarToggle.addEventListener("click", () => {
             this.sidebar.classList.toggle("collapsed");
         });
