@@ -156,6 +156,25 @@ export class Renderer {
         }
         this.labelCtx.restore();
     }
+    isRectInViewport(worldX, worldY, width, height, extraPadding = 0) {
+        const viewportMin = this.camera.screenToWorld(0, 0);
+        const viewportMax = this.camera.screenToWorld(this.canvas.width, this.canvas.height);
+        // Inflate viewport slightly for safety (e.g., thick strokes, glows, bezier curves)
+        const padding = (50 + extraPadding) / this.camera.zoom;
+        viewportMin.x -= padding;
+        viewportMin.y -= padding;
+        viewportMax.x += padding;
+        viewportMax.y += padding;
+        if (worldX + width < viewportMin.x)
+            return false;
+        if (worldY + height < viewportMin.y)
+            return false;
+        if (worldX > viewportMax.x)
+            return false;
+        if (worldY > viewportMax.y)
+            return false;
+        return true;
+    }
     drawGroupLabels() {
         if (!this.labelCtx)
             return;
@@ -163,6 +182,9 @@ export class Renderer {
         this.labelCtx.textBaseline = 'middle';
         for (const node of this.store.visibleNodes()) {
             if (node.nodeType !== 'group')
+                continue;
+            const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
+            if (!this.isRectInViewport(x, y, node.width, node.height))
                 continue;
             const screenPos = this.camera.worldToScreen(node.localX, node.localY);
             this.labelCtx.fillStyle = '#f8fafc';
@@ -193,6 +215,18 @@ export class Renderer {
         let lineCursor = 0;
         let headCursor = 0;
         for (const edge of visibleEdges) {
+            const sourceNode = this.store.get(edge.sourceNodeId);
+            const targetNode = this.store.get(edge.targetNodeId);
+            if (!sourceNode || !targetNode)
+                continue;
+            const sPos = getWorldPosition(sourceNode.id, this.store.allNodesMap);
+            const tPos = getWorldPosition(targetNode.id, this.store.allNodesMap);
+            const minX = Math.min(sPos.x, tPos.x);
+            const minY = Math.min(sPos.y, tPos.y);
+            const maxX = Math.max(sPos.x + sourceNode.width, tPos.x + targetNode.width);
+            const maxY = Math.max(sPos.y + sourceNode.height, tPos.y + targetNode.height);
+            if (!this.isRectInViewport(minX, minY, maxX - minX, maxY - minY, 100))
+                continue;
             const geometry = buildEdgeRouteGeometry(edge, this.store, this.camera);
             if (!geometry || geometry.worldPoints.length < 2)
                 continue;
@@ -390,6 +424,10 @@ export class Renderer {
         for (const node of this.store.visibleNodes()) {
             // Scene graph: resolve the absolute world position before building model matrix
             const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
+            // Viewport culling
+            if (!this.isRectInViewport(x, y, node.width, node.height)) {
+                continue;
+            }
             this.drawNode(node, x, y, picking);
         }
     }
