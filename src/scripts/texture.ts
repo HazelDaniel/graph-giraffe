@@ -1,3 +1,4 @@
+import { PI } from './globals.js';
 import {
   NODE_LAYOUT,
   NodeHandleData,
@@ -40,7 +41,7 @@ export function drawHandle(
 
   if (style.shape === 'circle') {
     ctx.beginPath();
-    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    ctx.arc(x, y, radius, 0, 2 * PI);
     ctx.fill();
     ctx.stroke();
   } else {
@@ -176,14 +177,14 @@ export function createOverlayTexture(
     // Background circle
     ctx.fillStyle = theme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.15)';
     ctx.beginPath();
-    ctx.arc(btnX, btnY, btnRadius, 0, 2 * Math.PI);
+    ctx.arc(btnX, btnY, btnRadius, 0, 2 * PI);
     ctx.fill();
 
     // Border
     ctx.strokeStyle = s.borderStroke;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(btnX, btnY, btnRadius, 0, 2 * Math.PI);
+    ctx.arc(btnX, btnY, btnRadius, 0, 2 * PI);
     ctx.stroke();
 
     // Plus text

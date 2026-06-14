@@ -87,3 +87,8 @@ For containers that resize dynamically as children are added, the SVG will be dr
 The 2D canvas (sized to the container's new dimensions) will be filled with this repeating pattern row-by-row before uploading to WebGL, ensuring patterns like grid or dots remain crisp and uniform regardless of the container's size.
 
 
+[Texture Resolution on Zoom]
+Resolution Bucketing Strategy:
+If a user smoothly zooms from 1.0x to 2.0x, the screen size changes on every frame.
+We didn't generate 60 different textures.
+We "bucket" the requested sizes (e.g., round to the nearest power of 2, or nearest 128px increment) so that a node transitioning from 150px to 160px shares the same 256px texture.

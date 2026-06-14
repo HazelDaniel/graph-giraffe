@@ -21,7 +21,6 @@ export class TextureCache {
 
   getTexture(textureId: string): CachedTexture | null {
     const entry = this.cache.get(textureId);
-
     if (entry && !('then' in entry)) {
       return entry;
     }

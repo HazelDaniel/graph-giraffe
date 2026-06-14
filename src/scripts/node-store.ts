@@ -426,7 +426,7 @@ export class NodeStore {
       return;
     }
 
-    const paddingX = 20;
+    const paddingX = 0;
     const paddingY = 50;
     const paddingBottom = 40;
     const gapY = 10;

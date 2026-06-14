@@ -1,3 +1,4 @@
+import { PI } from './globals.js';
 import { NODE_LAYOUT, isContainerNodeType, } from './types.js';
 export function drawHandle(ctx, handle, x, y) {
     const { style, isConnected } = handle;
@@ -11,7 +12,7 @@ export function drawHandle(ctx, handle, x, y) {
     ctx.lineWidth = style.borderWidth;
     if (style.shape === 'circle') {
         ctx.beginPath();
-        ctx.arc(x, y, radius, 0, 2 * Math.PI);
+        ctx.arc(x, y, radius, 0, 2 * PI);
         ctx.fill();
         ctx.stroke();
     }
@@ -120,13 +121,13 @@ export function createOverlayTexture(gl, ctx, canvas, text, width, height, theme
         // Background circle
         ctx.fillStyle = theme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.15)';
         ctx.beginPath();
-        ctx.arc(btnX, btnY, btnRadius, 0, 2 * Math.PI);
+        ctx.arc(btnX, btnY, btnRadius, 0, 2 * PI);
         ctx.fill();
         // Border
         ctx.strokeStyle = s.borderStroke;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(btnX, btnY, btnRadius, 0, 2 * Math.PI);
+        ctx.arc(btnX, btnY, btnRadius, 0, 2 * PI);
         ctx.stroke();
         // Plus text
         ctx.fillStyle = s.titleFill;

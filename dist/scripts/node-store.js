@@ -344,7 +344,7 @@ export class NodeStore {
             container.overlayTexture = createOverlayTexture(this.gl, this.ctx, this.textCanvas, container.text, container.width, container.height, theme, container.nodeType);
             return;
         }
-        const paddingX = 20;
+        const paddingX = 0;
         const paddingY = 50;
         const paddingBottom = 40;
         const gapY = 10;

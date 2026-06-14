@@ -20,11 +20,11 @@ export const DEFAULT_HANDLE_STYLE = {
     size: 12,
 };
 export const NODE_SIZE = {
-    node: { width: 180, height: 150 },
-    nodeCollapsed: { width: 180, height: NODE_LAYOUT.headerHeight },
-    group: { width: 240, height: 200 },
-    composition: { width: 240, height: 200 },
-    compositionChild: { width: 180, height: NODE_LAYOUT.headerHeight },
+    node: { width: 190, height: 150 },
+    nodeCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
+    group: { width: 220, height: 200 },
+    composition: { width: 140, height: 200 },
+    compositionChild: { width: 160, height: NODE_LAYOUT.headerHeight },
 };
 export function isContainerNodeType(nodeType) {
     return nodeType === 'group' || nodeType === 'composition';

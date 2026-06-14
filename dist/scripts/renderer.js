@@ -462,70 +462,69 @@ export class Renderer {
             gl.uniform4f(this.locations.u_Color, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1.0);
             this.setModelMatrix(worldX, worldY, node.width, node.height);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+            return;
         }
-        else {
-            if (node.isDropTarget) {
-                this.setModelMatrix(worldX - 6, worldY - 6, node.width + 12, node.height + 12);
-                gl.uniform1i(this.locations.u_UseTexture, 0);
-                gl.uniform1i(this.locations.u_Use9Slice, 0);
-                gl.uniform4f(this.locations.u_Color, 0.13, 0.86, 0.39, 0.8); // Green glow
-                gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
-            }
-            else if (node.isSelected) {
-                // Selection glow: draw a slightly larger quad behind the node
-                this.setModelMatrix(worldX - 4, worldY - 4, node.width + 8, node.height + 8);
-                gl.uniform1i(this.locations.u_UseTexture, 0);
-                gl.uniform1i(this.locations.u_Use9Slice, 0);
-                gl.uniform4f(this.locations.u_Color, 0.23, 0.51, 0.96, 0.8);
-                gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
-            }
-            // Draw body
-            const bodyCache = this.textureCache.getTexture(node.textureIds.body);
-            if (bodyCache) {
-                this.setModelMatrix(worldX, worldY, node.width, node.height);
-                gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
-                gl.uniform1i(this.locations.u_UseTexture, 1);
-                gl.uniform1i(this.locations.u_Use9Slice, 1);
-                gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
-                gl.uniform2f(this.locations.u_TextureSize, bodyCache.nativeWidth, bodyCache.nativeHeight);
-                gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
-                gl.uniform1i(this.locations.u_Sampler, 0);
-                gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
-                gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
-            }
-            // Draw head
-            let headHeight = node.height;
-            if (node.nodeType === 'node' || node.nodeType === 'composition-child') {
-                headHeight = NODE_LAYOUT.headerHeight;
-            }
-            else if (node.nodeType === 'group' || node.nodeType === 'composition') {
-                headHeight = node.height; // for containers, "head" might mean the entire background or top bar, depending on SVG
-            }
-            const headCache = this.textureCache.getTexture(node.textureIds.head);
-            if (headCache) {
-                this.setModelMatrix(worldX, worldY, node.width, headHeight);
-                gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
-                gl.uniform1i(this.locations.u_UseTexture, 1);
-                gl.uniform1i(this.locations.u_Use9Slice, 1);
-                gl.uniform2f(this.locations.u_Dimensions, node.width, headHeight);
-                gl.uniform2f(this.locations.u_TextureSize, headCache.nativeWidth, headCache.nativeHeight);
-                gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
-                gl.uniform1i(this.locations.u_Sampler, 0);
-                gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
-                gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
-            }
-            // Draw overlay
+        if (node.isDropTarget) {
+            this.setModelMatrix(worldX - 6, worldY - 6, node.width + 12, node.height + 12);
+            gl.uniform1i(this.locations.u_UseTexture, 0);
+            gl.uniform1i(this.locations.u_Use9Slice, 0);
+            gl.uniform4f(this.locations.u_Color, 0.13, 0.86, 0.39, 0.8); // Green glow
+            gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+        }
+        else if (node.isSelected) {
+            // Selection glow: draw a slightly larger quad behind the node
+            this.setModelMatrix(worldX - 2, worldY - 2, node.width + 4, node.height + 4);
+            gl.uniform1i(this.locations.u_UseTexture, 0);
+            gl.uniform1i(this.locations.u_Use9Slice, 0);
+            gl.uniform4f(this.locations.u_Color, 0.23, 0.23, 0.86, 1.0);
+            gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+        }
+        // Draw body
+        const bodyCache = this.textureCache.getTexture(node.textureIds.body);
+        if (bodyCache) {
             this.setModelMatrix(worldX, worldY, node.width, node.height);
             gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, node.overlayTexture);
+            gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
             gl.uniform1i(this.locations.u_UseTexture, 1);
-            gl.uniform1i(this.locations.u_Use9Slice, 0);
+            gl.uniform1i(this.locations.u_Use9Slice, 1);
+            gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+            gl.uniform2f(this.locations.u_TextureSize, bodyCache.nativeWidth, bodyCache.nativeHeight);
+            gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
             gl.uniform1i(this.locations.u_Sampler, 0);
             gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         }
+        // Draw head
+        let headHeight = node.height;
+        if (node.nodeType === 'node' || node.nodeType === 'composition-child') {
+            headHeight = NODE_LAYOUT.headerHeight;
+        }
+        else if (node.nodeType === 'group' || node.nodeType === 'composition') {
+            headHeight = node.height; // for containers, "head" might mean the entire background or top bar, depending on SVG
+        }
+        const headCache = this.textureCache.getTexture(node.textureIds.head);
+        if (headCache) {
+            this.setModelMatrix(worldX, worldY, node.width, headHeight);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
+            gl.uniform1i(this.locations.u_UseTexture, 1);
+            gl.uniform1i(this.locations.u_Use9Slice, 1);
+            gl.uniform2f(this.locations.u_Dimensions, node.width, headHeight);
+            gl.uniform2f(this.locations.u_TextureSize, headCache.nativeWidth, headCache.nativeHeight);
+            gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
+            gl.uniform1i(this.locations.u_Sampler, 0);
+            gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
+            gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+        }
+        // Draw overlay
+        this.setModelMatrix(worldX, worldY, node.width, node.height);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, node.overlayTexture);
+        gl.uniform1i(this.locations.u_UseTexture, 1);
+        gl.uniform1i(this.locations.u_Use9Slice, 0);
+        gl.uniform1i(this.locations.u_Sampler, 0);
+        gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
+        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
     setModelMatrix(x, y, w, h) {
         this.modelMatrix.setIdentity();
