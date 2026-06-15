@@ -135,6 +135,8 @@ export class EdgeHeadTextureLibrary {
     }
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
     gl.texImage2D(
       gl.TEXTURE_2D,

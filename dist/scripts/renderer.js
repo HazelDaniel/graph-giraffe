@@ -45,14 +45,14 @@ export class Renderer {
         this.labelCanvas = labelCanvas;
         this.getConnectionPreview = getConnectionPreview;
         this.getBgColor = getBgColor;
-        this.labelCtx = labelCanvas.getContext('2d');
+        this.labelCtx = labelCanvas.getContext("2d");
         this.edgeVertexBuffer = gl.createBuffer();
         this.edgeHeadBuffer = gl.createBuffer();
         if (!this.edgeVertexBuffer) {
-            throw new Error('Unable to allocate edge vertex buffer');
+            throw new Error("Unable to allocate edge vertex buffer");
         }
         if (!this.edgeHeadBuffer) {
-            throw new Error('Unable to allocate edge head buffer');
+            throw new Error("Unable to allocate edge head buffer");
         }
         this.edgeHeadTextures = new EdgeHeadTextureLibrary(gl);
         this.textureCache = new TextureCache(gl, () => {
@@ -88,8 +88,8 @@ export class Renderer {
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
         // gl.clearColor(0.0, 0.0, 0.0, 0.0);
         // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        this.drawEdges();
         this.drawNodes(false);
+        this.drawEdges();
         this.drawOverlay();
     }
     drawOverlay() {
@@ -116,7 +116,7 @@ export class Renderer {
         this.labelCtx.save();
         this.labelCtx.beginPath();
         this.labelCtx.lineWidth = 2;
-        this.labelCtx.strokeStyle = 'rgba(96, 165, 250, 0.95)';
+        this.labelCtx.strokeStyle = "rgba(96, 165, 250, 0.95)";
         this.labelCtx.setLineDash([8, 6]);
         this.labelCtx.moveTo(route.screenPoints[0].x, route.screenPoints[0].y);
         for (let i = 1; i < route.screenPoints.length; i++) {
@@ -129,9 +129,9 @@ export class Renderer {
         if (!this.labelCtx)
             return;
         this.labelCtx.save();
-        this.labelCtx.font = '500 12px Inter, sans-serif';
-        this.labelCtx.textBaseline = 'middle';
-        this.labelCtx.fillStyle = 'rgba(226, 232, 240, 0.95)';
+        this.labelCtx.font = "500 12px Inter, sans-serif";
+        this.labelCtx.textBaseline = "middle";
+        this.labelCtx.fillStyle = "rgba(226, 232, 240, 0.95)";
         for (const route of this.edgeFrame) {
             if (!route.edge.label)
                 continue;
@@ -144,14 +144,14 @@ export class Renderer {
             const width = metrics.width + padX * 2;
             const height = 20;
             this.labelCtx.fillStyle = isSelected
-                ? 'rgba(69, 26, 3, 0.92)'
-                : 'rgba(15, 23, 42, 0.72)';
+                ? "rgba(69, 26, 3, 0.92)"
+                : "rgba(15, 23, 42, 0.72)";
             this.labelCtx.beginPath();
             this.labelCtx.roundRect(x - width / 2, y - height / 2, width, height, 8);
             this.labelCtx.fill();
             this.labelCtx.fillStyle = isSelected
-                ? 'rgba(255, 243, 205, 0.98)'
-                : 'rgba(226, 232, 240, 0.95)';
+                ? "rgba(255, 243, 205, 0.98)"
+                : "rgba(226, 232, 240, 0.95)";
             this.labelCtx.fillText(route.edge.label, x - metrics.width / 2, y);
         }
         this.labelCtx.restore();
@@ -178,16 +178,16 @@ export class Renderer {
     drawGroupLabels() {
         if (!this.labelCtx)
             return;
-        this.labelCtx.font = '600 14px Inter, sans-serif';
-        this.labelCtx.textBaseline = 'middle';
+        this.labelCtx.font = "600 14px Inter, sans-serif";
+        this.labelCtx.textBaseline = "middle";
         for (const node of this.store.visibleNodes()) {
-            if (node.nodeType !== 'group')
+            if (node.nodeType !== "group")
                 continue;
             const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
             if (!this.isRectInViewport(x, y, node.width, node.height))
                 continue;
             const screenPos = this.camera.worldToScreen(node.localX, node.localY);
-            this.labelCtx.fillStyle = '#f8fafc';
+            this.labelCtx.fillStyle = "#f8fafc";
             this.labelCtx.fillText(node.text, screenPos.x + 15, screenPos.y + 20);
         }
     }
@@ -204,7 +204,9 @@ export class Renderer {
     }
     drawEdges() {
         const gl = this.gl;
-        const visibleEdges = this.edgeStore.allEdges().filter((edge) => edge.visible);
+        const visibleEdges = this.edgeStore
+            .allEdges()
+            .filter((edge) => edge.visible);
         this.edgeFrame = [];
         if (visibleEdges.length === 0)
             return;
@@ -280,7 +282,7 @@ export class Renderer {
         for (const selectedEdge of selectedEdges) {
             const selectedGeometry = buildEdgeRouteGeometry(selectedEdge, this.store, this.camera);
             if (selectedGeometry) {
-                this.drawSingleEdge(selectedGeometry, 'rgba(245, 158, 11, 0.98)', 'rgba(251, 191, 36, 1)');
+                this.drawSingleEdge(selectedGeometry, "rgba(245, 158, 11, 0.98)", "rgba(251, 191, 36, 1)");
             }
         }
     }
@@ -373,10 +375,10 @@ export class Renderer {
         gl.enableVertexAttribArray(this.locations.a_TexCoord);
     }
     parseColor(color) {
-        if (color.startsWith('rgba(')) {
+        if (color.startsWith("rgba(")) {
             const parts = color
                 .slice(5, -1)
-                .split(',')
+                .split(",")
                 .map((part) => part.trim());
             return [
                 Number(parts[0]) / 255,
@@ -496,10 +498,10 @@ export class Renderer {
         }
         // Draw head
         let headHeight = node.height;
-        if (node.nodeType === 'node' || node.nodeType === 'composition-child') {
+        if (node.nodeType === "node" || node.nodeType === "composition-child") {
             headHeight = NODE_LAYOUT.headerHeight;
         }
-        else if (node.nodeType === 'group' || node.nodeType === 'composition') {
+        else if (node.nodeType === "group" || node.nodeType === "composition") {
             headHeight = node.height; // for containers, "head" might mean the entire background or top bar, depending on SVG
         }
         const headCache = this.textureCache.getTexture(node.textureIds.head);

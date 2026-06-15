@@ -59,6 +59,7 @@ export class TextureCache {
             img.onload = () => {
                 const tex = this.gl.createTexture();
                 this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
+                this.gl.pixelStorei(this.gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, this.gl.NONE);
                 this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, 1);
                 this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
                 this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
