@@ -178,7 +178,7 @@ export class NodeEditor {
     bgVsSource: string,
     bgFsSource: string,
     options: NodeEditorConfig = {},
-    nodeTextureList: AddUploadedTextureParams[] = []
+    nodeTextureUploadList: AddUploadedTextureParams[] = []
   ): NodeEditor {
     if (this._instance) return this._instance;
     this._instance = new NodeEditor(
@@ -190,7 +190,7 @@ export class NodeEditor {
       bgVsSource,
       bgFsSource,
       options,
-      nodeTextureList
+      nodeTextureUploadList
     );
     return this._instance;
   }
@@ -204,7 +204,7 @@ export class NodeEditor {
     bgVsSource: string,
     bgFsSource: string,
     options: NodeEditorConfig = {},
-    private nodeTextureList: AddUploadedTextureParams[]
+    private nodeTextureUploadList: AddUploadedTextureParams[]
   ) {
     const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
     const textCanvas = document.getElementById(
@@ -324,7 +324,7 @@ export class NodeEditor {
   }
 
   private uploadTextureSources(): void {
-    for (const textureUpload of this.nodeTextureList) {
+    for (const textureUpload of this.nodeTextureUploadList) {
       TextureRegistry.addUploaded(textureUpload);
     }
   }

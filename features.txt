@@ -12,7 +12,6 @@
 - collapsibility of nodes to show just the head when placed in a group, and expandability when moved out
 - introduce another primitive called composition-reference
 
-
 - texture picker (with preview list) for both group nodes and nodes
 		* edges (types: cubic, line, line-curve) [)
 		* edge labels  ()
@@ -21,13 +20,15 @@
 			they come in different variants based on the buttons they allow (max 3),
 			and they will have different textures from the node body, node heads only apply to ordinary nodes and composite-child nodes - composite child nodes will use whatever node heads the node chooses)
 		* node buttons (types: functional, inert) (to be displayed on the node header,comes with chosen texture, max 3)
-- node spotlight (lerp camera movement to show current node. keeps track of a new camera system - in collaboration contexts)
+- node prop overlay
+- group node spotlight (lerp camera movement to show current node. keeps track of a new camera system - in collaboration contexts)
+- simulation
 
 - EVENT ACTIONS (undoable/redoable):
 	* connection
 	* deletion (node, edge, groupnode, composition)
 	* creation (node, edge, groupnode, composition)
-	* model matrix translation
+	* world-space translation
 	* label update
     * [others not yet mapped out]
 

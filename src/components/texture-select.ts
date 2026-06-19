@@ -529,10 +529,7 @@ export class TextureSelect extends HTMLElement {
   }
 
   private getOptions(): TextureSource[] {
-    if (!this.kind) {
-      // console.log(TextureRegistry.all())
-return TextureRegistry.all();
-    }
+    if (!this.kind) return TextureRegistry.all();
     return TextureRegistry.byKind(this.kind);
   }
 

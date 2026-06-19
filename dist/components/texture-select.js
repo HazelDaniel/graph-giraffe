@@ -469,10 +469,8 @@ export class TextureSelect extends HTMLElement {
         return [...this.dropdownEl.querySelectorAll('.option')];
     }
     getOptions() {
-        if (!this.kind) {
-            // console.log(TextureRegistry.all())
+        if (!this.kind)
             return TextureRegistry.all();
-        }
         return TextureRegistry.byKind(this.kind);
     }
     escAttr(value) {

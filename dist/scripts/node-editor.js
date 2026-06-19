@@ -18,7 +18,7 @@ import { TextureRegistry } from "./texture-registry.js";
  * No internal type leaks out of this file's public API.
  */
 export class NodeEditor {
-    nodeTextureList;
+    nodeTextureUploadList;
     camera;
     store;
     edgeStore;
@@ -55,14 +55,14 @@ export class NodeEditor {
     gestureMode = false;
     pinchDistance = null;
     static _instance = null;
-    static create(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}, nodeTextureList = []) {
+    static create(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}, nodeTextureUploadList = []) {
         if (this._instance)
             return this._instance;
-        this._instance = new NodeEditor(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options, nodeTextureList);
+        this._instance = new NodeEditor(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options, nodeTextureUploadList);
         return this._instance;
     }
-    constructor(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}, nodeTextureList) {
-        this.nodeTextureList = nodeTextureList;
+    constructor(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}, nodeTextureUploadList) {
+        this.nodeTextureUploadList = nodeTextureUploadList;
         const canvas = document.getElementById(canvasId);
         const textCanvas = document.getElementById(textCanvasId);
         const backgroundCanvas = document.getElementById(backgroundCanvasId);
@@ -153,7 +153,7 @@ export class NodeEditor {
         };
     }
     uploadTextureSources() {
-        for (const textureUpload of this.nodeTextureList) {
+        for (const textureUpload of this.nodeTextureUploadList) {
             TextureRegistry.addUploaded(textureUpload);
         }
     }
