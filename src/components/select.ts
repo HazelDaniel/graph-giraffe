@@ -534,3 +534,9 @@ export class CustomSelect extends HTMLElement {
 if (!customElements.get("gg-select")) {
   customElements.define("gg-select", CustomSelect);
 }
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "gg-select": CustomSelect;
+  }
+}

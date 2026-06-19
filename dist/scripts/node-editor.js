@@ -67,6 +67,15 @@ export class NodeEditor {
         const textCanvas = document.getElementById(textCanvasId);
         const backgroundCanvas = document.getElementById(backgroundCanvasId);
         const labelCanvas = document.getElementById("2d-label-canvas");
+        const loadingScreen = document.querySelector("gg-loading-screen");
+        void loadingScreen;
+        // if (loadingScreen)
+        //   loadingScreen.promise = WAIT(2, () => console.log("ran for 2 seconds"));
+        // if (loadingScreen) loadingScreen.promise = WAIT(2, () => {throw new Error("ran for 2 seconds")});
+        // if (loadingScreen) loadingScreen.promise = WAIT(2, () => console.log("ran for 2 seconds"));
+        // if (loadingScreen) loadingScreen.promise = WAIT(8, () => console.log("ran for 8 seconds"));
+        // if (loadingScreen) loadingScreen.promise = WAIT(4, () => {throw new Error("ran for 4 seconds")});
+        // if (loadingScreen) loadingScreen.promise = WAIT(10, () => {console.log("ran for 10 seconds")});
         if (!canvas)
             throw new Error(`Canvas "${canvasId}" not found`);
         if (!textCanvas)
@@ -170,21 +179,26 @@ export class NodeEditor {
         // For leaf nodes: 'node-body' maps to body, 'node-head' maps to head, etc.
         const applyToNodes = (nodes) => {
             for (const node of nodes) {
-                if ((node.nodeType === 'node' && kind === 'node-body') ||
-                    (node.nodeType === 'group' && kind === 'group-body') ||
-                    (node.nodeType === 'composition' && kind === 'composition-body') ||
-                    (node.nodeType === 'composition-child' && kind === 'node-body') || // fallback for body
-                    (node.nodeType === 'node' && node.compositionRefId !== null && kind === 'composition-reference-body')) {
+                if ((node.nodeType === "node" && kind === "node-body") ||
+                    (node.nodeType === "group" && kind === "group-body") ||
+                    (node.nodeType === "composition" && kind === "composition-body") ||
+                    (node.nodeType === "composition-child" && kind === "node-body") || // fallback for body
+                    (node.nodeType === "node" &&
+                        node.compositionRefId !== null &&
+                        kind === "composition-reference-body")) {
                     if (node.textureIds.body !== textureId) {
                         node.textureIds.body = textureId;
                         didChange = true;
                     }
                 }
-                if ((node.nodeType === 'node' && kind === 'node-head') ||
-                    (node.nodeType === 'group' && kind === 'group-head') ||
-                    (node.nodeType === 'composition' && kind === 'composition-head') ||
-                    (node.nodeType === 'composition-child' && kind === 'composition-child-head') ||
-                    (node.nodeType === 'node' && node.compositionRefId !== null && kind === 'composition-reference-child-head')) {
+                if ((node.nodeType === "node" && kind === "node-head") ||
+                    (node.nodeType === "group" && kind === "group-head") ||
+                    (node.nodeType === "composition" && kind === "composition-head") ||
+                    (node.nodeType === "composition-child" &&
+                        kind === "composition-child-head") ||
+                    (node.nodeType === "node" &&
+                        node.compositionRefId !== null &&
+                        kind === "composition-reference-child-head")) {
                     if (node.textureIds.head !== textureId) {
                         node.textureIds.head = textureId;
                         didChange = true;

@@ -40,6 +40,8 @@ import {
 } from "./handle-geometry.js";
 import { getWorldPosition } from "./scene-graph.js";
 import { TextureRegistry } from "./texture-registry.js";
+import { LoadingScreen } from "../components/loading-screen.js";
+import { WAIT } from "./globals.js";
 
 interface DragSnapshot {
   localX: number;
@@ -216,6 +218,17 @@ export class NodeEditor {
     const labelCanvas = document.getElementById(
       "2d-label-canvas"
     ) as HTMLCanvasElement;
+    const loadingScreen = document.querySelector(
+      "gg-loading-screen"
+    ) as LoadingScreen | null;
+    void loadingScreen;
+    // if (loadingScreen)
+    //   loadingScreen.promise = WAIT(2, () => console.log("ran for 2 seconds"));
+    // if (loadingScreen) loadingScreen.promise = WAIT(2, () => {throw new Error("ran for 2 seconds")});
+    // if (loadingScreen) loadingScreen.promise = WAIT(2, () => console.log("ran for 2 seconds"));
+    // if (loadingScreen) loadingScreen.promise = WAIT(8, () => console.log("ran for 8 seconds"));
+    // if (loadingScreen) loadingScreen.promise = WAIT(4, () => {throw new Error("ran for 4 seconds")});
+    // if (loadingScreen) loadingScreen.promise = WAIT(10, () => {console.log("ran for 10 seconds")});
 
     if (!canvas) throw new Error(`Canvas "${canvasId}" not found`);
     if (!textCanvas) throw new Error(`Canvas "${textCanvasId}" not found`);
@@ -303,7 +316,6 @@ export class NodeEditor {
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
     this.handleResize(canvas);
     this.syncToolbarState();
-
   }
 
   private distance(p1: PointerEvent, p2: PointerEvent): number {
@@ -338,7 +350,10 @@ export class NodeEditor {
     this.store.setConnectionMode(connectionMode);
   }
 
-  private handleGlobalTextureChange(kind: TextureKind, textureId: string): void {
+  private handleGlobalTextureChange(
+    kind: TextureKind,
+    textureId: string
+  ): void {
     let didChange = false;
 
     // Apply the new texture to all nodes that match the kind logic.
@@ -346,11 +361,13 @@ export class NodeEditor {
     const applyToNodes = (nodes: Iterable<NodeData>) => {
       for (const node of nodes) {
         if (
-          (node.nodeType === 'node' && kind === 'node-body') ||
-          (node.nodeType === 'group' && kind === 'group-body') ||
-          (node.nodeType === 'composition' && kind === 'composition-body') ||
-          (node.nodeType === 'composition-child' && kind === 'node-body') || // fallback for body
-          (node.nodeType === 'node' && node.compositionRefId !== null && kind === 'composition-reference-body')
+          (node.nodeType === "node" && kind === "node-body") ||
+          (node.nodeType === "group" && kind === "group-body") ||
+          (node.nodeType === "composition" && kind === "composition-body") ||
+          (node.nodeType === "composition-child" && kind === "node-body") || // fallback for body
+          (node.nodeType === "node" &&
+            node.compositionRefId !== null &&
+            kind === "composition-reference-body")
         ) {
           if (node.textureIds.body !== textureId) {
             node.textureIds.body = textureId;
@@ -359,11 +376,14 @@ export class NodeEditor {
         }
 
         if (
-          (node.nodeType === 'node' && kind === 'node-head') ||
-          (node.nodeType === 'group' && kind === 'group-head') ||
-          (node.nodeType === 'composition' && kind === 'composition-head') ||
-          (node.nodeType === 'composition-child' && kind === 'composition-child-head') ||
-          (node.nodeType === 'node' && node.compositionRefId !== null && kind === 'composition-reference-child-head')
+          (node.nodeType === "node" && kind === "node-head") ||
+          (node.nodeType === "group" && kind === "group-head") ||
+          (node.nodeType === "composition" && kind === "composition-head") ||
+          (node.nodeType === "composition-child" &&
+            kind === "composition-child-head") ||
+          (node.nodeType === "node" &&
+            node.compositionRefId !== null &&
+            kind === "composition-reference-child-head")
         ) {
           if (node.textureIds.head !== textureId) {
             node.textureIds.head = textureId;

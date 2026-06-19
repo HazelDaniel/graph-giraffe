@@ -17,6 +17,7 @@
     <script type="module" src="../dist/components/ui-controls.js"></script>
     <script type="module" src="../dist/components/action-pane.js"></script>
     <script type="module" src="../dist/components/history-pane.js"></script>
+    <script type="module" src="../dist/components/loading-screen.js"></script>
   </head>
   <body>
     <!-- WebGL Canvas -->
@@ -53,6 +54,8 @@
 
     <!-- Action Pane -->
     <gg-action-pane id="tool-panel"></gg-action-pane>
+
+    <gg-loading-screen></gg-loading-screen>
 
     <script type="x-shader/vertex" id="v-shader">
       attribute vec4 a_Position;

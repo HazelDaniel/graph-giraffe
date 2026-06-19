@@ -1,4 +1,4 @@
-import { TextureRegistry } from './texture-registry.js';
+import { TextureRegistry } from "./texture-registry.js";
 export class TextureCache {
     gl;
     // key: "textureId", value: CachedTexture | Promise<CachedTexture>
@@ -11,7 +11,7 @@ export class TextureCache {
     }
     getTexture(textureId) {
         const entry = this.cache.get(textureId);
-        if (entry && !('then' in entry)) {
+        if (entry && !("then" in entry)) {
             return entry;
         }
         if (!entry) {
@@ -39,9 +39,9 @@ export class TextureCache {
         return new Promise((resolve, reject) => {
             // Inject width and height to force crisp rasterization at native size
             const parser = new DOMParser();
-            const doc = parser.parseFromString(svgText, 'image/svg+xml');
+            const doc = parser.parseFromString(svgText, "image/svg+xml");
             const svg = doc.documentElement;
-            const viewBox = svg.getAttribute('viewBox');
+            const viewBox = svg.getAttribute("viewBox");
             let nativeWidth = 96;
             let nativeHeight = 64;
             if (viewBox) {
@@ -51,11 +51,11 @@ export class TextureCache {
                     nativeHeight = parseFloat(parts[3]);
                 }
             }
-            svg.setAttribute('width', nativeWidth.toString());
-            svg.setAttribute('height', nativeHeight.toString());
+            svg.setAttribute("width", nativeWidth.toString());
+            svg.setAttribute("height", nativeHeight.toString());
             const newSvgText = new XMLSerializer().serializeToString(svg);
             const img = new Image();
-            img.crossOrigin = 'anonymous';
+            img.crossOrigin = "anonymous";
             img.onload = () => {
                 const tex = this.gl.createTexture();
                 this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
@@ -69,7 +69,7 @@ export class TextureCache {
                 resolve({
                     texture: tex,
                     nativeWidth,
-                    nativeHeight
+                    nativeHeight,
                 });
             };
             img.onerror = reject;
@@ -78,7 +78,7 @@ export class TextureCache {
     }
     dispose() {
         for (const [key, entry] of this.cache.entries()) {
-            if (entry && !('then' in entry)) {
+            if (entry && !("then" in entry)) {
                 this.gl.deleteTexture(entry.texture);
             }
         }
