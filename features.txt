@@ -21,7 +21,7 @@
 			and they will have different textures from the node body, node heads only apply to ordinary nodes and composite-child nodes - composite child nodes will use whatever node heads the node chooses)
 		* node buttons (types: functional, inert) (to be displayed on the node header,comes with chosen texture, max 3)
 - orthogonal edge routing	 []
-- node prop overlay
+- node prop overlay [)
 - group node spotlight (lerp camera movement to show current node. keeps track of a new camera system - in collaboration contexts)
 - minimap/radar view
 - simulation
@@ -30,8 +30,10 @@
 	* connection
 	* deletion (node, edge, groupnode, composition)
 	* creation (node, edge, groupnode, composition)
-	* world-space translation
+	* world-space translation (whether individual drags or in a multi-selection)
+	* node prop change
 	* label update
+	* layout reflow (for scene graphs)
     * [others not yet mapped out]
 
 - TEXTURE BUTTON ACTIONS (the events that canvas triggers)
