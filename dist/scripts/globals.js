@@ -13,4 +13,29 @@ export const WAIT = function (secs, callback) {
         }, secs * 1000);
     });
 };
+/** POLYFILLS FOR OLDER BROWSERS */
+if (typeof CanvasRenderingContext2D.prototype.roundRect !== 'function') {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, radii) {
+        if (typeof radii === 'number')
+            radii = [radii, radii, radii, radii];
+        if (!Array.isArray(radii))
+            radii = [0, 0, 0, 0];
+        let tl = radii[0] || 0;
+        let tr = radii[1] !== undefined ? radii[1] : tl;
+        let br = radii[2] !== undefined ? radii[2] : tr;
+        let bl = radii[3] !== undefined ? radii[3] : tl;
+        this.beginPath();
+        this.moveTo(x + tl, y);
+        this.lineTo(x + w - tr, y);
+        this.arcTo(x + w, y, x + w, y + tr, tr);
+        this.lineTo(x + w, y + h - br);
+        this.arcTo(x + w, y + h, x + w - br, y + h, br);
+        this.lineTo(x + bl, y + h);
+        this.arcTo(x, y + h, x, y + h - bl, bl);
+        this.lineTo(x, y + tl);
+        this.arcTo(x, y, x + tl, y, tl);
+        this.closePath();
+        return this;
+    };
+}
 //# sourceMappingURL=globals.js.map
