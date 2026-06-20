@@ -76,7 +76,6 @@ export class LoadingScreen extends HTMLElement {
                 return;
             this.stop();
         }).catch((_) => {
-            console.log("all didn't run");
             this.stop();
         });
     }

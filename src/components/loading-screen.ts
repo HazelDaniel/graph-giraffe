@@ -77,7 +77,6 @@ export class LoadingScreen extends HTMLElement {
       if (el.length && el.length < this.promises.length) return;
       this.stop();
     }).catch((_) => {
-      console.log("all didn't run");
       this.stop();
     });
   }
