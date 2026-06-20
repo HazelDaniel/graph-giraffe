@@ -1,5 +1,6 @@
 export const NODE_LAYOUT = {
     headerHeight: 30,
+    padding: 10,
     closeBtnPaddingRight: 20,
     closeBtnClickRadius: 15,
     editBtnPaddingRight: 45,

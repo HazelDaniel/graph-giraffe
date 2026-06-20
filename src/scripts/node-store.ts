@@ -12,7 +12,6 @@ import {
 } from './types.js';
 import {
   CompositionReferencePreviewChild,
-  createOverlayTexture,
 } from './texture.js';
 import { getDefaultTextureIds, getCompositionReferenceTextureIds } from './texture-registry.js';
 import { getWorldPosition, reparent } from './scene-graph.js';
@@ -36,14 +35,16 @@ export class NodeStore {
 
   constructor(
     private gl: WebGL2RenderingContext,
-    private ctx: CanvasRenderingContext2D,
-    private textCanvas: HTMLCanvasElement,
     connectionMode: ConnectionMode = 'node',
     handleStyle: HandleStyle = DEFAULT_HANDLE_STYLE
   ) {
     this.a11yTree = new AccessibilityTree();
     this.connectionMode = connectionMode;
     this.handleStyle = { ...handleStyle };
+  }
+
+  getTheme(): ThemeName {
+    return this.currentTheme;
   }
 
   /** The id that the next call to add() will assign. Useful for labelling. */
@@ -195,7 +196,6 @@ export class NodeStore {
       }
     }
 
-    this.gl.deleteTexture(node.overlayTexture);
     this.groups.delete(id);
     this.nodes.delete(id);
     this.a11yTree.removeNode(id);
@@ -412,17 +412,6 @@ export class NodeStore {
     if (container.childIds.length === 0) {
       container.width = defaultSize.width;
       container.height = defaultSize.height;
-      this.gl.deleteTexture(container.overlayTexture);
-      container.overlayTexture = createOverlayTexture(
-        this.gl,
-        this.ctx,
-        this.textCanvas,
-        container.text,
-        container.width,
-        container.height,
-        theme,
-        container.nodeType
-      );
       return;
     }
 
@@ -457,17 +446,6 @@ export class NodeStore {
       currentY += child.height + gapY;
     }
 
-    this.gl.deleteTexture(container.overlayTexture);
-    container.overlayTexture = createOverlayTexture(
-      this.gl,
-      this.ctx,
-      this.textCanvas,
-      container.text,
-      container.width,
-      container.height,
-      theme,
-      container.nodeType
-    );
   }
 
   /** Compatibility wrapper for the previous group-specific API. */
@@ -490,20 +468,8 @@ export class NodeStore {
   }
 
   refreshNodeTexture(node: NodeData, theme?: ThemeName): void {
-    const oldTexture = node.overlayTexture;
-    node.overlayTexture = createOverlayTexture(
-      this.gl,
-      this.ctx,
-      this.textCanvas,
-      node.text,
-      node.width,
-      node.height,
-      theme ?? this.currentTheme,
-      node.nodeType,
-      this.shouldCollapseNode(node),
-      this.getCompositionReferencePreviewChildren(node)
-    );
-    this.gl.deleteTexture(oldTexture);
+    // Left empty intentionally: no longer managing overlay texture via canvas.
+    // Text and icons are drawn via MSDF rendering pipeline dynamically.
   }
 
   private syncNodePresentation(nodeId: number): void {
@@ -524,7 +490,7 @@ export class NodeStore {
     this.refreshNodeTexture(node, this.currentTheme);
   }
 
-  private shouldCollapseNode(node: NodeData): boolean {
+  shouldCollapseNode(node: NodeData): boolean {
     if (node.compositionRefId !== null) return false;
     if (node.nodeType === 'composition-child') return true;
     if (node.nodeType !== 'node') return false;
@@ -632,16 +598,6 @@ export class NodeStore {
       height,
       text,
       textureIds: getDefaultTextureIds(nodeType),
-      overlayTexture: createOverlayTexture(
-        this.gl,
-        this.ctx,
-        this.textCanvas,
-        text,
-        width,
-        height,
-        theme,
-        nodeType
-      ),
       pickColor: [r / 255, g / 255, b / 255],
       isSelected,
       visible,

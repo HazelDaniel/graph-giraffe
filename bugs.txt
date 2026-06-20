@@ -5,3 +5,5 @@
 - a change in the label of a composition-child doesn't reflect to that of the composition-refrence children referencing the composition.
   no real-time change needed, just make sure that the input is throttled so that the final update is the only one propagated (to avoid excess repainting)
 - the edges currently sit across all node types in the stacking context, we want them to sit on just group nodes so, let's introduce hidden-surface removal and give these polygons some z-indices
+- composition references created after a texture switch don't reflect the current texture picked
+- edge heads not showing (in most cases) when connections are made due to the changes made in the icons to msdf conversion step, and they edge heads tend to render incorrectly (as if their polygons were affected by the change) when zoom scale change

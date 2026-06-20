@@ -1,4 +1,8 @@
-import { NodeShaderLocations, BGShaderLocations } from './types.js';
+import {
+  NodeShaderLocations,
+  BGShaderLocations,
+  MSDFShaderLocations,
+} from "./types.js";
 
 /**
  * Compiles vertex and fragment shaders, links them into a program, and returns it.
@@ -11,7 +15,10 @@ export function createProgram(
 ): WebGLProgram {
   const vertexShader = gl.createShader(gl.VERTEX_SHADER);
   const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-  if (!vertexShader || !fragmentShader) throw new Error('could not create shader object');
+  vsSource = vsSource.trim();
+  fsSource = fsSource.trim();
+  if (!vertexShader || !fragmentShader)
+    throw new Error("could not create shader object");
 
   gl.shaderSource(vertexShader, vsSource);
   gl.compileShader(vertexShader);
@@ -33,7 +40,7 @@ export function createProgram(
   if (!program) {
     gl.deleteShader(vertexShader);
     gl.deleteShader(fragmentShader);
-    throw new Error('failed to create WebGL program');
+    throw new Error("failed to create WebGL program");
   }
 
   gl.attachShader(program, vertexShader);
@@ -60,18 +67,18 @@ export function getShaderLocations(
   program: WebGLProgram
 ): NodeShaderLocations {
   const locations: NodeShaderLocations = {
-    a_Position:   gl.getAttribLocation(program, 'a_Position'),
-    a_TexCoord:   gl.getAttribLocation(program, 'a_TexCoord'),
-    u_Color:      gl.getUniformLocation(program, 'u_Color')!,
-    u_ModelMatrix:gl.getUniformLocation(program, 'u_ModelMatrix')!,
-    u_ViewMatrix: gl.getUniformLocation(program, 'u_ViewMatrix')!,
-    u_ProjMatrix: gl.getUniformLocation(program, 'u_ProjMatrix')!,
-    u_Sampler:    gl.getUniformLocation(program, 'u_Sampler')!,
-    u_UseTexture: gl.getUniformLocation(program, 'u_UseTexture')!,
-    u_Use9Slice:  gl.getUniformLocation(program, 'u_Use9Slice')!,
-    u_Dimensions: gl.getUniformLocation(program, 'u_Dimensions')!,
-    u_TextureSize:gl.getUniformLocation(program, 'u_TextureSize')!,
-    u_SliceMargins:gl.getUniformLocation(program, 'u_SliceMargins')!,
+    a_Position: gl.getAttribLocation(program, "a_Position"),
+    a_TexCoord: gl.getAttribLocation(program, "a_TexCoord"),
+    u_Color: gl.getUniformLocation(program, "u_Color")!,
+    u_ModelMatrix: gl.getUniformLocation(program, "u_ModelMatrix")!,
+    u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix")!,
+    u_ProjMatrix: gl.getUniformLocation(program, "u_ProjMatrix")!,
+    u_Sampler: gl.getUniformLocation(program, "u_Sampler")!,
+    u_UseTexture: gl.getUniformLocation(program, "u_UseTexture")!,
+    u_Use9Slice: gl.getUniformLocation(program, "u_Use9Slice")!,
+    u_Dimensions: gl.getUniformLocation(program, "u_Dimensions")!,
+    u_TextureSize: gl.getUniformLocation(program, "u_TextureSize")!,
+    u_SliceMargins: gl.getUniformLocation(program, "u_SliceMargins")!,
   };
   validateShaderLocations(locations);
   return locations;
@@ -82,24 +89,37 @@ export function getBGShaderLocations(
   program: WebGLProgram
 ): BGShaderLocations {
   const locations: BGShaderLocations = {
-    a_Position: gl.getAttribLocation(program, 'a_Position'),
-    u_Color: gl.getUniformLocation(program, 'u_Color')!,
-    u_UsePointMask: gl.getUniformLocation(program, 'u_UsePointMask')!,
+    a_Position: gl.getAttribLocation(program, "a_Position"),
+    u_Color: gl.getUniformLocation(program, "u_Color")!,
+    u_UsePointMask: gl.getUniformLocation(program, "u_UsePointMask")!,
   };
   validateShaderLocations(locations);
   return locations;
 }
 
+export function getMSDFShaderLocations(
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram
+): MSDFShaderLocations {
+  const locations: MSDFShaderLocations = {
+    a_Position: gl.getAttribLocation(program, "a_Position"),
+    a_TexCoord: gl.getAttribLocation(program, "a_TexCoord"),
+    a_Color: gl.getAttribLocation(program, "a_Color"),
+    u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix")!,
+    u_ProjMatrix: gl.getUniformLocation(program, "u_ProjMatrix")!,
+    u_Atlas: gl.getUniformLocation(program, "u_Atlas")!,
+  };
+  validateShaderLocations(locations);
+  return locations;
+}
 
-function validateShaderLocations(
-  locs: object
-): void {
+function validateShaderLocations(locs: object): void {
   for (const [key, val] of Object.entries(
     locs as Record<string, number | WebGLUniformLocation | null>
   )) {
-    if (key.startsWith('a_') && (val as number) < 0) {
+    if (key.startsWith("a_") && (val as number) < 0) {
       throw new Error(`Shader attribute ${key} has an invalid location`);
-    } else if (key.startsWith('u_') && !val) {
+    } else if (key.startsWith("u_") && !val) {
       throw new Error(`Shader uniform ${key} has an invalid location`);
     }
   }

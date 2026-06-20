@@ -9,6 +9,7 @@ import { Renderer } from "./renderer.js";
 import { UIControls } from "./controls.js";
 import { HistoryStack } from "./history.js";
 import { DEFAULT_HANDLE_STYLE, NODE_LAYOUT, isCandidateNodeType, isContainerNodeType, } from "./types.js";
+import { MsdfAtlas } from "./msdf-text.js";
 import { getHandleScreenGeometry, isPointInsideHandle, } from "./handle-geometry.js";
 import { getWorldPosition } from "./scene-graph.js";
 import { TextureRegistry } from "./texture-registry.js";
@@ -18,6 +19,14 @@ import { TextureRegistry } from "./texture-registry.js";
  * No internal type leaks out of this file's public API.
  */
 export class NodeEditor {
+    canvasId;
+    backgroundCanvasId;
+    vsSource;
+    fsSource;
+    bgVsSource;
+    bgFsSource;
+    msdfVsSource;
+    msdfFsSource;
     nodeTextureUploadList;
     camera;
     store;
@@ -55,56 +64,63 @@ export class NodeEditor {
     gestureMode = false;
     pinchDistance = null;
     static _instance = null;
-    static create(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}, nodeTextureUploadList = []) {
+    static async create(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, options = {}, nodeTextureUploadList = []) {
         if (this._instance)
             return this._instance;
-        this._instance = new NodeEditor(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options, nodeTextureUploadList);
+        this._instance = new NodeEditor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, options, nodeTextureUploadList);
+        await this._instance.init();
         return this._instance;
     }
-    constructor(canvasId, textCanvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, options = {}, nodeTextureUploadList) {
+    msdfAtlas;
+    iconAtlas;
+    constructor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, options = {}, nodeTextureUploadList) {
+        this.canvasId = canvasId;
+        this.backgroundCanvasId = backgroundCanvasId;
+        this.vsSource = vsSource;
+        this.fsSource = fsSource;
+        this.bgVsSource = bgVsSource;
+        this.bgFsSource = bgFsSource;
+        this.msdfVsSource = msdfVsSource;
+        this.msdfFsSource = msdfFsSource;
         this.nodeTextureUploadList = nodeTextureUploadList;
         const canvas = document.getElementById(canvasId);
-        const textCanvas = document.getElementById(textCanvasId);
         const backgroundCanvas = document.getElementById(backgroundCanvasId);
-        const labelCanvas = document.getElementById("2d-label-canvas");
-        const loadingScreen = document.querySelector("gg-loading-screen");
-        void loadingScreen;
-        // if (loadingScreen)
-        //   loadingScreen.promise = WAIT(2, () => console.log("ran for 2 seconds"));
-        // if (loadingScreen) loadingScreen.promise = WAIT(2, () => {throw new Error("ran for 2 seconds")});
-        // if (loadingScreen) loadingScreen.promise = WAIT(2, () => console.log("ran for 2 seconds"));
-        // if (loadingScreen) loadingScreen.promise = WAIT(8, () => console.log("ran for 8 seconds"));
-        // if (loadingScreen) loadingScreen.promise = WAIT(4, () => {throw new Error("ran for 4 seconds")});
-        // if (loadingScreen) loadingScreen.promise = WAIT(10, () => {console.log("ran for 10 seconds")});
         if (!canvas)
             throw new Error(`Canvas "${canvasId}" not found`);
-        if (!textCanvas)
-            throw new Error(`Canvas "${textCanvasId}" not found`);
         if (!backgroundCanvas)
             throw new Error(`Canvas "${backgroundCanvasId}" not found`);
-        if (!labelCanvas)
-            throw new Error(`Canvas "2d-label-canvas" not found`);
         const gl = canvas.getContext("webgl2");
         if (!gl)
             throw new Error("WebGL2 is not supported in this browser");
-        const textCtx = textCanvas.getContext("2d");
-        if (!textCtx)
-            throw new Error("2D canvas context not supported");
-        const program = createProgram(gl, vsSource, fsSource);
-        const bgProgram = createProgram(gl, bgVsSource, bgFsSource);
-        const locations = getShaderLocations(gl, program);
-        const bgLocations = getBGShaderLocations(gl, bgProgram);
-        const geometry = new GeometryNode(gl, "rounded-square");
-        const bgGeometry = new BGGeometryNode(gl, "grid", backgroundCanvas);
         this.connectionMode = options.connectionMode ?? "node";
         // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
         this.camera = new Camera();
-        this.store = new NodeStore(gl, textCtx, textCanvas, this.connectionMode, options.handleStyle ?? DEFAULT_HANDLE_STYLE);
+        this.store = new NodeStore(gl, this.connectionMode, options.handleStyle ?? DEFAULT_HANDLE_STYLE);
         this.edgeStore = new EdgeStore();
         this.history = new HistoryStack();
         this.pickFBO = new PickFBO(gl, canvas.width, canvas.height);
-        //prettier-ignore
-        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor);
+    }
+    async init() {
+        const canvas = document.getElementById(this.canvasId);
+        const gl = canvas.getContext("webgl2");
+        const program = createProgram(gl, this.vsSource, this.fsSource);
+        const msdfProgram = createProgram(gl, this.msdfVsSource, this.msdfFsSource);
+        const bgProgram = createProgram(gl, this.bgVsSource, this.bgFsSource);
+        this.msdfAtlas = new MsdfAtlas(gl);
+        this.iconAtlas = new MsdfAtlas(gl);
+        await Promise.all([
+            this.msdfAtlas.load('assets/msdf-atlas.png', 'assets/msdf-atlas.json'),
+            this.iconAtlas.load('assets/icon-atlas.png', 'assets/icon-atlas.json')
+        ]);
+        const locations = getShaderLocations(gl, program);
+        const bgLocations = getBGShaderLocations(gl, bgProgram);
+        // We instantiate Renderer here now since it needs MsdfAtlas which is loaded asynchronously
+        // wait, Renderer is instantiated in constructor currently. I need to move it here or initialize it in init().
+        const backgroundCanvas = document.getElementById(this.backgroundCanvasId);
+        const labelCanvas = document.getElementById("2d-label-canvas");
+        const geometry = new GeometryNode(gl, "rounded-square");
+        const bgGeometry = new BGGeometryNode(gl, "grid", backgroundCanvas);
+        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, msdfProgram, this.msdfAtlas, this.iconAtlas);
         const container = document.getElementById("sidebar");
         const historyPane = document.getElementById("undo-redo-wrapper");
         const toolPane = document.getElementById("tool-panel");

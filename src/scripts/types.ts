@@ -81,6 +81,7 @@ export interface ConnectionPreviewData {
 
 export const NODE_LAYOUT = {
   headerHeight: 30,
+  padding: 10,
   closeBtnPaddingRight: 20,
   closeBtnClickRadius: 15,
   editBtnPaddingRight: 45,
@@ -162,6 +163,15 @@ export interface NodeShaderLocations {
   u_SliceMargins: WebGLUniformLocation;
 }
 
+export interface MSDFShaderLocations {
+  a_Position: number;
+  a_TexCoord: number;
+  a_Color: number;
+  u_ViewMatrix: WebGLUniformLocation;
+  u_ProjMatrix: WebGLUniformLocation;
+  u_Atlas: WebGLUniformLocation;
+}
+
 export interface BGShaderLocations {
   a_Position: number;
   u_Color: WebGLUniformLocation;
@@ -182,7 +192,6 @@ export interface NodeData {
   text: string;
   /** Stable texture source ids. Runtime WebGL textures are regenerated from these later. */
   textureIds: NodeTextureIds;
-  overlayTexture: WebGLTexture;
   pickColor: [number, number, number];
   isSelected: boolean;
   visible: boolean;

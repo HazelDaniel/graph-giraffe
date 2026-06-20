@@ -21,7 +21,6 @@ import {
   EdgeData,
   NodeEditorConfig,
   NodeData,
-  NodeHandleData,
   NodeTextureIds,
   HandleSide,
   ThemeName,
@@ -33,6 +32,7 @@ import {
   TextureKind,
   AddUploadedTextureParams,
 } from "./types.js";
+import { MsdfAtlas } from "./msdf-text.js";
 import {
   HandleHit,
   getHandleScreenGeometry,
@@ -135,8 +135,8 @@ export class NodeEditor {
   private store: NodeStore;
   private edgeStore: EdgeStore;
   private pickFBO: PickFBO;
-  private renderer: Renderer;
-  private controls: UIControls;
+  private renderer!: Renderer;
+  private controls!: UIControls;
   private history: HistoryStack;
 
   private bgColor: [number, number, number, number] = [
@@ -171,83 +171,60 @@ export class NodeEditor {
 
   private static _instance: NodeEditor | null = null;
 
-  static create(
+  static async create(
     canvasId: string,
-    textCanvasId: string,
     backgroundCanvasId: string,
     vsSource: string,
     fsSource: string,
     bgVsSource: string,
     bgFsSource: string,
+    msdfVsSource: string,
+    msdfFsSource: string,
     options: NodeEditorConfig = {},
     nodeTextureUploadList: AddUploadedTextureParams[] = []
-  ): NodeEditor {
+  ): Promise<NodeEditor> {
     if (this._instance) return this._instance;
     this._instance = new NodeEditor(
       canvasId,
-      textCanvasId,
       backgroundCanvasId,
       vsSource,
       fsSource,
       bgVsSource,
       bgFsSource,
+      msdfVsSource,
+      msdfFsSource,
       options,
       nodeTextureUploadList
     );
+    await this._instance.init();
     return this._instance;
   }
 
+  private msdfAtlas!: MsdfAtlas;
+  private iconAtlas!: MsdfAtlas;
+
   private constructor(
-    canvasId: string,
-    textCanvasId: string,
-    backgroundCanvasId: string,
-    vsSource: string,
-    fsSource: string,
-    bgVsSource: string,
-    bgFsSource: string,
+    private canvasId: string,
+    private backgroundCanvasId: string,
+    private vsSource: string,
+    private fsSource: string,
+    private bgVsSource: string,
+    private bgFsSource: string,
+    private msdfVsSource: string,
+    private msdfFsSource: string,
     options: NodeEditorConfig = {},
     private nodeTextureUploadList: AddUploadedTextureParams[]
   ) {
     const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-    const textCanvas = document.getElementById(
-      textCanvasId
-    ) as HTMLCanvasElement;
-    const backgroundCanvas = document.getElementById(
-      backgroundCanvasId
-    ) as HTMLCanvasElement;
-    const labelCanvas = document.getElementById(
-      "2d-label-canvas"
-    ) as HTMLCanvasElement;
-    const loadingScreen = document.querySelector(
-      "gg-loading-screen"
-    ) as LoadingScreen | null;
-    void loadingScreen;
-    // if (loadingScreen)
-    //   loadingScreen.promise = WAIT(2, () => console.log("ran for 2 seconds"));
-    // if (loadingScreen) loadingScreen.promise = WAIT(2, () => {throw new Error("ran for 2 seconds")});
-    // if (loadingScreen) loadingScreen.promise = WAIT(2, () => console.log("ran for 2 seconds"));
-    // if (loadingScreen) loadingScreen.promise = WAIT(8, () => console.log("ran for 8 seconds"));
-    // if (loadingScreen) loadingScreen.promise = WAIT(4, () => {throw new Error("ran for 4 seconds")});
-    // if (loadingScreen) loadingScreen.promise = WAIT(10, () => {console.log("ran for 10 seconds")});
-
+    const backgroundCanvas = document.getElementById(backgroundCanvasId) as HTMLCanvasElement;
+    
     if (!canvas) throw new Error(`Canvas "${canvasId}" not found`);
-    if (!textCanvas) throw new Error(`Canvas "${textCanvasId}" not found`);
     if (!backgroundCanvas)
       throw new Error(`Canvas "${backgroundCanvasId}" not found`);
-    if (!labelCanvas) throw new Error(`Canvas "2d-label-canvas" not found`);
 
     const gl = canvas.getContext("webgl2") as WebGL2RenderingContext;
     if (!gl) throw new Error("WebGL2 is not supported in this browser");
 
-    const textCtx = textCanvas.getContext("2d");
-    if (!textCtx) throw new Error("2D canvas context not supported");
-
-    const program = createProgram(gl, vsSource, fsSource);
-    const bgProgram = createProgram(gl, bgVsSource, bgFsSource);
-    const locations = getShaderLocations(gl, program);
-    const bgLocations = getBGShaderLocations(gl, bgProgram);
-    const geometry = new GeometryNode(gl, "rounded-square");
-    const bgGeometry = new BGGeometryNode(gl, "grid", backgroundCanvas);
     this.connectionMode = options.connectionMode ?? "node";
 
     // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
@@ -255,20 +232,46 @@ export class NodeEditor {
     this.camera = new Camera();
     this.store = new NodeStore(
       gl,
-      textCtx,
-      textCanvas,
       this.connectionMode,
       options.handleStyle ?? DEFAULT_HANDLE_STYLE
     );
     this.edgeStore = new EdgeStore();
     this.history = new HistoryStack();
     this.pickFBO = new PickFBO(gl, canvas.width, canvas.height);
+  }
 
-    //prettier-ignore
+  private async init(): Promise<void> {
+    const canvas = document.getElementById(this.canvasId) as HTMLCanvasElement;
+    const gl = canvas.getContext("webgl2") as WebGL2RenderingContext;
+    const program = createProgram(gl, this.vsSource, this.fsSource);
+    const msdfProgram = createProgram(gl, this.msdfVsSource, this.msdfFsSource);
+    const bgProgram = createProgram(gl, this.bgVsSource, this.bgFsSource);
+
+    this.msdfAtlas = new MsdfAtlas(gl);
+    this.iconAtlas = new MsdfAtlas(gl);
+    await Promise.all([
+      this.msdfAtlas.load('assets/msdf-atlas.png', 'assets/msdf-atlas.json'),
+      this.iconAtlas.load('assets/icon-atlas.png', 'assets/icon-atlas.json')
+    ]);
+
+    const locations = getShaderLocations(gl, program);
+    const bgLocations = getBGShaderLocations(gl, bgProgram);
+    
+    // We instantiate Renderer here now since it needs MsdfAtlas which is loaded asynchronously
+    // wait, Renderer is instantiated in constructor currently. I need to move it here or initialize it in init().
+    const backgroundCanvas = document.getElementById(this.backgroundCanvasId) as HTMLCanvasElement;
+    const labelCanvas = document.getElementById("2d-label-canvas") as HTMLCanvasElement;
+    
+    const geometry = new GeometryNode(gl, "rounded-square");
+    const bgGeometry = new BGGeometryNode(gl, "grid", backgroundCanvas);
+
     this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations,
       geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas,
       () => this.activeConnectionDrag,
       () => this.bgColor,
+      msdfProgram,
+      this.msdfAtlas,
+      this.iconAtlas
     );
 
     const container = document.getElementById("sidebar");
@@ -317,6 +320,7 @@ export class NodeEditor {
     this.handleResize(canvas);
     this.syncToolbarState();
   }
+
 
   private distance(p1: PointerEvent, p2: PointerEvent): number {
     const dx = p2.clientX - p1.clientX;

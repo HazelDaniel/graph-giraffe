@@ -9,17 +9,22 @@ async function init(): Promise<void> {
 
   const BGvsSource = document.getElementById("bg-v-shader")?.textContent;
   const BGfsSource = document.getElementById("bg-f-shader")?.textContent;
+  const msdfVsSource = document.getElementById("msdf-v-shader")?.textContent;
+  const msdfFsSource = document.getElementById("msdf-f-shader")?.textContent;
   if (!vsSource || !fsSource) throw new Error("Shader source missing from DOM");
   if (!BGvsSource || !BGfsSource)
     throw new Error("Background shader source missing from DOM");
-  NodeEditor.create(
+  if (!msdfVsSource || !msdfFsSource)
+    throw new Error("MSDF shader source missing from DOM");
+  const editor = await NodeEditor.create(
     "webgl-canvas",
-    "2d-text-canvas",
     "2d-bg-canvas",
     vsSource,
     fsSource,
     BGvsSource,
     BGfsSource,
+    msdfVsSource,
+    msdfFsSource,
     { connectionMode: "node" },
     //prettier-ignore
     [
@@ -34,7 +39,8 @@ async function init(): Promise<void> {
       generateTetureSkinOption("group-head",  "Group Head Glassy", 0, "jklajkffkldfdfjsljfjklfdsdlfjlsiifjsl"),
       generateTetureSkinOption("group-head",  "Group Head Blank", 1, "jklajjlfldfkffkldfdfjsljfjklfdsdlfjlsiifjsl"),
     ]
-  ).render();
+  );
+  editor.render();
 }
 
 document.addEventListener("DOMContentLoaded", init);

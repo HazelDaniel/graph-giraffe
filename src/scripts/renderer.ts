@@ -3,6 +3,7 @@ import {
   NodeShaderLocations,
   BGShaderLocations,
   ConnectionPreviewData,
+  MSDFShaderLocations,
 } from "./types.js";
 import { BGGeometryNode, GeometryNode } from "./geometry.js";
 import { Camera } from "./camera.js";
@@ -22,6 +23,8 @@ import { drawHandle } from "./texture.js";
 import { getHandleScreenGeometry } from "./handle-geometry.js";
 import { TextureCache } from "./texture-cache.js";
 import { NODE_LAYOUT } from "./types.js";
+import { getMSDFShaderLocations } from "./shader.js";
+import { MsdfAtlas, MsdfTextRenderer } from "./msdf-text.js";
 
 /**
  * Owns the WebGL draw loop and all rendering logic.
@@ -47,7 +50,10 @@ export class Renderer {
     private labelCanvas: HTMLCanvasElement,
     private getConnectionPreview: () => ConnectionPreviewData | null,
     /** Callback so Renderer never stores bgColor itself — it belongs to the editor. */
-    private getBgColor: () => [number, number, number, number]
+    private getBgColor: () => [number, number, number, number],
+    private msdfProgram: WebGLProgram,
+    private msdfAtlas: MsdfAtlas,
+    private iconAtlas: MsdfAtlas
   ) {
     this.labelCtx = labelCanvas.getContext("2d");
     this.edgeVertexBuffer = gl.createBuffer();
@@ -64,7 +70,14 @@ export class Renderer {
       // It's a continuous loop, so we don't strictly need to force a redraw,
       // but if we were using on-demand rendering we would trigger it here.
     });
+
+    const msdfLocations = getMSDFShaderLocations(gl, msdfProgram);
+    this.textRenderer = new MsdfTextRenderer(gl, msdfProgram, msdfLocations, msdfAtlas);
+    this.iconRenderer = new MsdfTextRenderer(gl, msdfProgram, msdfLocations, iconAtlas);
   }
+
+  private textRenderer: MsdfTextRenderer;
+  private iconRenderer: MsdfTextRenderer;
 
   private labelCtx: CanvasRenderingContext2D | null;
   private edgeVertexBuffer: WebGLBuffer;
@@ -346,6 +359,7 @@ export class Renderer {
       this.modelMatrix.elements
     );
     gl.uniform1i(this.locations.u_UseTexture, 0);
+    gl.uniform1i(this.locations.u_Use9Slice, 0);
 
     gl.uniform4f(this.locations.u_Color, 0.38, 0.62, 1.0, 0.72);
     let vertexOffset = 0;
@@ -568,6 +582,8 @@ export class Renderer {
     } else {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      this.textRenderer.beginBatch();
+      this.iconRenderer.beginBatch();
     }
 
     // Bind shared geometry buffers once for all nodes
@@ -616,6 +632,11 @@ export class Renderer {
       }
 
       this.drawNode(node, x, y, picking);
+    }
+
+    if (!picking) {
+      this.textRenderer.flush(this.camera, this.projMatrix);
+      this.iconRenderer.flush(this.camera, this.projMatrix);
     }
   }
 
@@ -751,15 +772,124 @@ export class Renderer {
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
 
-    // Draw overlay
-    this.setModelMatrix(worldX, worldY, node.width, node.height);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, node.overlayTexture);
-    gl.uniform1i(this.locations.u_UseTexture, 1);
-    gl.uniform1i(this.locations.u_Use9Slice, 0);
-    gl.uniform1i(this.locations.u_Sampler, 0);
-    gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    // Draw overlay via MSDF
+    if (!picking) {
+      const theme = this.store.getTheme();
+      let r = 1, g = 1, b = 1;
+      if (theme === 'dark') { r = 248/255; g = 250/255; b = 252/255; }
+      else if (theme === 'light') { r = 15/255; g = 23/255; b = 42/255; }
+      else if (theme === 'neon') { r = 207/255; g = 250/255; b = 254/255; }
+
+      const isCollapsed = this.store.shouldCollapseNode(node);
+      const headOnly = node.nodeType === 'composition-child' || isCollapsed;
+
+      const titleY = (node.nodeType === 'group' || node.nodeType === 'composition') && !isCollapsed
+        ? 20
+        : (headOnly ? node.height / 2 : NODE_LAYOUT.headerHeight / 2);
+
+      if (node.nodeType === 'node' || node.nodeType === 'composition-child' || isCollapsed) {
+        this.textRenderer.addText(node.text, worldX + NODE_LAYOUT.padding, worldY + titleY, 14, r, g, b, 1.0, 'left', 'middle');
+      }
+
+      // Close Icon
+      if (node.nodeType === 'node' || node.nodeType === 'composition' || node.nodeType === "group") {
+        const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
+        this.iconRenderer.addText('', worldX + xPos, worldY + titleY, 16, r, g, b, 1.0, 'center', 'middle');
+      }
+
+      // Edit Icon (node only)
+      if (node.nodeType === 'node') {
+        const xPos = node.width - NODE_LAYOUT.editBtnPaddingRight;
+        // Using '...' because true pencil emoji isn't in MSDF atlas
+        this.iconRenderer.addText('', worldX + xPos, worldY + titleY, 16, r, g, b, 1.0, 'center', 'middle');
+      }
+
+      // Close Icon (composition child)
+      if (isCollapsed && node.nodeType === 'composition-child') {
+        const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
+        this.iconRenderer.addText('', worldX + xPos, worldY + node.height / 2, 16, r, g, b, 1.0, 'center', 'middle');
+      }
+
+      // Group Add (+) Icon
+      if (node.nodeType === 'group' && !isCollapsed) {
+        const xPos = node.width / 2;
+        const yPos = node.height - NODE_LAYOUT.plusBtnPaddingBottom;
+        this.textRenderer.addText('+', worldX + xPos, worldY + yPos, 20, r, g, b, 1.0, 'center', 'middle');
+      }
+
+      if (!headOnly) {
+        if (node.nodeType === 'node' && node.compositionRefId !== null) {
+          const padding = NODE_LAYOUT.padding;
+          const spacing = 8;
+          const titleHeight = 8;
+          let yOffset = NODE_LAYOUT.headerHeight + padding;
+
+          yOffset += titleHeight + spacing;
+
+          const composition = this.store.get(node.compositionRefId!);
+          if (composition) {
+            const children = composition.childIds.map(id => this.store.get(id)).filter(Boolean);
+            if (children.length === 0) {
+              this.textRenderer.addText('No nodes', worldX + padding, worldY + yOffset, 12, r, g, b, 0.5, 'left', 'top');
+            } else {
+              // We need to flush MSDF text first, then draw the children nodes using the main shader,
+              // then we can resume queuing MSDF text. Wait, MSDF text is completely deferred to the end of the frame!
+              // So we can just queue the child titles in textRenderer, and immediately draw their bodies using the main shader!
+              gl.useProgram(this.program);
+              
+              for (let i = 0; i < Math.min(children.length, 5); i++) {
+                const child = children[i]!;
+                const childWidth = Math.min(child.width, node.width - 40);
+                const childHeight = Math.max(NODE_LAYOUT.headerHeight, child.height);
+                const x = worldX + (node.width - childWidth) / 2;
+                const y = worldY + yOffset;
+
+                // Draw child body
+                const bodyCache = this.textureCache.getTexture(child.textureIds.body);
+                if (bodyCache) {
+                  this.setModelMatrix(x, y, childWidth, childHeight);
+                  gl.activeTexture(gl.TEXTURE0);
+                  gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
+                  gl.uniform1i(this.locations.u_UseTexture, 1);
+                  gl.uniform1i(this.locations.u_Use9Slice, 1);
+                  gl.uniform2f(this.locations.u_Dimensions, childWidth, childHeight);
+                  gl.uniform2f(this.locations.u_TextureSize, bodyCache.nativeWidth, bodyCache.nativeHeight);
+                  gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
+                  gl.uniform1i(this.locations.u_Sampler, 0);
+                  gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
+                  gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+                }
+
+                // Draw child head
+                const headCache = this.textureCache.getTexture(child.textureIds.head);
+                if (headCache) {
+                  this.setModelMatrix(x, y, childWidth, NODE_LAYOUT.headerHeight);
+                  gl.activeTexture(gl.TEXTURE0);
+                  gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
+                  gl.uniform1i(this.locations.u_UseTexture, 1);
+                  gl.uniform1i(this.locations.u_Use9Slice, 1);
+                  gl.uniform2f(this.locations.u_Dimensions, childWidth, NODE_LAYOUT.headerHeight);
+                  gl.uniform2f(this.locations.u_TextureSize, headCache.nativeWidth, headCache.nativeHeight);
+                  gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
+                  gl.uniform1i(this.locations.u_Sampler, 0);
+                  gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
+                  gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+                }
+
+                this.textRenderer.addText(child.text, x + 12, y + NODE_LAYOUT.headerHeight / 2, 13, r, g, b, 1.0, 'left', 'middle');
+
+                yOffset += childHeight + 10;
+              }
+              if (children.length > 5) {
+                this.textRenderer.addText(`+ ${children.length - 5} more nodes`, worldX + padding, worldY + yOffset, 12, r, g, b, 0.5, 'left', 'top');
+              }
+            }
+          }
+        } else if (node.nodeType === 'node') {
+          this.textRenderer.addText('Properties...', worldX + NODE_LAYOUT.padding, worldY + NODE_LAYOUT.headerHeight + NODE_LAYOUT.padding, 12, r, g, b, 1.0, 'left', 'top');
+        }
+      }
+    }
   }
 
   private setModelMatrix(x: number, y: number, w: number, h: number): void {
