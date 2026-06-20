@@ -183,9 +183,8 @@ export class NodeStore {
     /** Rebuild textures for all nodes under a new theme. */
     regenerateTextures(theme) {
         this.currentTheme = theme;
-        const regen = (node) => this.refreshNodeTexture(node, theme);
-        this.groups.forEach(regen);
-        this.nodes.forEach(regen);
+        // Theme swap no longer rebuilds textures per node.
+        // Textures are shared and colors are injected via shader or dynamically drawn.
     }
     /** Update the label text of a node and regenerate its texture. */
     updateLabel(id, newLabel, theme) {
@@ -194,7 +193,6 @@ export class NodeStore {
             return;
         node.text = newLabel;
         this.currentTheme = theme;
-        this.refreshNodeTexture(node, theme);
         this.a11yTree.updateLabel(id, newLabel, node.nodeType);
     }
     updateHandleConnectionState(nodeId, side, isConnected) {
@@ -219,7 +217,6 @@ export class NodeStore {
         node.textureIds = getCompositionReferenceTextureIds();
         this.currentTheme = theme;
         this.syncNodePresentation(nodeId);
-        this.refreshNodeTexture(node, theme);
         return true;
     }
     clearCompositionReference(nodeId, theme) {
@@ -231,7 +228,6 @@ export class NodeStore {
         node.textureIds = getDefaultTextureIds('node');
         this.currentTheme = theme;
         this.syncNodePresentation(nodeId);
-        this.refreshNodeTexture(node, theme);
         return true;
     }
     getCompositionReferenceNodes(compositionId) {
@@ -246,7 +242,6 @@ export class NodeStore {
     refreshCompositionReferences(compositionId, theme) {
         for (const node of this.getCompositionReferenceNodes(compositionId)) {
             this.syncNodePresentation(node.id);
-            this.refreshNodeTexture(node, theme);
         }
     }
     /** Assign a new parent to a child node, preserving world position. */
@@ -379,10 +374,6 @@ export class NodeStore {
         this.syncToMap(node);
         this.a11yTree.addNode(node.id, node.text, node.nodeType);
     }
-    refreshNodeTexture(node, theme) {
-        // Left empty intentionally: no longer managing overlay texture via canvas.
-        // Text and icons are drawn via MSDF rendering pipeline dynamically.
-    }
     syncNodePresentation(nodeId) {
         const node = this.get(nodeId);
         if (!node)
@@ -396,7 +387,6 @@ export class NodeStore {
             return;
         node.width = width;
         node.height = height;
-        this.refreshNodeTexture(node, this.currentTheme);
     }
     shouldCollapseNode(node) {
         if (node.compositionRefId !== null)

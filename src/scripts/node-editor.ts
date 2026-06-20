@@ -1064,7 +1064,6 @@ export class NodeEditor {
     );
     node.width = snapshot.width;
     node.height = snapshot.height;
-    this.store.refreshNodeTexture(node, this.theme);
   }
 
   private restoreNodeSnapshots(snapshots: NodeHistorySnapshot[]): void {

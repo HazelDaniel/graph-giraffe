@@ -758,7 +758,6 @@ export class NodeEditor {
         this.store.forceRestoreNodePlacement(snapshot.id, snapshot.localX, snapshot.localY, snapshot.parentId);
         node.width = snapshot.width;
         node.height = snapshot.height;
-        this.store.refreshNodeTexture(node, this.theme);
     }
     restoreNodeSnapshots(snapshots) {
         for (const snapshot of snapshots) {

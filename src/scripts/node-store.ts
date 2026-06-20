@@ -227,9 +227,8 @@ export class NodeStore {
   /** Rebuild textures for all nodes under a new theme. */
   regenerateTextures(theme: ThemeName): void {
     this.currentTheme = theme;
-    const regen = (node: NodeData) => this.refreshNodeTexture(node, theme);
-    this.groups.forEach(regen);
-    this.nodes.forEach(regen);
+    // Theme swap no longer rebuilds textures per node.
+    // Textures are shared and colors are injected via shader or dynamically drawn.
   }
 
   /** Update the label text of a node and regenerate its texture. */
@@ -238,7 +237,6 @@ export class NodeStore {
     if (!node) return;
     node.text = newLabel;
     this.currentTheme = theme;
-    this.refreshNodeTexture(node, theme);
 
     this.a11yTree.updateLabel(id, newLabel, node.nodeType);
   }
@@ -268,7 +266,6 @@ export class NodeStore {
     node.textureIds = getCompositionReferenceTextureIds();
     this.currentTheme = theme;
     this.syncNodePresentation(nodeId);
-    this.refreshNodeTexture(node, theme);
     return true;
   }
 
@@ -282,7 +279,6 @@ export class NodeStore {
     node.textureIds = getDefaultTextureIds('node');
     this.currentTheme = theme;
     this.syncNodePresentation(nodeId);
-    this.refreshNodeTexture(node, theme);
     return true;
   }
 
@@ -299,7 +295,6 @@ export class NodeStore {
   refreshCompositionReferences(compositionId: number, theme: ThemeName): void {
     for (const node of this.getCompositionReferenceNodes(compositionId)) {
       this.syncNodePresentation(node.id);
-      this.refreshNodeTexture(node, theme);
     }
   }
 
@@ -467,10 +462,7 @@ export class NodeStore {
     this.a11yTree.addNode(node.id, node.text, node.nodeType);
   }
 
-  refreshNodeTexture(node: NodeData, theme?: ThemeName): void {
-    // Left empty intentionally: no longer managing overlay texture via canvas.
-    // Text and icons are drawn via MSDF rendering pipeline dynamically.
-  }
+
 
   private syncNodePresentation(nodeId: number): void {
     const node = this.get(nodeId);
@@ -487,7 +479,6 @@ export class NodeStore {
 
     node.width = width;
     node.height = height;
-    this.refreshNodeTexture(node, this.currentTheme);
   }
 
   shouldCollapseNode(node: NodeData): boolean {
