@@ -1,5 +1,6 @@
 import { TextureSelect } from "../components/texture-select.js";
-import { ThemeName } from "./types.js";
+import { ThemeName, NodeData } from "./types.js";
+import { GGPropGroup } from "../components/prop-group.js";
 
 /** All interaction events the NodeEditor handles, expressed as plain callbacks. */
 export interface ControlCallbacks {
@@ -41,6 +42,7 @@ export class UIControls {
   private sidebarToggle: HTMLButtonElement;
   private nodeProperties: HTMLElement;
   private nodeLabelInput: HTMLInputElement;
+  public nodePropGroup: GGPropGroup;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -80,6 +82,9 @@ export class UIControls {
     this.nodeLabelInput = container.shadowRoot?.querySelector(
       "#node-label-input"
     )! as HTMLInputElement;
+    this.nodePropGroup = container.shadowRoot?.querySelector(
+      "#node-prop-group"
+    )! as GGPropGroup;
 
     this.addNodeButton.addEventListener("click", () => callbacks.onAddNode());
     this.addGroupButton.addEventListener("click", () => callbacks.onAddGroup());
@@ -182,9 +187,15 @@ export class UIControls {
     this.redoButton.disabled = true;
   }
 
-  showProperties(label: string): void {
+  showProperties(node: NodeData): void {
     this.nodeProperties.style.display = "flex";
-    this.nodeLabelInput.value = label;
+    this.nodeLabelInput.value = node.text;
+    if (node.props) {
+      this.nodePropGroup.useProps(node.props);
+      this.nodePropGroup.style.display = "block";
+    } else {
+      this.nodePropGroup.style.display = "none";
+    }
     this.sidebar.classList.remove("collapsed");
   }
 

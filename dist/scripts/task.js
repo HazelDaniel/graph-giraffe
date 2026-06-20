@@ -1,5 +1,6 @@
 import { NodeEditor } from "./node-editor.js";
 import { generateTetureSkinOption } from "./texture-registry.js";
+import "../components/prop-group.js";
 async function init() {
     await document.fonts.ready;
     //ts-ignore

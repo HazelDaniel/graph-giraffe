@@ -652,7 +652,74 @@ export class Renderer {
                     }
                 }
                 else if (node.nodeType === 'node') {
-                    this.textRenderer.addText('Properties...', worldX + NODE_LAYOUT.padding, worldY + NODE_LAYOUT.headerHeight + NODE_LAYOUT.padding, 12, r, g, b, 1.0, 'left', 'top');
+                    if (node.props) {
+                        let cursorY = worldY + NODE_LAYOUT.headerHeight + 16;
+                        const xLeft = worldX + NODE_LAYOUT.padding + 4;
+                        const xRight = worldX + node.width - NODE_LAYOUT.padding - 4;
+                        // Draw ungrouped items (iterate maps directly — no temp arrays)
+                        const boolU = node.props.booleans["ungrouped"];
+                        const textU = node.props.texts["ungrouped"];
+                        const enumU = node.props.enums["ungrouped"];
+                        if (boolU)
+                            for (let i = 0; i < boolU.length; i++) {
+                                const p = boolU[i];
+                                this.textRenderer.addText(p.label, xLeft, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+                                this.iconRenderer.addText(p.value ? '' : '', xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
+                                cursorY += 20;
+                            }
+                        if (textU)
+                            for (let i = 0; i < textU.length; i++) {
+                                const p = textU[i];
+                                this.textRenderer.addText(p.label, xLeft, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+                                this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
+                                cursorY += 20;
+                            }
+                        if (enumU)
+                            for (let i = 0; i < enumU.length; i++) {
+                                const p = enumU[i];
+                                this.textRenderer.addText(p.label, xLeft, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+                                this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
+                                cursorY += 20;
+                            }
+                        // Draw grouped items
+                        const groups = node.props.groups;
+                        for (let gi = 0; gi < groups.length; gi++) {
+                            const groupName = groups[gi];
+                            const boolG = node.props.booleans[groupName];
+                            const textG = node.props.texts[groupName];
+                            const enumG = node.props.enums[groupName];
+                            const hasItems = (boolG && boolG.length > 0) || (textG && textG.length > 0) || (enumG && enumG.length > 0);
+                            if (hasItems) {
+                                // Subheading
+                                this.textRenderer.addText(groupName.toUpperCase(), xLeft, cursorY, 10, r, g, b, 0.5, 'left', 'middle');
+                                cursorY += 20;
+                                if (boolG)
+                                    for (let i = 0; i < boolG.length; i++) {
+                                        const p = boolG[i];
+                                        this.textRenderer.addText(p.label, xLeft + 8, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+                                        this.iconRenderer.addText(p.value ? '' : '', xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
+                                        cursorY += 20;
+                                    }
+                                if (textG)
+                                    for (let i = 0; i < textG.length; i++) {
+                                        const p = textG[i];
+                                        this.textRenderer.addText(p.label, xLeft + 8, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+                                        this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
+                                        cursorY += 20;
+                                    }
+                                if (enumG)
+                                    for (let i = 0; i < enumG.length; i++) {
+                                        const p = enumG[i];
+                                        this.textRenderer.addText(p.label, xLeft + 8, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+                                        this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
+                                        cursorY += 20;
+                                    }
+                            }
+                        }
+                    }
+                    else {
+                        this.textRenderer.addText('Properties...', worldX + NODE_LAYOUT.padding, worldY + NODE_LAYOUT.headerHeight + NODE_LAYOUT.padding, 12, r, g, b, 1.0, 'left', 'top');
+                    }
                 }
             }
         }

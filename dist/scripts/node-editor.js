@@ -163,8 +163,45 @@ export class NodeEditor {
         this.controls.setMultiSelectActive(this.isMultiSelectMode);
         window.addEventListener("resize", () => this.handleResize(canvas));
         window.addEventListener("keydown", (e) => this.handleKeyDown(e));
+        window.addEventListener("pointercancel", (e) => this.handlePointerCancel(e, canvas));
+        this.setupPropGroupListener();
         this.handleResize(canvas);
         this.syncToolbarState();
+    }
+    setupPropGroupListener() {
+        this.controls.nodePropGroup.addEventListener("gg-prop-change", (e) => {
+            const customEvent = e;
+            const { label, value } = customEvent.detail;
+            if (this.selectedNodeIds.size === 1) {
+                const nodeId = Array.from(this.selectedNodeIds)[0];
+                const node = this.store.get(nodeId);
+                if (node && node.props) {
+                    // Mutate the primitive value in the node's props tree
+                    this.updatePropValue(node.props, label, value);
+                    // Re-calculate node height
+                    const newHeight = this.controls.nodePropGroup.useProps(node.props);
+                    node.height = newHeight;
+                }
+            }
+        });
+    }
+    updatePropValue(props, targetLabel, newValue) {
+        const primitives = [
+            ...Object.values(props.booleans || {}).flat(),
+            ...Object.values(props.texts || {}).flat(),
+            ...Object.values(props.enums || {}).flat()
+        ];
+        for (const primitive of primitives) {
+            if (primitive.label === targetLabel) {
+                primitive.value = newValue;
+            }
+        }
+    }
+    validateConfig(config) {
+        return {
+            connectionMode: config.connectionMode ?? "node",
+            handleStyle: config.handleStyle ?? DEFAULT_HANDLE_STYLE,
+        };
     }
     distance(p1, p2) {
         const dx = p2.clientX - p1.clientX;
@@ -639,7 +676,10 @@ export class NodeEditor {
                 this.store.updateLabel(node.id, session.previousLabel, this.theme);
                 if (this.getSingleSelectedNode()?.id === node.id &&
                     node.nodeType !== "composition") {
-                    this.controls.showProperties(session.previousLabel);
+                    const nodeId = this.selectedNodeIds.values().next().value;
+                    const selectedNode = nodeId !== undefined ? this.store.get(nodeId) : undefined;
+                    if (selectedNode)
+                        this.controls.showProperties(selectedNode);
                 }
                 this.syncToolbarState();
             },
@@ -647,7 +687,10 @@ export class NodeEditor {
                 this.store.updateLabel(node.id, nextLabel, this.theme);
                 if (this.getSingleSelectedNode()?.id === node.id &&
                     node.nodeType !== "composition") {
-                    this.controls.showProperties(nextLabel);
+                    const nodeId = this.selectedNodeIds.values().next().value;
+                    const selectedNode = nodeId !== undefined ? this.store.get(nodeId) : undefined;
+                    if (selectedNode)
+                        this.controls.showProperties(selectedNode);
                 }
                 this.syncToolbarState();
             },
@@ -1280,16 +1323,14 @@ export class NodeEditor {
             node.nodeType === "composition-child" ||
             node.nodeType === "group") {
             const editX = node.width - NODE_LAYOUT.editBtnPaddingRight;
-            const editY = isContainerNodeType(node.nodeType)
-                ? 20
-                : NODE_LAYOUT.headerHeight / 2;
+            const editY = NODE_LAYOUT.headerHeight / 2;
             const editDx = localClickX - editX;
             const editDy = localClickY - editY;
             if (editDx * editDx + editDy * editDy <=
                 NODE_LAYOUT.editBtnClickRadius * NODE_LAYOUT.editBtnClickRadius) {
                 this.beginLabelEdit(node);
                 this.selectOnlyNode(node.id);
-                this.controls.showProperties(node.text);
+                this.controls.showProperties(node);
                 this.hoveredHandle = null;
                 this.syncToolbarState();
                 return;

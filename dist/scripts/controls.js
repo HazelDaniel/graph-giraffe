@@ -16,6 +16,7 @@ export class UIControls {
     sidebarToggle;
     nodeProperties;
     nodeLabelInput;
+    nodePropGroup;
     constructor(canvas, container, historyPane, toolPane, callbacks) {
         this.sidebar = container;
         this.addNodeButton = toolPane.shadowRoot?.querySelector("#btn-add-node");
@@ -28,6 +29,7 @@ export class UIControls {
         this.sidebarToggle = container.shadowRoot?.querySelector("#sidebar-toggle");
         this.nodeProperties = container.shadowRoot?.querySelector("#node-properties");
         this.nodeLabelInput = container.shadowRoot?.querySelector("#node-label-input");
+        this.nodePropGroup = container.shadowRoot?.querySelector("#node-prop-group");
         this.addNodeButton.addEventListener("click", () => callbacks.onAddNode());
         this.addGroupButton.addEventListener("click", () => callbacks.onAddGroup());
         this.addCompositionButton.addEventListener("click", () => callbacks.onAddComposition());
@@ -101,9 +103,16 @@ export class UIControls {
     disableRedo() {
         this.redoButton.disabled = true;
     }
-    showProperties(label) {
+    showProperties(node) {
         this.nodeProperties.style.display = "flex";
-        this.nodeLabelInput.value = label;
+        this.nodeLabelInput.value = node.text;
+        if (node.props) {
+            this.nodePropGroup.useProps(node.props);
+            this.nodePropGroup.style.display = "block";
+        }
+        else {
+            this.nodePropGroup.style.display = "none";
+        }
         this.sidebar.classList.remove("collapsed");
     }
     hideProperties() {

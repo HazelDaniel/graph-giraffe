@@ -1,281 +1,216 @@
-export class GGInputPair extends HTMLElement {
-    static get observedAttributes() {
-        return ['label', 'value', 'uiprimitive', 'options'];
-    }
-    container;
+class GGInputPair extends HTMLElement {
     constructor() {
         super();
-        this.attachShadow({ mode: 'open' });
-        this.container = document.createElement('div');
-        this.shadowRoot.appendChild(this.container);
-    }
-    connectedCallback() {
-        this.render();
-    }
-    attributeChangedCallback() {
-        if (this.isConnected) {
-            this.render();
-        }
-    }
-    get value() {
-        const input = this.shadowRoot.querySelector('input, gg-select');
-        if (!input)
-            return '';
-        if (input instanceof HTMLInputElement && input.type === 'checkbox') {
-            return input.checked;
-        }
-        return input.value;
-    }
-    set value(val) {
-        this.setAttribute('value', String(val));
-    }
-    render() {
-        const labelText = this.getAttribute('label') || '';
-        const valAttr = this.getAttribute('value') || '';
-        const uiprimitive = this.getAttribute('uiprimitive') || 'text';
-        const optionsAttr = this.getAttribute('options') || '';
-        this.container.innerHTML = `
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = `
       <style>
-        .pair-row {
+        :host {
           display: flex;
+          flex-direction: column;
+          align-items: flex-start;
           justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          width: 100%;
           margin-bottom: 8px;
-          font-family: inherit;
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          color: #e2e8f0;
+          gap: 0.4rem;
+        }
+        :host(.row) {
+          flex-direction: row;
         }
         label {
-          font-weight: 500;
-          color: var(--text-main, #e2e8f0);
           flex: 1;
-          font-size: 0.8rem;
+          margin-right: 12px;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        input[type="checkbox"] {
+        .control-container {
+          flex: 2;
+          display: flex;
+          justify-content: flex-end;
+        }
+        ::slotted(input[type="text"]) {
+          width: 100%;
+          background: #1e293b;
+          border: 1px solid #334155;
+          color: #f8fafc;
+          border-radius: 4px;
+          padding: 4px 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          box-sizing: border-box;
+        }
+        ::slotted(input[type="checkbox"]) {
+          accent-color: #3b82f6;
           width: 16px;
           height: 16px;
-          cursor: pointer;
-          accent-color: var(--accent, #38bdf8);
         }
-        input[type="text"], input[type="number"], input[type="range"] {
-          flex: 1.5;
-          padding: 6px 10px;
-          background: var(--cs-surface, #1e293b);
-          border: 1px solid var(--cs-border, rgba(77, 77, 77, 0.25));
-          border-radius: 6px;
-          color: #f8fafc;
-          font-size: 14px;
-          outline: none;
-          max-width: 160px;
-        }
-        gg-select {
-          flex: 1.5;
-          max-width: 160px;
+        ::slotted(gg-select) {
+          width: 100%;
         }
       </style>
-      <div class="pair-row">
-        <label title="${labelText}">${labelText}</label>
-        ${this.renderInput(uiprimitive, valAttr, optionsAttr)}
+      <label id="lbl"></label>
+      <div class="control-container">
+        <slot></slot>
       </div>
     `;
-        const input = this.shadowRoot.querySelector('input, gg-select');
-        if (input) {
-            input.addEventListener('change', () => {
-                this.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-            });
-            input.addEventListener('input', () => {
-                this.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-            });
-            input.addEventListener('gg-select-change', () => {
-                this.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-            });
-        }
     }
-    renderInput(uiprimitive, value, optionsAttr) {
-        if (uiprimitive === 'checkbox') {
-            const isChecked = value === 'true' || value === '1';
-            return `<input type="checkbox" ${isChecked ? 'checked' : ''}>`;
-        }
-        if (uiprimitive === 'select') {
-            const options = optionsAttr ? optionsAttr.split(',') : [];
-            return `
-        <gg-select value="${value}">
-          ${options.map(opt => `<gg-option value="${opt.trim()}">${opt.trim()}</gg-option>`).join('')}
-        </gg-select>
-      `;
-        }
-        return `<input type="${uiprimitive}" value="${value}">`;
+    set label(text) {
+        this.shadowRoot.getElementById("lbl").textContent = text;
     }
 }
-export class GGInputGroup extends HTMLElement {
+customElements.define("gg-input-pair", GGInputPair);
+class GGInputGroup extends HTMLElement {
     constructor() {
         super();
-        this.attachShadow({ mode: 'open' });
-    }
-    connectedCallback() {
-        const groupName = this.getAttribute('id') || 'group';
+        this.attachShadow({ mode: "open" });
         this.shadowRoot.innerHTML = `
       <style>
-        fieldset {
-          border: 1px solid var(--glass-border, rgba(77, 77, 77, 0.25));
-          border-radius: 8px;
-          padding: 12px;
+        :host {
+          display: block;
           margin-bottom: 16px;
-          background: rgba(30, 41, 59, 0.1);
+        }
+        fieldset {
+          border: 1px solid #334155;
+          border-radius: 6px;
+          padding: 12px;
+          margin: 0;
+          background: rgba(15, 23, 42, 0.4);
         }
         legend {
-          font-weight: 600;
+          font-family: 'Inter', sans-serif;
           font-size: 11px;
+          font-weight: 600;
+          color: #94a3b8;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          color: var(--accent, #38bdf8);
-          padding: 0 6px;
+          padding: 0 4px;
         }
       </style>
       <fieldset>
-        <legend>${groupName}</legend>
+        <legend id="leg"></legend>
         <slot></slot>
       </fieldset>
     `;
     }
+    set legend(text) {
+        this.shadowRoot.getElementById("leg").textContent = text;
+    }
 }
+customElements.define("gg-input-group", GGInputGroup);
 export class GGPropGroup extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          padding: 16px 0;
+          max-height: 100%;
+          box-sizing: border-box;
+          width: 100%;
+          overflow: hidden;
+        }
+
+        :host>#container {
+          width: 100%;
+          overflow-y: auto;
+        }
+      </style>
+      <div id="container" part="root"></div>
+    `;
+    }
+    /**
+     * Generates the DOM based on the NodePropType data.
+     * Returns the estimated height of the WebGL node body based on the properties.
+     */
     useProps(data) {
-        this.innerHTML = '';
-        // 1. Render ungrouped properties first
-        // Ungrouped Booleans
-        if (data.booleans && data.booleans.ungrouped) {
-            for (const item of data.booleans.ungrouped) {
-                const pair = this.createPair(item);
-                this.appendChild(pair);
+        const container = this.shadowRoot.getElementById("container");
+        container.innerHTML = "";
+        // We will estimate WebGL node height based on the number of items.
+        let lineCount = 0;
+        // Helper to create an input element based on primitive type
+        const createControl = (primitive) => {
+            const { label, value, uiPrimitive } = primitive;
+            let control;
+            if (uiPrimitive === "select") {
+                control = document.createElement("gg-select");
+                // We assume gg-select has an 'options' setter and 'value' property.
+                // For now, we'll just set its value attribute.
+                control.setAttribute("value", value);
+                control.addEventListener("change", (e) => {
+                    this.dispatchPropChange(label, e.target.value, uiPrimitive);
+                });
             }
-        }
-        // Ungrouped Texts
-        if (data.texts && data.texts.ungrouped) {
-            for (const item of data.texts.ungrouped) {
-                const pair = this.createPair(item);
-                this.appendChild(pair);
-            }
-        }
-        // Ungrouped Enums
-        if (data.enums && data.enums.ungrouped) {
-            for (const item of data.enums.ungrouped) {
-                const pair = this.createPair(item);
-                this.appendChild(pair);
-            }
-        }
-        // 2. Render grouped properties in order of groups key
-        if (data.groups) {
-            for (const groupKey of data.groups) {
-                const groupEl = document.createElement('gg-input-group');
-                groupEl.setAttribute('id', groupKey);
-                const groupBooleans = (data.booleans && data.booleans[groupKey]) || [];
-                const groupTexts = (data.texts && data.texts[groupKey]) || [];
-                const groupEnums = (data.enums && data.enums[groupKey]) || [];
-                for (const item of groupBooleans) {
-                    groupEl.appendChild(this.createPair(item, false));
+            else {
+                const input = document.createElement("input");
+                input.type = uiPrimitive === "checkbox" ? "checkbox" : "text"; // fallback to text
+                if (uiPrimitive === "checkbox") {
+                    input.checked = value;
+                    input.addEventListener("change", (e) => {
+                        this.dispatchPropChange(label, input.checked, uiPrimitive);
+                    });
                 }
-                for (const item of groupTexts) {
-                    groupEl.appendChild(this.createPair(item, false));
+                else {
+                    input.value = value;
+                    input.addEventListener("change", (e) => {
+                        this.dispatchPropChange(label, input.value, uiPrimitive);
+                    });
                 }
-                for (const item of groupEnums) {
-                    groupEl.appendChild(this.createPair(item, false));
+                control = input;
+            }
+            return control;
+        };
+        // Helper to create a gg-input-pair
+        const createPair = (primitive) => {
+            const pair = document.createElement("gg-input-pair");
+            if ("uiPrimitive" in primitive && primitive["uiPrimitive"] === "checkbox")
+                pair.classList.add("row");
+            pair.label = primitive.label;
+            const control = createControl(primitive);
+            pair.appendChild(control);
+            return pair;
+        };
+        const ungrouped = [
+            ...(data.booleans["ungrouped"] || []),
+            ...(data.texts["ungrouped"] || []),
+            ...(data.enums["ungrouped"] || []),
+        ];
+        for (const item of ungrouped) {
+            container.appendChild(createPair(item));
+            lineCount++;
+        }
+        for (const groupName of data.groups) {
+            const groupItems = [
+                ...(data.booleans[groupName] || []),
+                ...(data.texts[groupName] || []),
+                ...(data.enums[groupName] || []),
+            ];
+            if (groupItems.length > 0) {
+                const groupEl = document.createElement("gg-input-group");
+                groupEl.legend = groupName;
+                // Group heading counts as a line
+                lineCount++;
+                for (const item of groupItems) {
+                    groupEl.appendChild(createPair(item));
+                    lineCount++;
                 }
-                this.appendChild(groupEl);
+                container.appendChild(groupEl);
             }
         }
-        // Attach event listeners to child elements with IDs
-        this.attachEventListeners();
-        // Validate DOM tree structure
-        this.validateDOM();
-        // Calculate Expanded Body Height
-        return this.calculateExpandedHeight(data);
+        // headerHeight (30) + top padding (16) + (lineCount * 20) + bottom padding (16)
+        return 30 + 16 + lineCount * 20 + 16;
     }
-    createPair(item, assignId = true) {
-        const pair = document.createElement('gg-input-pair');
-        pair.setAttribute('label', item.label);
-        pair.setAttribute('uiprimitive', item.uiPrimitive);
-        pair.setAttribute('value', String(item.value));
-        if (item.options) {
-            pair.setAttribute('options', item.options.join(','));
-        }
-        if (assignId) {
-            const pairId = item.label.toLowerCase().replace(/\s+/g, '-');
-            pair.setAttribute('id', pairId);
-        }
-        return pair;
-    }
-    attachEventListeners() {
-        const childrenWithId = this.querySelectorAll('[id]');
-        childrenWithId.forEach((child) => {
-            child.addEventListener('change', (e) => this.handleEvent(e));
-            child.addEventListener('input', (e) => this.handleEvent(e));
-        });
-    }
-    handleEvent(e) {
-        e.stopPropagation();
-        const target = e.target;
-        const pair = target.closest('gg-input-pair');
-        if (!pair)
-            return;
-        const label = pair.getAttribute('label') || '';
-        const uiPrimitive = pair.getAttribute('uiprimitive') || '';
-        const value = pair.value;
-        this.dispatchEvent(new CustomEvent('gg-prop-change', {
+    dispatchPropChange(label, value, uiPrimitive) {
+        const payload = { label, value, uiPrimitive };
+        this.dispatchEvent(new CustomEvent("gg-prop-change", {
+            detail: payload,
             bubbles: true,
             composed: true,
-            detail: { label, value, uiPrimitive }
         }));
     }
-    validateDOM() {
-        for (const child of this.children) {
-            const tag = child.tagName.toLowerCase();
-            if (tag !== 'gg-input-pair' && tag !== 'gg-input-group') {
-                throw new Error(`Invalid DOM structure inside gg-prop-group: direct child <${tag}> is not allowed.`);
-            }
-            if (tag === 'gg-input-group') {
-                for (const nestedChild of child.children) {
-                    const nestedTag = nestedChild.tagName.toLowerCase();
-                    if (nestedTag !== 'gg-input-pair') {
-                        throw new Error(`Invalid DOM structure inside gg-input-group: nested child <${nestedTag}> is not allowed.`);
-                    }
-                }
-            }
-        }
-    }
-    calculateExpandedHeight(data) {
-        let numLines = 0;
-        // Ungrouped
-        const ungBooleans = (data.booleans && data.booleans.ungrouped) || [];
-        const ungTexts = (data.texts && data.texts.ungrouped) || [];
-        const ungEnums = (data.enums && data.enums.ungrouped) || [];
-        numLines += ungBooleans.length + ungTexts.length + ungEnums.length;
-        // Grouped
-        if (data.groups) {
-            for (const groupKey of data.groups) {
-                numLines += 1; // subheading line
-                const gBooleans = (data.booleans && data.booleans[groupKey]) || [];
-                const gTexts = (data.texts && data.texts[groupKey]) || [];
-                const gEnums = (data.enums && data.enums[groupKey]) || [];
-                numLines += gBooleans.length + gTexts.length + gEnums.length;
-            }
-        }
-        const baseHeight = 50;
-        const lineHeight = 20;
-        const bottomPadding = 15;
-        return baseHeight + numLines * lineHeight + bottomPadding;
-    }
 }
-if (!customElements.get('gg-input-pair')) {
-    customElements.define('gg-input-pair', GGInputPair);
-}
-if (!customElements.get('gg-input-group')) {
-    customElements.define('gg-input-group', GGInputGroup);
-}
-if (!customElements.get('gg-prop-group')) {
-    customElements.define('gg-prop-group', GGPropGroup);
-}
+customElements.define("gg-prop-group", GGPropGroup);
 //# sourceMappingURL=prop-group.js.map

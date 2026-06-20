@@ -9,6 +9,7 @@ import {
   NodeData,
   ThemeName,
   NodeType,
+  NodePropType
 } from './types.js';
 import {
   CompositionReferencePreviewChild,
@@ -506,7 +507,14 @@ export class NodeStore {
       return getDefaultNodeSize('composition');
     }
 
-    return getDefaultNodeSize(node.nodeType, shouldCollapse);
+    const defaultSize = getDefaultNodeSize(node.nodeType, shouldCollapse);
+
+    // If the node has props and is not collapsed, derive height from props schema
+    if (node.nodeType === 'node' && !shouldCollapse && node.props) {
+      return { width: defaultSize.width, height: this.calculatePropHeight(node.props) };
+    }
+
+    return defaultSize;
   }
 
   private getCompositionReferencePreviewChildren(
@@ -581,7 +589,7 @@ export class NodeStore {
     const b = (id >> 16) & 0xff;
     const handles = this.createHandleState(id, nodeType);
 
-    return {
+    const result: NodeData = {
       id,
       localX,
       localY,
@@ -598,6 +606,53 @@ export class NodeStore {
       compositionRefId: null,
       isDropTarget,
       handles,
+      props: nodeType === 'node' ? this.createDefaultProps() : undefined,
+    };
+
+    if (nodeType === 'node' && result.props) {
+      result.height = this.calculatePropHeight(result.props);
+    }
+
+    return result;
+  }
+
+  private calculatePropHeight(props: NodePropType): number {
+    let lineCount = 0;
+
+    // Count ungrouped items directly
+    lineCount += (props.booleans["ungrouped"]?.length ?? 0);
+    lineCount += (props.texts["ungrouped"]?.length ?? 0);
+    lineCount += (props.enums["ungrouped"]?.length ?? 0);
+
+    // Count grouped items
+    for (let i = 0; i < props.groups.length; i++) {
+      const g = props.groups[i];
+      const bc = props.booleans[g]?.length ?? 0;
+      const tc = props.texts[g]?.length ?? 0;
+      const ec = props.enums[g]?.length ?? 0;
+      const total = bc + tc + ec;
+      if (total > 0) {
+        lineCount += 1 + total; // heading + items
+      }
+    }
+
+    // headerHeight (30) + top padding (16) + (lineCount * 20) + bottom padding (16)
+    return 30 + 16 + (lineCount * 20) + 16;
+  }
+
+  private createDefaultProps(): NodePropType {
+    return {
+      groups: ["Appearance", "Data"],
+      booleans: {
+        "ungrouped": [{ label: "Visible", value: true, uiPrimitive: "checkbox" }],
+        "Appearance": [{ label: "Shadow", value: true, uiPrimitive: "checkbox" }]
+      },
+      texts: {
+        "Data": [{ label: "Value", value: "0", uiPrimitive: "text" }]
+      },
+      enums: {
+        "Appearance": [{ label: "Size", value: "Medium", uiPrimitive: "select" }]
+      }
     };
   }
 }

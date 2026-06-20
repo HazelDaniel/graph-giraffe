@@ -1,10 +1,11 @@
+import "./prop-group.js";
 const STYLE_TEMPLATE = `
       :host {
         position: absolute;
         top: 2.5vh;
         right: 0;
         height: 95vh;
-        width: 280px;
+        width: 300px;
         background: var(--glass-bg);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
@@ -20,13 +21,14 @@ const STYLE_TEMPLATE = `
       }
 
       :host>.root {
-        top: inherit;
+        top: 0;
         right: inherit;
         position: inherit;
         height: inherit;
         width: inherit;
         display: flex;
         flex-direction: inherit;
+        padding-bottom: 2rem;
       }
 
       .sidebar-toggle {
@@ -70,12 +72,19 @@ const STYLE_TEMPLATE = `
 
       .sidebar-content {
         flex: 1;
+        max-height: 100%;
         overflow-y: auto;
         padding: 20px;
         display: flex;
         flex-direction: column;
         gap: 24px;
         font-size: 0.8rem;
+        padding-bottom: 2rem;
+        scrollbar-width: thin;
+      }
+
+      .sidebar-content::-webkit-scrollbar {
+        // display: none;
       }
 
       .settings-group {
@@ -229,6 +238,7 @@ export class UIControls extends HTMLElement {
               class="text-input"
             />
           </div>
+          <gg-prop-group id="node-prop-group"></gg-prop-group>
         </div>
       </div>
 

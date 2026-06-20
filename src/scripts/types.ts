@@ -178,6 +178,31 @@ export interface BGShaderLocations {
   u_UsePointMask: WebGLUniformLocation;
 }
 
+export interface NodePropPrimitive {
+  label: string;
+  value: string | boolean;
+  uiPrimitive: string;
+}
+
+export interface NodePropType {
+  groups: string[];
+  booleans: {
+    [groupKey: string]: NodePropPrimitive[];
+  };
+  texts: {
+    [groupKey: string]: NodePropPrimitive[];
+  };
+  enums: {
+    [groupKey: string]: NodePropPrimitive[];
+  };
+}
+
+export interface PropChangePayload {
+  label: string;
+  value: string | boolean;
+  uiPrimitive: string;
+}
+
 export interface NodeData {
   id: number;
   nodeType: NodeType;
@@ -201,6 +226,8 @@ export interface NodeData {
   childIds: number[];
   /** Handle metadata for nodes that can participate in connections. */
   handles: NodeHandleData[];
+  /** Dynamic properties that dictate node body height and overlay text. */
+  props?: NodePropType;
 }
 
 export interface AddUploadedTextureParams {
