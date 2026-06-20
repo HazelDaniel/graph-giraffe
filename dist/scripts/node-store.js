@@ -503,7 +503,7 @@ export class NodeStore {
                 "Appearance": [{ label: "Shadow", value: true, uiPrimitive: "checkbox" }]
             },
             texts: {
-                "Data": [{ label: "Value", value: "0", uiPrimitive: "text" }]
+                "Data": [{ label: "Value", value: "0", uiPrimitive: "range" }]
             },
             enums: {
                 "Appearance": [{ label: "Size", value: "Medium", uiPrimitive: "select" }]

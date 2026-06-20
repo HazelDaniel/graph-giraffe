@@ -24,13 +24,13 @@ export function drawHandle(ctx, handle, x, y) {
     }
     ctx.restore();
 }
-const NODE_THEMES = {
+export const NODE_THEMES = {
     dark: {
         bgFill: 'rgba(30, 41, 59, 0.8)',
         borderStroke: 'rgba(255, 255, 255, 0.1)',
         headerFill: 'rgba(0, 0, 0, 0.3)',
         titleFill: '#f8fafc',
-        bodyFill: '#94a3b8',
+        bodyFill: 'rgba(19, 18, 18, 0.8)',
         borderWidth: 1,
     },
     light: {
@@ -50,11 +50,11 @@ const NODE_THEMES = {
         borderWidth: 2,
     },
 };
-const G_NODE_THEMES = {
+export const G_NODE_THEMES = {
     dark: {
-        bgFill: 'rgba(30, 41, 59, 0.25)',
+        bgFill: 'rgba(11, 13, 17, 0.25)',
         borderStroke: 'rgba(255, 255, 255, 0.35)',
-        headerFill: 'rgba(0, 0, 0, 0.3)',
+        headerFill: 'rgba(22, 20, 20, 0.79)',
         titleFill: '#f8fafc',
         bodyFill: '#94a3b8',
         borderWidth: 1,

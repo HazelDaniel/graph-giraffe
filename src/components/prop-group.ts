@@ -157,7 +157,7 @@ export class GGPropGroup extends HTMLElement {
         });
       } else {
         const input = document.createElement("input");
-        input.type = uiPrimitive === "checkbox" ? "checkbox" : "text"; // fallback to text
+        input.type = uiPrimitive === "checkbox" ? "checkbox" : uiPrimitive; // fallback to text
 
         if (uiPrimitive === "checkbox") {
           input.checked = value as boolean;

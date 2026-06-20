@@ -33,7 +33,7 @@
 	* world-space translation (whether individual drags or in a multi-selection)
 	* node prop change
 	* label update
-	* layout reflow (for scene graphs)
+	* re-parenting
     * [others not yet mapped out]
 
 - TEXTURE BUTTON ACTIONS (the events that canvas triggers)

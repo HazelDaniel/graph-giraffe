@@ -1,3 +1,4 @@
+import { G_NODE_THEMES, NODE_THEMES } from "./texture.js";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const NODE_HEAD_TEXTURE_SKINS = [
     ` <svg width="595" height="93" viewBox="0 0 595 93" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -126,7 +127,7 @@ const NODE_BODY_TEXTURE_SKINS = [
     `
 <svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g filter="url(#filter0_i_2_14)">
-<rect width="206" height="142" rx="8" fill="currentColor"/>
+<rect width="206" height="142" rx="8" fill="var(--theme)"/>
 </g>
 <defs>
 <filter id="filter0_i_2_14" x="0" y="0" width="206" height="146" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
@@ -207,12 +208,16 @@ const NODE_ID_TEXTURE_LOOKUP = {
 class textureRegistry {
     sources = new Map();
     ownedPreviewUrls = new Set();
+    theme_ = null;
     static _instance = null;
     static get instance() {
         if (!this._instance) {
             this._instance = new textureRegistry();
         }
         return this._instance;
+    }
+    set theme(newTheme) {
+        this.theme_ = newTheme;
     }
     constructor(defaultSources = DEFAULT_TEXTURE_SOURCES) {
         for (const source of defaultSources) {
@@ -244,8 +249,37 @@ class textureRegistry {
         return this.sources.has(id);
     }
     addUploaded(params) {
-        const svgText = sanitizeSvg(params.svgText);
+        let svgText = sanitizeSvg(params.svgText);
         const id = this.ensureUniqueId(params.id ?? slugify(params.label));
+        let themeColor = "";
+        switch (params.kind) {
+            case "node-head":
+            case "composition-reference-child-head":
+            case "composition-child-head": {
+                themeColor = NODE_THEMES[this.theme_ || "dark"].headerFill;
+                break;
+            }
+            case "node-body":
+            case "composition-reference-body": {
+                themeColor = NODE_THEMES[this.theme_ || "dark"].bodyFill;
+                break;
+            }
+            case "group-head":
+            case "composition-head": {
+                themeColor = G_NODE_THEMES[this.theme_ || "dark"].headerFill;
+                break;
+            }
+            case "group-body":
+            case "composition-body": {
+                themeColor = G_NODE_THEMES[this.theme_ || "dark"].bodyFill;
+                break;
+            }
+            default: {
+                themeColor = G_NODE_THEMES[this.theme_ || "dark"].bgFill;
+                break;
+            }
+        }
+        svgText = svgText.replaceAll("var(--theme)", themeColor);
         const source = {
             id,
             label: params.label,
@@ -332,11 +366,9 @@ export function generateTetureSkinOption(kind, label, index, id) {
 }
 function buildDefaultTextureSvg(fill, stroke) {
     return `
-  <svg xmlns="${SVG_NS}" viewBox="0 0 96 64">
-  <rect x="4" y="4" width="88" height="56" rx="10" fill="${fill}"/>
-  <path d="M8 48 C24 34, 36 58, 54 42 S76 28, 90 40" fill="none" stroke="${stroke}" stroke-width="4" stroke-linecap="round"/>
-  <path d="M14 18 H82" stroke="${stroke}" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
-  </svg>
+  <svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="${SVG_NS}">
+<rect x="0.5" y="0.5" width="205" height="141" rx="7.5" fill="${fill}"  stroke="${stroke}"/>
+</svg>
 `;
 }
 function sanitizeSvg(svgText) {

@@ -1,4 +1,13 @@
 export type ThemeName = 'dark' | 'light' | 'neon';
+export interface ThemeStyle {
+  bgFill: string;
+  borderStroke: string;
+  headerFill: string;
+  titleFill: string;
+  bodyFill: string;
+  borderWidth: number;
+}
+
 export type GeometryMeshType = 'rounded-square';
 export type BGGeometryMeshType = 'dotted' | 'grid';
 export type NodeType = 'node' | 'group' | 'composition' | 'composition-child';

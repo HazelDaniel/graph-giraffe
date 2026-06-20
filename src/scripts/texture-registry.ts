@@ -1,9 +1,11 @@
+import { G_NODE_THEMES, NODE_THEMES } from "./texture.js";
 import {
   AddUploadedTextureParams,
   NodeTextureIds,
   NodeType,
   TextureKind,
   TextureSource,
+  ThemeName,
 } from "./types.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -139,7 +141,7 @@ const NODE_BODY_TEXTURE_SKINS = [
 `
 <svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g filter="url(#filter0_i_2_14)">
-<rect width="206" height="142" rx="8" fill="currentColor"/>
+<rect width="206" height="142" rx="8" fill="var(--theme)"/>
 </g>
 <defs>
 <filter id="filter0_i_2_14" x="0" y="0" width="206" height="146" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
@@ -282,6 +284,7 @@ const NODE_ID_TEXTURE_LOOKUP: Record<TextureLookupKeys, NodeTextureIds> = {
 class textureRegistry {
   public sources = new Map<string, TextureSource>();
   public ownedPreviewUrls = new Set<string>();
+  private theme_: ThemeName | null = null;
 
   private static _instance: textureRegistry | null = null;
 
@@ -290,6 +293,10 @@ class textureRegistry {
       this._instance = new textureRegistry();
     }
     return this._instance;
+  }
+
+  set theme(newTheme: ThemeName) {
+    this.theme_ = newTheme;
   }
 
   constructor(defaultSources: TextureSource[] = DEFAULT_TEXTURE_SOURCES) {
@@ -329,8 +336,41 @@ class textureRegistry {
   }
 
   addUploaded(params: AddUploadedTextureParams): TextureSource {
-    const svgText = sanitizeSvg(params.svgText);
+    let svgText = sanitizeSvg(params.svgText);
     const id = this.ensureUniqueId(params.id ?? slugify(params.label));
+    let themeColor = "";
+
+    switch (params.kind) {
+      case "node-head":
+      case "composition-reference-child-head":
+      case "composition-child-head": {
+        themeColor = NODE_THEMES[this.theme_ || "dark"].headerFill;
+        break;
+      }
+      case "node-body":
+      case "composition-reference-body": {
+        themeColor = NODE_THEMES[this.theme_ || "dark"].bodyFill;
+        break;
+      }
+      case "group-head":
+      case "composition-head": {
+        themeColor = G_NODE_THEMES[this.theme_ || "dark"].headerFill;
+        break;
+      }
+
+      case "group-body":
+      case "composition-body": {
+        themeColor = G_NODE_THEMES[this.theme_ || "dark"].bodyFill;
+        break;
+      }
+      default: {
+        themeColor = G_NODE_THEMES[this.theme_ || "dark"].bgFill;
+        break;
+      }
+
+    }
+
+    svgText = svgText.replaceAll("var(--theme)", themeColor);
     const source: TextureSource = {
       id,
       label: params.label,
@@ -437,11 +477,9 @@ export function generateTetureSkinOption(kind: TextureKind, label: string, index
 
 function buildDefaultTextureSvg(fill: string, stroke: string): string {
   return `
-  <svg xmlns="${SVG_NS}" viewBox="0 0 96 64">
-  <rect x="4" y="4" width="88" height="56" rx="10" fill="${fill}"/>
-  <path d="M8 48 C24 34, 36 58, 54 42 S76 28, 90 40" fill="none" stroke="${stroke}" stroke-width="4" stroke-linecap="round"/>
-  <path d="M14 18 H82" stroke="${stroke}" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
-  </svg>
+  <svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="${SVG_NS}">
+<rect x="0.5" y="0.5" width="205" height="141" rx="7.5" fill="${fill}"  stroke="${stroke}"/>
+</svg>
 `;
 }
 

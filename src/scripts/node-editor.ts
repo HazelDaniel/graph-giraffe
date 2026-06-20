@@ -297,6 +297,7 @@ export class NodeEditor {
       },
       onThemeChange: (theme) => {
         this.theme = theme;
+        TextureRegistry.theme = theme;
         this.store.regenerateTextures(theme);
       },
       onGlobalTextureChange: (kind, textureId) => {
