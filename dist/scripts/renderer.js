@@ -97,6 +97,7 @@ export class Renderer {
         requestAnimationFrame(this.tick.bind(this));
     }
     drawFrame() {
+        this.textureCache.processUploads();
         const gl = this.gl;
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
         // gl.clearColor(0.0, 0.0, 0.0, 0.0);

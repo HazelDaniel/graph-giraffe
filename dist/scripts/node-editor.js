@@ -1368,6 +1368,7 @@ export class NodeEditor {
                     const delta = this.pinchDistance - distance;
                     const rect = canvas.getBoundingClientRect();
                     this.camera.zoomAt(center.x - rect.left, center.y - rect.top, delta);
+                    this.triggerZoomThrottle();
                 }
                 this.pinchDistance = distance;
             }
@@ -1821,11 +1822,23 @@ export class NodeEditor {
     hasSelection() {
         return this.selectedNodeIds.size > 0 || this.selectedEdgeIds.size > 0;
     }
+    zoomThrottleTimer = null;
+    ZOOM_THROTTLE_MS = 180;
+    triggerZoomThrottle() {
+        this.isZooming = true;
+        if (this.zoomThrottleTimer) {
+            clearTimeout(this.zoomThrottleTimer);
+        }
+        this.zoomThrottleTimer = setTimeout(() => {
+            this.isZooming = false;
+            this.zoomThrottleTimer = null;
+        }, this.ZOOM_THROTTLE_MS);
+    }
     handleWheel(e, canvas) {
         e.preventDefault();
         const { left, top } = canvas.getBoundingClientRect();
-        this.isZooming = Math.abs(e.deltaY) > 80; // TODO: we'll stop drawing group node labels when isZooming to  optimize rendering
         this.camera.zoomAt(e.clientX - left, e.clientY - top, e.deltaY);
+        this.triggerZoomThrottle();
     }
     handleKeyDown(e) {
         const target = e.target;
