@@ -52,7 +52,7 @@ export function buildEdgeRouteGeometry(
     edge.sourceHandleSide,
     targetWorld,
     edge.targetHandleSide,
-    edge.edgeType
+    'orthogonal'
   );
   const screenPoints = route.worldPoints.map((point) => camera.worldToScreen(point.x, point.y));
   const labelWorldPoint = getPolylineMidpoint(route.worldPoints);
@@ -85,7 +85,7 @@ export function buildConnectionPreviewGeometry(
   const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera);
   const targetWorld = camera.screenToWorld(screenX, screenY);
   const oppositeSide: HandleSide = sourceHandleSide === 'left' ? 'right' : 'left';
-  const route = buildCubicRoute(sourceWorld, sourceHandleSide, targetWorld, oppositeSide, 'cubic');
+  const route = buildOrthogonalRoute(sourceWorld, sourceHandleSide, targetWorld, oppositeSide);
   const screenPoints = route.worldPoints.map((point) => camera.worldToScreen(point.x, point.y));
   const labelWorldPoint = getPolylineMidpoint(route.worldPoints);
   const labelScreenPoint = camera.worldToScreen(labelWorldPoint.x, labelWorldPoint.y);
@@ -97,7 +97,7 @@ export function buildConnectionPreviewGeometry(
       sourceHandleSide,
       targetNodeId: -1,
       targetHandleSide: oppositeSide,
-      edgeType: 'cubic',
+      edgeType: 'orthogonal',
       headType: 'none',
       headSkinId: 'arrow',
       label: '',
@@ -142,6 +142,10 @@ function buildCubicRoute(
       worldPoints: [sourceWorld, targetWorld],
       arrowhead: buildEdgeHeadGeometry(sourceWorld, targetWorld),
     };
+  }
+
+  if (edgeType === 'orthogonal') {
+    return buildOrthogonalRoute(sourceWorld, sourceSide, targetWorld, targetSide);
   }
 
   const sourceDirection = sideDirection(sourceSide);
@@ -279,6 +283,106 @@ function sampleCubic(
 
 function sideDirection(side: HandleSide): number {
   return side === 'left' ? -1 : 1;
+}
+
+function buildOrthogonalRoute(
+  sourceWorld: Point2D,
+  sourceSide: HandleSide,
+  targetWorld: Point2D,
+  targetSide: HandleSide
+): { worldPoints: Point2D[]; arrowhead: ArrowheadGeometry | null } {
+  const padding = 32;
+  const sourceDir = sideDirection(sourceSide);
+  const targetDir = sideDirection(targetSide);
+
+  const p1 = { x: sourceWorld.x + sourceDir * padding, y: sourceWorld.y };
+  const p2 = { x: targetWorld.x + targetDir * padding, y: targetWorld.y };
+
+  const points: Point2D[] = [sourceWorld];
+
+  if (sourceDir === 1 && targetDir === -1) {
+    // Standard left-to-right connection
+    if (p1.x <= p2.x) {
+      const midX = (p1.x + p2.x) / 2;
+      points.push({ x: midX, y: p1.y }, { x: midX, y: p2.y });
+    } else {
+      const midY = (p1.y + p2.y) / 2;
+      points.push(p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2);
+    }
+  } else if (sourceDir === -1 && targetDir === 1) {
+    // Right-to-left connection (backwards)
+    if (p1.x >= p2.x) {
+      const midX = (p1.x + p2.x) / 2;
+      points.push({ x: midX, y: p1.y }, { x: midX, y: p2.y });
+    } else {
+      const midY = (p1.y + p2.y) / 2;
+      points.push(p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2);
+    }
+  } else {
+    // Same side connection
+    const outX = sourceDir === 1 ? Math.max(p1.x, p2.x) : Math.min(p1.x, p2.x);
+    points.push({ x: outX, y: p1.y }, { x: outX, y: p2.y });
+  }
+
+  points.push(targetWorld);
+
+  const worldPoints = filletPolyline(points, 16);
+
+  return {
+    worldPoints,
+    arrowhead: buildEdgeHeadGeometry(targetWorld, worldPoints[worldPoints.length - 2]),
+  };
+}
+
+function filletPolyline(points: Point2D[], radius: number): Point2D[] {
+  if (points.length <= 2) return points;
+
+  const result: Point2D[] = [points[0]];
+
+  for (let i = 1; i < points.length - 1; i++) {
+    // to calculate segment lengths accurately, we must use the original sharp points.
+    const origPrev = points[i - 1];
+    const curr = points[i];
+    const next = points[i + 1];
+
+    const distPrev = Math.hypot(curr.x - origPrev.x, curr.y - origPrev.y);
+    const distNext = Math.hypot(next.x - curr.x, next.y - curr.y);
+
+    const r = Math.min(radius, distPrev / 2, distNext / 2);
+
+    if (r < 1) {
+      result.push(curr);
+      continue;
+    }
+
+    const startP = {
+      x: curr.x + ((origPrev.x - curr.x) / distPrev) * r,
+      y: curr.y + ((origPrev.y - curr.y) / distPrev) * r,
+    };
+
+    const endP = {
+      x: curr.x + ((next.x - curr.x) / distNext) * r,
+      y: curr.y + ((next.y - curr.y) / distNext) * r,
+    };
+
+    // Draw straight line from prev rounded end to start of this corner
+    if (result.length > 0 && (result[result.length - 1].x !== startP.x || result[result.length - 1].y !== startP.y)) {
+      result.push(startP);
+    }
+
+    const samples = 6;
+    for (let j = 1; j <= samples; j++) {
+      const t = j / samples;
+      const u = 1 - t;
+      result.push({
+        x: u * u * startP.x + 2 * u * t * curr.x + t * t * endP.x,
+        y: u * u * startP.y + 2 * u * t * curr.y + t * t * endP.y,
+      });
+    }
+  }
+
+  result.push(points[points.length - 1]);
+  return result;
 }
 
 function distancePointToSegmentSquared(

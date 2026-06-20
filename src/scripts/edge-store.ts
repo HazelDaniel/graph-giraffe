@@ -57,7 +57,7 @@ export class EdgeStore {
       sourceHandleSide,
       targetNodeId,
       targetHandleSide,
-      edgeType = 'cubic',
+      edgeType = 'orthogonal',
       headType = 'arrow',
       headSkinId = 'arrow',
       label = '',

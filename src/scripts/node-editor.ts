@@ -18,6 +18,8 @@ import { HistoryStack, HistoryEntry } from "./history.js";
 import {
   ConnectionMode,
   EdgeHeadSkinId,
+  EdgeType,
+  EdgeHeadType,
   EdgeData,
   NodeEditorConfig,
   NodeData,
@@ -89,8 +91,8 @@ interface EdgeHistorySnapshot {
   sourceHandleSide: HandleSide;
   targetNodeId: number;
   targetHandleSide: HandleSide;
-  edgeType: "line" | "cubic" | "line-curve";
-  headType: "none" | "arrow";
+  edgeType: EdgeType;
+  headType: EdgeHeadType;
   headSkinId: EdgeHeadSkinId;
   label: string;
   isSelected: boolean;

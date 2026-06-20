@@ -23,7 +23,7 @@ export class EdgeStore {
         return Boolean(edgeIds && edgeIds.size > 0);
     }
     add(params) {
-        const { sourceNodeId, sourceHandleSide, targetNodeId, targetHandleSide, edgeType = 'cubic', headType = 'arrow', headSkinId = 'arrow', label = '', isSelected = false, visible = true, idOverride, } = params;
+        const { sourceNodeId, sourceHandleSide, targetNodeId, targetHandleSide, edgeType = 'orthogonal', headType = 'arrow', headSkinId = 'arrow', label = '', isSelected = false, visible = true, idOverride, } = params;
         if (sourceNodeId === targetNodeId)
             return null;
         if (this.hasConnection(sourceNodeId, sourceHandleSide))
