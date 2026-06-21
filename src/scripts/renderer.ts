@@ -162,7 +162,7 @@ export class Renderer {
     this.labelCtx.save();
     this.labelCtx.beginPath();
     this.labelCtx.lineWidth = 2;
-    this.labelCtx.strokeStyle = "rgba(96, 165, 250, 0.95)";
+    this.labelCtx.strokeStyle = "rgba(228, 228, 228, 0.95)";
     this.labelCtx.setLineDash([8, 6]);
     this.labelCtx.moveTo(route.screenPoints[0].x, route.screenPoints[0].y);
     for (let i = 1; i < route.screenPoints.length; i++) {
@@ -367,7 +367,7 @@ export class Renderer {
     gl.uniform1i(this.locations.u_UseTexture, 0);
     gl.uniform1i(this.locations.u_Use9Slice, 0);
 
-    gl.uniform4f(this.locations.u_Color, 0.38, 0.62, 1.0, 0.72);
+    gl.uniform4f(this.locations.u_Color, 0.38, 0.38, 0.39, 0.72);
     let vertexOffset = 0;
     for (const draw of lineDraws) {
       gl.drawArrays(gl.LINE_STRIP, vertexOffset, draw.count);

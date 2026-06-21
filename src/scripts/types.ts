@@ -106,8 +106,8 @@ export const HANDLE_LAYOUT = {
 
 export const DEFAULT_HANDLE_STYLE: HandleStyle = {
   shape: 'circle',
-  backgroundColor: 'rgba(148, 163, 184, 0.95)',
-  connectedBorderColor: 'rgba(34, 197, 94, 1)',
+  backgroundColor: 'rgba(33, 36, 39, 0.95)',
+  connectedBorderColor: '#2C9F92',
   disconnectedBorderColor: 'rgba(148, 163, 184, 0.85)',
   borderWidth: 2,
   size: 12,
