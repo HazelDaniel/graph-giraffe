@@ -651,7 +651,7 @@ export class NodeStore {
         "Data": [{ label: "Value", value: "0", uiPrimitive: "range" }]
       },
       enums: {
-        "Appearance": [{ label: "Size", value: "Medium", uiPrimitive: "select" }]
+        "Appearance": [{ label: "Size", value: "Medium", uiPrimitive: "select", options: ["Medium", "Large", "ExtraLarge"] }]
       }
     };
   }

@@ -42,9 +42,15 @@ class GGInputPair extends HTMLElement {
           box-sizing: border-box;
         }
         ::slotted(input[type="checkbox"]) {
-          accent-color: #3b82f6;
+          accent-color: #2C9F92;
           width: 16px;
           height: 16px;
+          border-radius: 0.8rem;
+        }
+
+        ::slotted(input[type="range"]) {
+          min-width: 12rem;
+          accent-color: #2C9F92;
         }
         ::slotted(gg-select) {
           width: 100%;
@@ -76,7 +82,7 @@ class GGInputGroup extends HTMLElement {
           border-radius: 6px;
           padding: 12px;
           margin: 0;
-          background: rgba(15, 23, 42, 0.4);
+          background:rgba(44, 159, 146, 0.1);
         }
         legend {
           font-family: 'Inter', sans-serif;
@@ -133,14 +139,20 @@ export class GGPropGroup extends HTMLElement {
         let lineCount = 0;
         // Helper to create an input element based on primitive type
         const createControl = (primitive) => {
-            const { label, value, uiPrimitive } = primitive;
+            const { label, value, uiPrimitive, options } = primitive;
             let control;
             if (uiPrimitive === "select") {
                 control = document.createElement("gg-select");
                 // We assume gg-select has an 'options' setter and 'value' property.
                 // For now, we'll just set its value attribute.
                 control.setAttribute("value", value);
-                control.addEventListener("change", (e) => {
+                if (Array.isArray(options)) {
+                    for (const option of options) {
+                        const optionTemplate = `<gg-option value="${option}">${option}</gg-option>`;
+                        control.insertAdjacentHTML("beforeend", optionTemplate);
+                    }
+                }
+                control.addEventListener("gg-select-change", (e) => {
                     this.dispatchPropChange(label, e.target.value, uiPrimitive);
                 });
             }

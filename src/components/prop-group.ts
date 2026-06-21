@@ -44,9 +44,15 @@ class GGInputPair extends HTMLElement {
           box-sizing: border-box;
         }
         ::slotted(input[type="checkbox"]) {
-          accent-color: #3b82f6;
+          accent-color: #2C9F92;
           width: 16px;
           height: 16px;
+          border-radius: 0.8rem;
+        }
+
+        ::slotted(input[type="range"]) {
+          min-width: 12rem;
+          accent-color: #2C9F92;
         }
         ::slotted(gg-select) {
           width: 100%;
@@ -80,7 +86,7 @@ class GGInputGroup extends HTMLElement {
           border-radius: 6px;
           padding: 12px;
           margin: 0;
-          background: rgba(15, 23, 42, 0.4);
+          background:rgba(44, 159, 146, 0.1);
         }
         legend {
           font-family: 'Inter', sans-serif;
@@ -142,7 +148,7 @@ export class GGPropGroup extends HTMLElement {
 
     // Helper to create an input element based on primitive type
     const createControl = (primitive: any) => {
-      const { label, value, uiPrimitive } = primitive;
+      const { label, value, uiPrimitive, options } = primitive;
 
       let control: HTMLElement;
 
@@ -151,8 +157,14 @@ export class GGPropGroup extends HTMLElement {
         // We assume gg-select has an 'options' setter and 'value' property.
         // For now, we'll just set its value attribute.
         control.setAttribute("value", value as string);
+        if (Array.isArray(options)) {
+          for (const option of options) {
+            const optionTemplate = `<gg-option value="${option}">${option}</gg-option>`;
+            control.insertAdjacentHTML("beforeend", optionTemplate);
+          }
+        }
 
-        control.addEventListener("change", (e: Event) => {
+        control.addEventListener("gg-select-change", (e: Event) => {
           this.dispatchPropChange(label, (e.target as any).value, uiPrimitive);
         });
       } else {

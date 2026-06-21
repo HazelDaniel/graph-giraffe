@@ -191,6 +191,7 @@ export interface NodePropPrimitive {
   label: string;
   value: string | boolean;
   uiPrimitive: string;
+  options?: string[];
 }
 
 export interface NodePropType {
