@@ -12,6 +12,7 @@ export interface ControlCallbacks {
   onRedo(): void;
   onDeleteNode(): void;
   onBgColorChange(r: number, g: number, b: number, a: number): void;
+  onFontColorChange(r: number, g: number, b: number, a: number): void;
   onThemeChange(theme: ThemeName): void;
   onGlobalTextureChange(kind: string, textureId: string): void;
   onLabelChange(newLabel: string): void;
@@ -109,6 +110,16 @@ export class UIControls {
       const g = parseInt(hex.slice(3, 5), 16) / 255;
       const b = parseInt(hex.slice(5, 7), 16) / 255;
       callbacks.onBgColorChange(r, g, b, 1.0);
+    });
+    const fontColorPicker = container.shadowRoot?.querySelector(
+      "#font-color-picker"
+    ) as HTMLInputElement | null;
+    fontColorPicker?.addEventListener("input", (e) => {
+      const hex = (e.target as HTMLInputElement).value;
+      const r = parseInt(hex.slice(1, 3), 16) / 255;
+      const g = parseInt(hex.slice(3, 5), 16) / 255;
+      const b = parseInt(hex.slice(5, 7), 16) / 255;
+      callbacks.onFontColorChange(r, g, b, 1.0);
     });
 
     const themeSelect = container.shadowRoot?.querySelector(

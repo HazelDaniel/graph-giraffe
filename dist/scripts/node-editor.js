@@ -42,6 +42,12 @@ export class NodeEditor {
         8 / 255,
         1.0,
     ];
+    fontColor = [
+        (255 - 7) / 255,
+        (255 - 7) / 255,
+        (255 - 8) / 255,
+        1.0,
+    ];
     theme = "dark";
     draggingNode = null;
     dragSnapshot = null;
@@ -121,7 +127,7 @@ export class NodeEditor {
         const labelCanvas = document.getElementById("2d-label-canvas");
         const geometry = new GeometryNode(gl, "rounded-square");
         const bgGeometry = new BGGeometryNode(gl, "grid", backgroundCanvas);
-        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, msdfProgram, this.msdfAtlas, this.iconAtlas);
+        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, msdfProgram, this.msdfAtlas, this.iconAtlas);
         const container = document.getElementById("sidebar");
         const historyPane = document.getElementById("undo-redo-wrapper");
         const toolPane = document.getElementById("tool-panel");
@@ -141,10 +147,14 @@ export class NodeEditor {
             onBgColorChange: (r, g, b, a) => {
                 this.bgColor = [r, g, b, a];
             },
+            onFontColorChange: (r, g, b, a) => {
+                this.fontColor = [r, g, b, a];
+            },
             onThemeChange: (theme) => {
                 this.theme = theme;
                 TextureRegistry.theme = theme;
                 this.store.regenerateTextures(theme);
+                this.renderer.invalidateTextures();
             },
             onGlobalTextureChange: (kind, textureId) => {
                 this.handleGlobalTextureChange(kind, textureId);

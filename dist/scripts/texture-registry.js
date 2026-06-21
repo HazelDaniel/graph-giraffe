@@ -57,7 +57,7 @@ const NODE_HEAD_TEXTURE_SKINS = [
 </svg>
 
 
-`
+`,
 ];
 const COMPOSITION_HEAD_TEXTURE_SKINS = [];
 const COMPOSITION_CHILD_HEAD_TEXTURE_SKINS = [];
@@ -76,7 +76,7 @@ const NODE_BODY_TEXTURE_SKINS = [
     `
 <svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g filter="url(#filter0_in_2_12)">
-<rect width="206" height="142" rx="8" fill="#F0F0F0"/>
+<rect width="206" height="142" rx="8" fill="var(--theme)"/>
 </g>
 <defs>
 <filter id="filter0_in_2_12" x="0" y="0" width="206" height="146" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
@@ -108,7 +108,7 @@ const NODE_BODY_TEXTURE_SKINS = [
     `
 <svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g filter="url(#filter0_i_2_13)">
-<rect width="206" height="142" rx="8" fill="#F0F0F0" fill-opacity="0.2"/>
+<rect width="206" height="142" rx="8" fill="var(--theme)" fill-opacity="0.2"/>
 </g>
 <defs>
 <filter id="filter0_i_2_13" x="0" y="0" width="206" height="146" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
@@ -143,15 +143,16 @@ const NODE_BODY_TEXTURE_SKINS = [
 </defs>
 </svg>
 
-`
+`,
 ];
-const GROUP_HEAD_TEXTURE_SKINS = [NODE_BODY_TEXTURE_SKINS[2],
+const GROUP_HEAD_TEXTURE_SKINS = [
+    NODE_BODY_TEXTURE_SKINS[2],
     `
 <svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="206" height="142" rx="8" fill="#D9D9D9" fill-opacity="0"/>
+<rect width="206" height="142" rx="8" fill="var(--theme)" fill-opacity="0"/>
 </svg>
 
-`
+`,
 ];
 const GROUP_BODY_TEXTURE_SKINS = [NODE_BODY_TEXTURE_SKINS[2]];
 const COMPOSITION_BODY_TEXTURE_SKINS = [];
@@ -168,10 +169,10 @@ export const DEFAULT_TEXTURE_SKINS = {
     "composition-reference-body": COMPOSITION_REFERENCE_BODY_TEXTURE_SKINS,
 };
 const DEFAULT_TEXTURE_SOURCES = [
-    createDefaultSource("gg-node-body-glass", "Glass Body", "node-body", "#1e293b", "#64748b"),
-    createDefaultSource("gg-node-head-graphite", "Graphite Head", "node-head", "#0f172a", "#475569"),
-    createDefaultSource("gg-group-body-grid", "Grid Group Body", "group-body", "#172033", "#94a3b8"),
-    createDefaultSource("gg-group-head-slate", "Slate Group Head", "group-head", "#111827", "#64748b"),
+    createDefaultSource("gg-node-body-glass", "Default Body", "node-body", "var(--theme)", "var(--theme)"),
+    createDefaultSource("gg-node-head-graphite", "Default Head", "node-head", "var(--theme)", "var(--theme)"),
+    createDefaultSource("gg-group-body-grid", "Grid Group Body", "group-body", "var(--theme)", "var(--theme)"),
+    createDefaultSource("gg-group-head-slate", "Slate Group Head", "group-head", "var(--theme)", "var(--theme)"),
     createDefaultSource("gg-composition-body-mint", "Mint Composition Body", "composition-body", "#064e3b", "#34d399"),
     createDefaultSource("gg-composition-head-mint", "Mint Composition Head", "composition-head", "#065f46", "#6ee7b7"),
     createDefaultSource("gg-composition-child-head-teal", "Teal Child Head", "composition-child-head", "#0f766e", "#5eead4"),
@@ -217,7 +218,46 @@ class textureRegistry {
         return this._instance;
     }
     set theme(newTheme) {
+        if (this.theme_ === newTheme)
+            return;
         this.theme_ = newTheme;
+        this.updatePreviewUrls();
+    }
+    updatePreviewUrls() {
+        for (const source of this.sources.values()) {
+            if (source.sourceType === "upload") {
+                if (source.previewUrl && this.ownedPreviewUrls.has(source.previewUrl)) {
+                    URL.revokeObjectURL(source.previewUrl);
+                    this.ownedPreviewUrls.delete(source.previewUrl);
+                }
+                source.previewUrl = createSvgPreviewUrl(this.getResolvedSvgText(source));
+                this.ownedPreviewUrls.add(source.previewUrl);
+            }
+        }
+        document?.dispatchEvent(new CustomEvent("gg-texture-registry-update"));
+    }
+    getThemeColorForKind(kind) {
+        const theme = this.theme_ || "dark";
+        switch (kind) {
+            case "node-head":
+            case "composition-reference-child-head":
+            case "composition-child-head":
+                return NODE_THEMES[theme].headerFill;
+            case "node-body":
+            case "composition-reference-body":
+                return NODE_THEMES[theme].bodyFill;
+            case "group-head":
+            case "composition-head":
+                return G_NODE_THEMES[theme].headerFill;
+            case "group-body":
+            case "composition-body":
+                return G_NODE_THEMES[theme].bodyFill;
+            default:
+                return G_NODE_THEMES[theme].bgFill;
+        }
+    }
+    getResolvedSvgText(source) {
+        return source.svgText.replaceAll("var(--theme)", this.getThemeColorForKind(source.kind));
     }
     constructor(defaultSources = DEFAULT_TEXTURE_SOURCES) {
         for (const source of defaultSources) {
@@ -243,51 +283,25 @@ class textureRegistry {
     }
     get(id) {
         const source = this.sources.get(id);
-        return source ? { ...source } : undefined;
+        if (!source)
+            return undefined;
+        return { ...source, svgText: this.getResolvedSvgText(source) };
     }
     has(id) {
         return this.sources.has(id);
     }
     addUploaded(params) {
-        let svgText = sanitizeSvg(params.svgText);
+        const svgText = sanitizeSvg(params.svgText);
         const id = this.ensureUniqueId(params.id ?? slugify(params.label));
-        let themeColor = "";
-        switch (params.kind) {
-            case "node-head":
-            case "composition-reference-child-head":
-            case "composition-child-head": {
-                themeColor = NODE_THEMES[this.theme_ || "dark"].headerFill;
-                break;
-            }
-            case "node-body":
-            case "composition-reference-body": {
-                themeColor = NODE_THEMES[this.theme_ || "dark"].bodyFill;
-                break;
-            }
-            case "group-head":
-            case "composition-head": {
-                themeColor = G_NODE_THEMES[this.theme_ || "dark"].headerFill;
-                break;
-            }
-            case "group-body":
-            case "composition-body": {
-                themeColor = G_NODE_THEMES[this.theme_ || "dark"].bodyFill;
-                break;
-            }
-            default: {
-                themeColor = G_NODE_THEMES[this.theme_ || "dark"].bgFill;
-                break;
-            }
-        }
-        svgText = svgText.replaceAll("var(--theme)", themeColor);
         const source = {
             id,
             label: params.label,
             kind: params.kind,
             sourceType: "upload",
             svgText,
-            previewUrl: createSvgPreviewUrl(svgText),
+            previewUrl: "",
         };
+        source.previewUrl = createSvgPreviewUrl(this.getResolvedSvgText(source));
         if (source.previewUrl) {
             this.ownedPreviewUrls.add(source.previewUrl);
         }
@@ -334,7 +348,7 @@ export function getDefaultTextureIds(nodeType) {
     return { ...defaults };
 }
 export function getCompositionReferenceTextureIds() {
-    const defaults = NODE_ID_TEXTURE_LOOKUP['composition-reference'];
+    const defaults = NODE_ID_TEXTURE_LOOKUP["composition-reference"];
     return { ...defaults };
 }
 function createDefaultSource(id, label, kind, fill, stroke) {
@@ -367,8 +381,8 @@ export function generateTetureSkinOption(kind, label, index, id) {
 function buildDefaultTextureSvg(fill, stroke) {
     return `
   <svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="${SVG_NS}">
-<rect x="0.5" y="0.5" width="205" height="141" rx="7.5" fill="${fill}"  stroke="${stroke}"/>
-</svg>
+    <rect x="0.5" y="0.5" width="205" height="141" rx="7.5" fill="${fill}"  stroke="${stroke}" stroke-width="2"/>
+  </svg>
 `;
 }
 function sanitizeSvg(svgText) {

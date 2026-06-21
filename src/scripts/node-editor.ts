@@ -118,6 +118,12 @@ export class NodeEditor {
     8 / 255,
     1.0,
   ];
+  private fontColor: [number, number, number, number] = [
+    (255 - 7) / 255,
+    (255 - 7) / 255,
+    (255 - 8) / 255,
+    1.0,
+  ];
   private theme: ThemeName = "dark";
   private draggingNode: NodeData | null = null;
   private dragSnapshot: DragSnapshot | null = null;
@@ -242,6 +248,7 @@ export class NodeEditor {
       geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas,
       () => this.activeConnectionDrag,
       () => this.bgColor,
+      () => this.fontColor,
       msdfProgram,
       this.msdfAtlas,
       this.iconAtlas
@@ -266,10 +273,14 @@ export class NodeEditor {
       onBgColorChange: (r, g, b, a) => {
         this.bgColor = [r, g, b, a];
       },
+      onFontColorChange: (r, g, b, a) => {
+        this.fontColor = [r, g, b, a];
+      },
       onThemeChange: (theme) => {
         this.theme = theme;
         TextureRegistry.theme = theme;
         this.store.regenerateTextures(theme);
+        this.renderer.invalidateTextures();
       },
       onGlobalTextureChange: (kind, textureId) => {
         this.handleGlobalTextureChange(kind as TextureKind, textureId);

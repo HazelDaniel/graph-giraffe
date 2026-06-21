@@ -214,6 +214,10 @@ export class UIControls extends HTMLElement {
             <label for="bg-color-picker">Color</label>
             <input type="color" id="bg-color-picker" value="#0f172a" />
           </div>
+          <div class="settings-group">
+            <label for="font-color-picker">Font Color</label>
+            <input type="color" id="font-color-picker" value="#ffffff" />
+          </div>
 
           <div class="settings-group vertical">
             <label for="theme-selector">Node Theme</label>

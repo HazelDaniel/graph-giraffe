@@ -50,7 +50,7 @@ export const NODE_THEMES: Record<ThemeName, ThemeStyle> = {
   dark: {
     bgFill:       'rgba(30, 41, 59, 0.8)',
     borderStroke: 'rgba(255, 255, 255, 0.1)',
-    headerFill:   'rgba(0, 0, 0, 0.3)',
+    headerFill:   'rgba(14, 13, 13, 0.9)',
     titleFill:    '#f8fafc',
     bodyFill:     'rgba(19, 18, 18, 0.8)',
     borderWidth:  1,
@@ -60,15 +60,15 @@ export const NODE_THEMES: Record<ThemeName, ThemeStyle> = {
     borderStroke: 'rgba(0, 0, 0, 0.1)',
     headerFill:   'rgba(226, 232, 240, 1)',
     titleFill:    '#0f172a',
-    bodyFill:     '#475569',
+    bodyFill:     'rgba(205, 205, 205, 0.9)',
     borderWidth:  1,
   },
   neon: {
     bgFill:       'rgba(10, 10, 20, 0.9)',
-    borderStroke: '#06b6d4',
-    headerFill:   'rgba(6, 182, 212, 0.2)',
+    borderStroke: 'rgb(10, 35, 39)',
+    headerFill:   'rgba(10, 35, 39, 0.76)',
     titleFill:    '#cffafe',
-    bodyFill:     '#67e8f9',
+    bodyFill:     'rgb(16, 96, 128)',
     borderWidth:  2,
   },
 };
@@ -76,11 +76,11 @@ export const NODE_THEMES: Record<ThemeName, ThemeStyle> = {
 
 export const G_NODE_THEMES: Record<ThemeName, ThemeStyle> = {
   dark: {
-    bgFill:       'rgba(11, 13, 17, 0.25)',
-    borderStroke: 'rgba(255, 255, 255, 0.35)',
+    bgFill:       'rgb(9, 9, 10)',
+    borderStroke: 'rgba(255, 255, 255, 0.95)',
     headerFill:   'rgba(22, 20, 20, 0.79)',
     titleFill:    '#f8fafc',
-    bodyFill:     '#94a3b8',
+    bodyFill:     'rgb(27, 27, 27)',
     borderWidth:  1,
   },
   light: {
@@ -96,7 +96,7 @@ export const G_NODE_THEMES: Record<ThemeName, ThemeStyle> = {
     borderStroke: '#06b6d4',
     headerFill:   'rgba(6, 182, 212, 0.2)',
     titleFill:    '#cffafe',
-    bodyFill:     '#67e8f9',
+    bodyFill:     'rgb(16, 96, 128)',
     borderWidth:  2,
   },
 };

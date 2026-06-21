@@ -159,4 +159,15 @@ export class TextureCache {
     }
     this.cache.clear();
   }
+  invalidateAll(): void {
+    for (const entry of this.cache.values()) {
+      if (entry.texture) {
+        this.gl.deleteTexture(entry.texture);
+      }
+    }
+    this.cache.clear();
+    this.uploadQueue = [];
+    // Trigger redraw to reload missing textures
+    this.onTextureLoaded();
+  }
 }

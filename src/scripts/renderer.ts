@@ -51,6 +51,7 @@ export class Renderer {
     private getConnectionPreview: () => ConnectionPreviewData | null,
     /** Callback so Renderer never stores bgColor itself — it belongs to the editor. */
     private getBgColor: () => [number, number, number, number],
+    private getFontColor: () => [number, number, number, number],
     private msdfProgram: WebGLProgram,
     private msdfAtlas: MsdfAtlas,
     private iconAtlas: MsdfAtlas
@@ -105,6 +106,10 @@ export class Renderer {
     this.drawBGFrame();
     this.drawFrame();
     requestAnimationFrame(this.tick.bind(this));
+  }
+
+  invalidateTextures(): void {
+    this.textureCache.invalidateAll();
   }
 
   private drawFrame(): void {
@@ -775,11 +780,7 @@ export class Renderer {
 
     // Draw overlay via MSDF
     if (!picking) {
-      const theme = this.store.getTheme();
-      let r = 1, g = 1, b = 1;
-      if (theme === 'dark') { r = 248/255; g = 250/255; b = 252/255; }
-      else if (theme === 'light') { r = 15/255; g = 23/255; b = 42/255; }
-      else if (theme === 'neon') { r = 207/255; g = 250/255; b = 254/255; }
+      const [r, g, b, _] = this.getFontColor();
 
       const isCollapsed = this.store.shouldCollapseNode(node);
       const headOnly = node.nodeType === 'composition-child' || isCollapsed;
@@ -898,19 +899,19 @@ export class Renderer {
             const enumU = node.props.enums["ungrouped"];
             if (boolU) for (let i = 0; i < boolU.length; i++) {
               const p = boolU[i];
-              this.textRenderer.addText(p.label, xLeft, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+              this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 0.9, 'left', 'middle');
               this.iconRenderer.addText(p.value ? '' : '', xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
               cursorY += 20;
             }
             if (textU) for (let i = 0; i < textU.length; i++) {
               const p = textU[i];
-              this.textRenderer.addText(p.label, xLeft, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+              this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 0.9, 'left', 'middle');
               this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
               cursorY += 20;
             }
             if (enumU) for (let i = 0; i < enumU.length; i++) {
               const p = enumU[i];
-              this.textRenderer.addText(p.label, xLeft, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+              this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 0.9, 'left', 'middle');
               this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
               cursorY += 20;
             }
@@ -929,23 +930,30 @@ export class Renderer {
                 this.textRenderer.addText(groupName.toUpperCase(), xLeft, cursorY, 10, r, g, b, 0.5, 'left', 'middle');
                 cursorY += 20;
 
-                if (boolG) for (let i = 0; i < boolG.length; i++) {
+
+                const boolGCount = boolG?.length;
+                if (boolG) for (let i = 0; i < boolGCount; i++) {
+                  const groupBottomPadding = i === boolGCount - 1 && !(textG || enumG) ? 8 : 0;
                   const p = boolG[i];
-                  this.textRenderer.addText(p.label, xLeft + 8, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+                  this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 1.0, 'left', 'middle');
                   this.iconRenderer.addText(p.value ? '' : '', xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
-                  cursorY += 20;
+                  cursorY += 20 + groupBottomPadding;
                 }
-                if (textG) for (let i = 0; i < textG.length; i++) {
+                const textGCount = textG?.length;
+                if (textG) for (let i = 0; i < textGCount; i++) {
+                  const groupBottomPadding = i === textGCount - 1  && !(enumG)? 8 : 0;
                   const p = textG[i];
-                  this.textRenderer.addText(p.label, xLeft + 8, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+                  this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 1.0, 'left', 'middle');
                   this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
-                  cursorY += 20;
+                  cursorY += 20 + groupBottomPadding;
                 }
-                if (enumG) for (let i = 0; i < enumG.length; i++) {
+                const enumGCount = enumG?.length;
+                if (enumG) for (let i = 0; i < enumGCount; i++) {
+                  const groupBottomPadding = i === enumGCount - 1 ? 8 : 0;
                   const p = enumG[i];
-                  this.textRenderer.addText(p.label, xLeft + 8, cursorY, 11, r, g, b, 0.7, 'left', 'middle');
+                  this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 1.0, 'left', 'middle');
                   this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
-                  cursorY += 20;
+                  cursorY += 20 + groupBottomPadding;
                 }
               }
             }

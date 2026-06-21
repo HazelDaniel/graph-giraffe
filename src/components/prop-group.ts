@@ -219,8 +219,8 @@ export class GGPropGroup extends HTMLElement {
       }
     }
 
-    // headerHeight (30) + top padding (16) + (lineCount * 20) + bottom padding (16)
-    return 30 + 16 + lineCount * 20 + 16;
+    // headerHeight (30) + top padding (16) + (lineCount * 20) + bottom padding (16) + padding due to group spacing (8 * num_groups)
+    return 30 + 16 + lineCount * 20 + 16 + (8 * data.groups.length);
   }
 
   private dispatchPropChange(
