@@ -7,9 +7,22 @@
 export class HistoryStack {
     undoStack = [];
     redoStack = [];
+    maxHistory;
+    constructor(options = {}) {
+        this.maxHistory = Math.max(1, options.maxHistory ?? 100);
+    }
     push(entry) {
         this.undoStack.push(entry);
+        if (this.undoStack.length > this.maxHistory) {
+            this.undoStack.splice(0, this.undoStack.length - this.maxHistory);
+        }
         this.redoStack = [];
+    }
+    get undoDepth() {
+        return this.undoStack.length;
+    }
+    get redoDepth() {
+        return this.redoStack.length;
     }
     canUndo() {
         return this.undoStack.length > 0;

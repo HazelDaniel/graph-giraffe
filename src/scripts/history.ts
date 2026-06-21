@@ -3,6 +3,10 @@ export interface HistoryEntry {
   redo(): void;
 }
 
+export interface HistoryStackOptions {
+  maxHistory?: number;
+}
+
 /**
  * Minimal undo/redo stack for editor actions.
  *
@@ -12,10 +16,26 @@ export interface HistoryEntry {
 export class HistoryStack {
   private undoStack: HistoryEntry[] = [];
   private redoStack: HistoryEntry[] = [];
+  private readonly maxHistory: number;
+
+  constructor(options: HistoryStackOptions = {}) {
+    this.maxHistory = Math.max(1, options.maxHistory ?? 100);
+  }
 
   push(entry: HistoryEntry): void {
     this.undoStack.push(entry);
+    if (this.undoStack.length > this.maxHistory) {
+      this.undoStack.splice(0, this.undoStack.length - this.maxHistory);
+    }
     this.redoStack = [];
+  }
+
+  get undoDepth(): number {
+    return this.undoStack.length;
+  }
+
+  get redoDepth(): number {
+    return this.redoStack.length;
   }
 
   canUndo(): boolean {

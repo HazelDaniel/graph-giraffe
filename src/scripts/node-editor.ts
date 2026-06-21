@@ -16,6 +16,12 @@ import { Renderer } from "./renderer.js";
 import { UIControls } from "./controls.js";
 import { HistoryStack, HistoryEntry } from "./history.js";
 import {
+  EdgeHistorySnapshot,
+  NodeHistorySnapshot,
+  captureNodeHistorySnapshot,
+  cloneNodeProps,
+} from "./history-snapshots.js";
+import {
   ConnectionMode,
   EdgeHeadSkinId,
   EdgeType,
@@ -62,41 +68,6 @@ interface NodePlacementSnapshot {
   localX: number;
   localY: number;
   parentId: number | null;
-}
-
-interface NodeHistorySnapshot {
-  id: number;
-  nodeType: NodeType;
-  localX: number;
-  localY: number;
-  width: number;
-  height: number;
-  text: string;
-  textureIds: NodeTextureIds;
-  visible: boolean;
-  isSelected: boolean;
-  isDropTarget: boolean;
-  parentId: number | null;
-  childIds: number[];
-  compositionRefId: number | null;
-  handleStates: Array<{
-    side: HandleSide;
-    isConnected: boolean;
-  }>;
-}
-
-interface EdgeHistorySnapshot {
-  id: number;
-  sourceNodeId: number;
-  sourceHandleSide: HandleSide;
-  targetNodeId: number;
-  targetHandleSide: HandleSide;
-  edgeType: EdgeType;
-  headType: EdgeHeadType;
-  headSkinId: EdgeHeadSkinId;
-  label: string;
-  isSelected: boolean;
-  visible: boolean;
 }
 
 type SelectionKind = "node" | "edge" | null;
@@ -338,28 +309,72 @@ export class NodeEditor {
         const node = this.store.get(nodeId);
 
         if (node && node.props) {
-          // Mutate the primitive value in the node's props tree
-          this.updatePropValue(node.props, label, value);
+          const beforeSnapshot = this.captureNodeSnapshot(node);
+          const selectionBefore = this.captureSelectionSnapshot();
+          const didChange = this.updatePropValue(node.props, label, value);
+          if (!didChange) return;
 
-          // Re-calculate node height
           const newHeight = this.controls.nodePropGroup.useProps(node.props);
           node.height = newHeight;
+          const afterSnapshot = this.captureNodeSnapshot(node);
+          const parentId = node.parentId;
+
+          if (parentId !== null) {
+            this.refreshContainerChain(parentId);
+          }
+
+          this.pushHistory({
+            undo: () => {
+              this.applyNodeSnapshot(beforeSnapshot);
+              this.restoreSelectionSnapshot(selectionBefore);
+              this.syncPropertiesPanelForSelection();
+              this.refreshContainerChain(parentId);
+              this.syncToolbarState();
+            },
+            redo: () => {
+              this.applyNodeSnapshot(afterSnapshot);
+              this.restoreSelectionSnapshot(selectionBefore);
+              this.syncPropertiesPanelForSelection();
+              this.refreshContainerChain(parentId);
+              this.syncToolbarState();
+            },
+          });
         }
       }
     });
   }
 
-  private updatePropValue(props: any, targetLabel: string, newValue: any): void {
+  private syncPropertiesPanelForSelection(): void {
+    const selected = this.getSingleSelectedNode();
+    if (selected && selected.nodeType !== "composition") {
+      this.controls.showProperties(selected);
+      return;
+    }
+
+    this.controls.hideProperties();
+  }
+
+  private updatePropValue(
+    props: NodeData["props"],
+    targetLabel: string,
+    newValue: string | boolean
+  ): boolean {
+    if (!props) return false;
+
     const primitives = [
       ...Object.values(props.booleans || {}).flat(),
       ...Object.values(props.texts || {}).flat(),
       ...Object.values(props.enums || {}).flat()
     ];
-    for (const primitive of primitives as any[]) {
+    for (const primitive of primitives) {
       if (primitive.label === targetLabel) {
+        if (primitive.value === newValue) return false;
         primitive.value = newValue;
+        return true;
       }
     }
+
+    return false;
   }
 
   private validateConfig(config: NodeEditorConfig): Required<NodeEditorConfig> {
@@ -977,26 +992,7 @@ export class NodeEditor {
   }
 
   private captureNodeSnapshot(node: NodeData): NodeHistorySnapshot {
-    return {
-      id: node.id,
-      nodeType: node.nodeType,
-      localX: node.localX,
-      localY: node.localY,
-      width: node.width,
-      height: node.height,
-      text: node.text,
-      textureIds: { ...node.textureIds },
-      visible: node.visible,
-      isSelected: node.isSelected,
-      isDropTarget: Boolean(node.isDropTarget),
-      parentId: node.parentId,
-      childIds: [...node.childIds],
-      compositionRefId: node.compositionRefId,
-      handleStates: node.handles.map((handle) => ({
-        side: handle.side,
-        isConnected: handle.isConnected,
-      })),
-    };
+    return captureNodeHistorySnapshot(node);
   }
 
   private captureSubtreeSnapshots(rootId: number): NodeHistorySnapshot[] {
@@ -1101,6 +1097,7 @@ export class NodeEditor {
     node.isDropTarget = snapshot.isDropTarget;
     node.childIds = [...snapshot.childIds];
     node.compositionRefId = snapshot.compositionRefId;
+    node.props = cloneNodeProps(snapshot.props);
     node.handles = node.handles.map((handle) => ({
       ...handle,
       isConnected:
