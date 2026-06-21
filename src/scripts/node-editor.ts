@@ -314,8 +314,7 @@ export class NodeEditor {
           const didChange = this.updatePropValue(node.props, label, value);
           if (!didChange) return;
 
-          const newHeight = this.controls.nodePropGroup.useProps(node.props);
-          node.height = newHeight;
+          this.store.syncNodePresentation(node.id);
           const afterSnapshot = this.captureNodeSnapshot(node);
           const parentId = node.parentId;
 

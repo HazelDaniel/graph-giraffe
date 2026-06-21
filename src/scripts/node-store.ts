@@ -465,7 +465,7 @@ export class NodeStore {
 
 
 
-  private syncNodePresentation(nodeId: number): void {
+  syncNodePresentation(nodeId: number): void {
     const node = this.get(nodeId);
     if (!node) return;
 
