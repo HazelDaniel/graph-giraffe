@@ -1,4 +1,4 @@
-import { G_NODE_THEMES, NODE_THEMES } from "./texture.js";
+import { C_NODE_THEMES, CR_NODE_THEMES, G_NODE_THEMES, NODE_THEMES } from "./texture.js";
 import {
   AddUploadedTextureParams,
   NodeTextureIds,
@@ -77,7 +77,7 @@ const COMPOSITION_REFERENCE_CHILD_HEAD_TEXTURE_SKINS: string[] = [];
 const NODE_BODY_TEXTURE_SKINS = [
   `
   <svg width="262" height="234" viewBox="0 0 262 234" fill="none" xmlns="http://www.w3.org/2000/svg"> <g filter="url(#filter0_d_4026_2521)">
-<path d="M4.75 28.75C4.75 13.286 17.2861 0.75 32.7501 0.75H57.177C63.9909 0.75 70.5709 3.23467 75.6842 7.73843L107.5 35.7616C112.613 40.2653 119.193 42.75 126.007 42.75H228.75C244.214 42.75 256.75 55.286 256.75 70.75V196.75C256.75 212.214 244.214 224.75 228.75 224.75H32.7501C17.2861 224.75 4.75 212.214 4.75 196.75V42.75V28.75Z" fill="url(#paint0_radial_4026_2521)" shape-rendering="crispEdges"/> <path d="M126.007 42.75H228.75C244.214 42.75 256.75 55.286 256.75 70.75V196.75C256.75 212.214 244.214 224.75 228.75 224.75H32.7501C17.2861 224.75 4.75 212.214 4.75 196.75V42.75M126.007 42.75C119.193 42.75 112.613 40.2653 107.5 35.7616L75.6842 7.73843C70.5709 3.23467 63.9909 0.75 57.177 0.75H32.7501C17.2861 0.75 4.75 13.286 4.75 28.75V42.75M126.007 42.75H4.75" stroke="#1D192B" stroke-opacity="0.16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" shape-rendering="crispEdges"/> </g>
+<path d="M4.75 28.75C4.75 13.286 17.2861 0.75 32.7501 0.75H57.177C63.9909 0.75 70.5709 3.23467 75.6842 7.73843L107.5 35.7616C112.613 40.2653 119.193 42.75 126.007 42.75H228.75C244.214 42.75 256.75 55.286 256.75 70.75V196.75C256.75 212.214 244.214 224.75 228.75 224.75H32.7501C17.2861 224.75 4.75 212.214 4.75 196.75V42.75V28.75Z" fill="url(#paint0_radial_4026_2521)" shape-rendering="crispEdges"/> <path d="M126.007 42.75H228.75C244.214 42.75 256.75 55.286 256.75 70.75V196.75C256.75 212.214 244.214 224.75 228.75 224.75H32.7501C17.2861 224.75 4.75 212.214 4.75 196.75V42.75M126.007 42.75C119.193 42.75 112.613 40.2653 107.5 35.7616L75.6842 7.73843C70.5709 3.23467 63.9909 0.75 57.177 0.75H32.7501C17.2861 0.75 4.75 13.286 4.75 28.75V42.75M126.007 42.75H4.75" stroke="var(--stroke-theme)" stroke-opacity="0.16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" shape-rendering="crispEdges"/> </g>
 <defs> <filter id="filter0_d_4026_2521" x="0" y="0" width="261.5" height="233.5" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"> <feFlood flood-opacity="0" result="BackgroundImageFix"/> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
 <feOffset dy="4"/> <feGaussianBlur stdDeviation="2"/> <feComposite in2="hardAlpha" operator="out"/> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.28 0"/>
 <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_4026_2521"/> <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_4026_2521" result="shape"/> </filter> <radialGradient id="paint0_radial_4026_2521" cx="0" cy="0" r="1" gradientTransform="matrix(-232.683 -221.365 249.035 -261.996 130.75 112.75)" gradientUnits="userSpaceOnUse">
@@ -188,60 +188,60 @@ export const DEFAULT_TEXTURE_SKINS: Record<TextureKind, string[]> = {
 
 const DEFAULT_TEXTURE_SOURCES: TextureSource[] = [
   createDefaultSource(
-    "gg-node-body-glass",
-    "Default Body",
+    "gg-node-body-default",
+    "Default Node Body",
     "node-body",
     "var(--theme)",
-    "var(--theme)"
+    "var(--stroke-theme)"
   ),
   createDefaultSource(
-    "gg-node-head-graphite",
-    "Default Head",
+    "gg-node-head-default",
+    "Default Node Head",
     "node-head",
     "var(--theme)",
-    "var(--theme)"
+    "var(--stroke-theme)"
   ),
   createDefaultSource(
-    "gg-group-body-grid",
-    "Grid Group Body",
+    "gg-group-body-default",
+    "Default Group Body",
     "group-body",
     "var(--theme)",
-    "var(--theme)"
+    "var(--stroke-theme)"
   ),
   createDefaultSource(
-    "gg-group-head-slate",
-    "Slate Group Head",
+    "gg-group-head-default",
+    "Default Group Head",
     "group-head",
     "var(--theme)",
-    "var(--theme)"
+    "var(--stroke-theme)"
   ),
   createDefaultSource(
-    "gg-composition-body-mint",
-    "Mint Composition Body",
+    "gg-composition-body-default",
+    "Default Composition Body",
     "composition-body",
-    "#064e3b",
-    "#34d399"
+    "var(--theme)",
+    "var(--stroke-theme)"
   ),
   createDefaultSource(
-    "gg-composition-head-mint",
-    "Mint Composition Head",
+    "gg-composition-head-default",
+    "Default Composition Head",
     "composition-head",
-    "#065f46",
-    "#6ee7b7"
+    "var(--theme)",
+    "var(--stroke-theme)"
   ),
   createDefaultSource(
-    "gg-composition-child-head-teal",
-    "Teal Child Head",
+    "gg-composition-child-head-default",
+    "Default Child Head",
     "composition-child-head",
-    "#0f766e",
-    "#5eead4"
+    "var(--theme)",
+    "var(--stroke-theme)"
   ),
   createDefaultSource(
     "gg-composition-reference-body",
-    "Reference Body",
+    "Default Reference Body",
     "composition-reference-body",
-    "#064e3b",
-    "#34d399"
+    "var(--theme)",
+    "var(--stroke-theme)"
   ),
 ];
 
@@ -249,20 +249,20 @@ type TextureLookupKeys = NodeType | "composition-reference";
 
 const NODE_ID_TEXTURE_LOOKUP: Record<TextureLookupKeys, NodeTextureIds> = {
   node: {
-    body: "gg-node-body-glass",
-    head: "gg-node-head-graphite",
+    body: "gg-node-body-default",
+    head: "gg-node-head-default",
   },
   group: {
-    body: "gg-group-body-grid",
-    head: "gg-group-head-slate",
+    body: "gg-group-body-default",
+    head: "gg-group-head-default",
   },
   composition: {
-    body: "gg-composition-body-mint",
-    head: "gg-composition-head-mint",
+    body: "gg-composition-body-default",
+    head: "gg-composition-head-default",
   },
   "composition-child": {
-    body: "gg-node-body-glass",
-    head: "gg-composition-child-head-teal",
+    body: "gg-node-body-default",
+    head: "gg-composition-child-head-default",
   },
   "composition-reference": {
     body: "gg-composition-reference-body",
@@ -312,6 +312,26 @@ class textureRegistry {
     document?.dispatchEvent(new CustomEvent("gg-texture-registry-update"));
   }
 
+  private getStrokeColorForKind(kind: TextureKind): string {
+    const theme = this.theme_ || "dark";
+    switch (kind) {
+      case "composition-reference-body":
+        return CR_NODE_THEMES[theme].borderStroke;
+      case "composition-body":
+        return C_NODE_THEMES[theme].borderStroke;
+      case "node-body":
+        return NODE_THEMES[theme].borderStroke;
+      case "composition-child-head":
+      case "composition-head":
+      case "group-head":
+      case "node-head":
+      case "composition-reference-child-head":
+        return "none";
+      default:
+        return G_NODE_THEMES[theme].borderStroke;
+    }
+  }
+
   private getThemeColorForKind(kind: TextureKind): string {
     const theme = this.theme_ || "dark";
     switch (kind) {
@@ -320,14 +340,17 @@ class textureRegistry {
       case "composition-child-head":
         return NODE_THEMES[theme].headerFill;
       case "node-body":
-      case "composition-reference-body":
         return NODE_THEMES[theme].bodyFill;
+      case "composition-reference-body":
+        return CR_NODE_THEMES[theme].bodyFill;
       case "group-head":
-      case "composition-head":
         return G_NODE_THEMES[theme].headerFill;
+      case "composition-head":
+        return C_NODE_THEMES[theme].headerFill;
       case "group-body":
-      case "composition-body":
         return G_NODE_THEMES[theme].bodyFill;
+      case "composition-body":
+        return C_NODE_THEMES[theme].bodyFill;
       default:
         return G_NODE_THEMES[theme].bgFill;
     }
@@ -337,6 +360,9 @@ class textureRegistry {
     return source.svgText.replaceAll(
       "var(--theme)",
       this.getThemeColorForKind(source.kind)
+    ).replaceAll(
+      "var(--stroke-theme)",
+      this.getStrokeColorForKind(source.kind)
     );
   }
 
