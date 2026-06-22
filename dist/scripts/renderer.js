@@ -561,7 +561,7 @@ export class Renderer {
                 this.iconRenderer.addText('', worldX + xPos, worldY + titleY, 16, r, g, b, 1.0, 'center', 'middle');
             }
             // Edit Icon (node only)
-            if (node.nodeType === 'node') {
+            if (node.nodeType === 'node' || node.nodeType === "group" || node.nodeType === "composition-child") {
                 const xPos = node.width - NODE_LAYOUT.editBtnPaddingRight;
                 // Using '...' because true pencil emoji isn't in MSDF atlas
                 this.iconRenderer.addText('', worldX + xPos, worldY + titleY, 16, r, g, b, 1.0, 'center', 'middle');
