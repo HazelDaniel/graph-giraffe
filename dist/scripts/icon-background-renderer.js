@@ -24,6 +24,7 @@ export class IconBackgroundRenderer {
         this.indexCount = 0;
     }
     addQuad(x, y, r, g, b, a, glyphWidth, glyphHeight, base, lineHeight, fontSize = 16, align = "center", baseline = "middle") {
+        return;
         const QUAD_PADDING = 1;
         glyphWidth += QUAD_PADDING * 2;
         glyphHeight += QUAD_PADDING * 2;

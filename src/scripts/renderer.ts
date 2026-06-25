@@ -855,7 +855,7 @@ export class Renderer {
           this.iconAtlas.common?.base || 0,
           this.iconAtlas.common?.lineHeight || 0,
           16,
-          "center",
+          "center"
         );
         this.iconRenderer.addText(
           "",
@@ -892,7 +892,7 @@ export class Renderer {
           this.iconAtlas.common?.base || 0,
           this.iconAtlas.common?.lineHeight || 0,
           16,
-          "center",
+          "center"
         );
         this.iconRenderer.addText(
           "",
@@ -923,7 +923,7 @@ export class Renderer {
           this.iconAtlas.common?.base || 0,
           this.iconAtlas.common?.lineHeight || 0,
           16,
-          "center",
+          "center"
         );
         this.iconRenderer.addText(
           "",
@@ -1133,12 +1133,12 @@ export class Renderer {
                   g,
                   b,
                   1.0,
-          dumbGlyphWidth,
-          dumbGlyphHeight,
-          this.iconAtlas.common?.base || 0,
-          this.iconAtlas.common?.lineHeight || 0,
-          16,
-          "center",
+                  dumbGlyphWidth,
+                  dumbGlyphHeight,
+                  this.iconAtlas.common?.base || 0,
+                  this.iconAtlas.common?.lineHeight || 0,
+                  16,
+                  "center"
                 );
                 this.iconRenderer.addText(
                   p.value ? "" : "",
@@ -1267,12 +1267,12 @@ export class Renderer {
                       g,
                       b,
                       1.0,
-          dumbGlyphWidth,
-          dumbGlyphHeight,
-          this.iconAtlas.common?.base || 0,
-          this.iconAtlas.common?.lineHeight || 0,
-          11,
-          "center",
+                      dumbGlyphWidth,
+                      dumbGlyphHeight,
+                      this.iconAtlas.common?.base || 0,
+                      this.iconAtlas.common?.lineHeight || 0,
+                      11,
+                      "center"
                     );
                     this.iconRenderer.addText(
                       p.value ? "" : "",

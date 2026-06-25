@@ -44,6 +44,7 @@ export class IconBackgroundRenderer {
     align: "left" | "center" | "right" = "center",
     baseline: "middle" | "bottom" = "middle"
   ) {
+    return;
     const QUAD_PADDING = 1;
     glyphWidth += QUAD_PADDING * 2;
     glyphHeight += QUAD_PADDING * 2;
