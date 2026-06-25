@@ -1,12 +1,19 @@
-import { MSDFShaderLocations } from './types.js';
-import { Camera } from './camera.js';
+import { MSDFShaderLocations } from "./types.js";
+import { Camera } from "./camera.js";
 // Matrix4 is declared globally via cuon-matrix script tag
 declare class Matrix4 {
   elements: Float32Array;
   setIdentity(): Matrix4;
   translate(x: number, y: number, z: number): Matrix4;
   scale(x: number, y: number, z: number): Matrix4;
-  setOrtho(left: number, right: number, bottom: number, top: number, near: number, far: number): Matrix4;
+  setOrtho(
+    left: number,
+    right: number,
+    bottom: number,
+    top: number,
+    near: number,
+    far: number
+  ): Matrix4;
 }
 
 export interface GlyphMetrics {
@@ -30,8 +37,8 @@ export interface AtlasJson {
 export class MsdfAtlas {
   public texture: WebGLTexture | null = null;
   public glyphs = new Map<number, GlyphMetrics>();
-  public common: AtlasJson['common'] | null = null;
-  public info: AtlasJson['info'] | null = null;
+  public common: AtlasJson["common"] | null = null;
+  public info: AtlasJson["info"] | null = null;
 
   constructor(private gl: WebGL2RenderingContext) {}
 
@@ -57,7 +64,7 @@ export class MsdfAtlas {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    
+
     this.texture = tex;
   }
 
@@ -74,11 +81,11 @@ export class MsdfAtlas {
 export class MsdfTextRenderer {
   private vertexBuffer: WebGLBuffer;
   private indexBuffer: WebGLBuffer;
-  
+
   // vertex: [x, y, u, v, r, g, b, a] = 8 floats per vertex -> 32 bytes
   private vertexData: Float32Array;
   private indexData: Uint16Array;
-  
+
   private vertexCount = 0;
   private indexCount = 0;
   private maxQuads = 10000;
@@ -109,8 +116,8 @@ export class MsdfTextRenderer {
     g: number,
     b: number,
     a: number,
-    align: 'left' | 'center' | 'right' = 'left',
-    baseline: 'top' | 'middle' | 'bottom' | 'alphabetic' = 'alphabetic'
+    align: "left" | "center" | "right" = "left",
+    baseline: "top" | "middle" | "bottom" | "alphabetic" = "alphabetic"
   ): void {
     if (!this.atlas.common || !this.atlas.info) return;
 
@@ -128,13 +135,13 @@ export class MsdfTextRenderer {
     }
 
     let cursorX = x;
-    if (align === 'center') cursorX -= totalWidth / 2;
-    else if (align === 'right') cursorX -= totalWidth;
+    if (align === "center") cursorX -= totalWidth / 2;
+    else if (align === "right") cursorX -= totalWidth;
 
     let cursorY = y;
-    if (baseline === 'middle') cursorY -= (lineHeight / 2) * scale;
-    else if (baseline === 'bottom') cursorY -= lineHeight * scale;
-    else if (baseline === 'alphabetic') cursorY -= base * scale;
+    if (baseline === "middle") cursorY -= (lineHeight / 2) * scale;
+    else if (baseline === "bottom") cursorY -= lineHeight * scale;
+    else if (baseline === "alphabetic") cursorY -= base * scale;
 
     for (let i = 0; i < text.length; i++) {
       const code = text.charCodeAt(i);
@@ -238,18 +245,47 @@ export class MsdfTextRenderer {
     );
 
     const stride = 32;
-    gl.vertexAttribPointer(this.locations.a_Position, 2, gl.FLOAT, false, stride, 0);
+    gl.vertexAttribPointer(
+      this.locations.a_Position,
+      2,
+      gl.FLOAT,
+      false,
+      stride,
+      0
+    );
     gl.enableVertexAttribArray(this.locations.a_Position);
 
-    gl.vertexAttribPointer(this.locations.a_TexCoord, 2, gl.FLOAT, false, stride, 8);
+    gl.vertexAttribPointer(
+      this.locations.a_TexCoord,
+      2,
+      gl.FLOAT,
+      false,
+      stride,
+      8
+    );
     gl.enableVertexAttribArray(this.locations.a_TexCoord);
 
-    gl.vertexAttribPointer(this.locations.a_Color, 4, gl.FLOAT, false, stride, 16);
+    gl.vertexAttribPointer(
+      this.locations.a_Color,
+      4,
+      gl.FLOAT,
+      false,
+      stride,
+      16
+    );
     gl.enableVertexAttribArray(this.locations.a_Color);
 
     if (camera && projMatrix) {
-      gl.uniformMatrix4fv(this.locations.u_ProjMatrix, false, projMatrix.elements);
-      gl.uniformMatrix4fv(this.locations.u_ViewMatrix, false, camera.getViewMatrix().elements);
+      gl.uniformMatrix4fv(
+        this.locations.u_ProjMatrix,
+        false,
+        projMatrix.elements
+      );
+      gl.uniformMatrix4fv(
+        this.locations.u_ViewMatrix,
+        false,
+        camera.getViewMatrix().elements
+      );
     }
 
     gl.activeTexture(gl.TEXTURE0);

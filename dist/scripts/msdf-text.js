@@ -65,7 +65,7 @@ export class MsdfTextRenderer {
         this.vertexCount = 0;
         this.indexCount = 0;
     }
-    addText(text, x, y, fontSize, r, g, b, a, align = 'left', baseline = 'alphabetic') {
+    addText(text, x, y, fontSize, r, g, b, a, align = "left", baseline = "alphabetic") {
         if (!this.atlas.common || !this.atlas.info)
             return;
         const scale = fontSize / this.atlas.info.size;
@@ -80,16 +80,16 @@ export class MsdfTextRenderer {
             }
         }
         let cursorX = x;
-        if (align === 'center')
+        if (align === "center")
             cursorX -= totalWidth / 2;
-        else if (align === 'right')
+        else if (align === "right")
             cursorX -= totalWidth;
         let cursorY = y;
-        if (baseline === 'middle')
+        if (baseline === "middle")
             cursorY -= (lineHeight / 2) * scale;
-        else if (baseline === 'bottom')
+        else if (baseline === "bottom")
             cursorY -= lineHeight * scale;
-        else if (baseline === 'alphabetic')
+        else if (baseline === "alphabetic")
             cursorY -= base * scale;
         for (let i = 0; i < text.length; i++) {
             const code = text.charCodeAt(i);

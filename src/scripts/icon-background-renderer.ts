@@ -41,17 +41,16 @@ export class IconBackgroundRenderer {
     base: number,
     lineHeight: number,
     fontSize: number = 16,
-    align: "left" | "center" | "right" = "center",
+    align: "left" | "center" | "right" = "left",
     baseline: "middle" | "bottom" = "middle"
   ) {
-    return;
-    const QUAD_PADDING = 1;
+    const QUAD_PADDING = 1.2;
     glyphWidth += QUAD_PADDING * 2;
     glyphHeight += QUAD_PADDING * 2;
 
     if (this.msdfFontSize === null) return;
     let scale = fontSize / this.msdfFontSize;
-    scale = 2;
+    // scale = 2;
     const dummyGlyphOffsetX = 1.5;
     const dummyGlyphOffsetY = 1.5;
     let cursorX = x;
@@ -60,14 +59,14 @@ export class IconBackgroundRenderer {
     else if (align === "right") cursorX -= glyphWidth;
 
     let cursorY = y;
-    if (baseline === "middle") cursorY -= (lineHeight / 2) * scale;
+    if (baseline === "middle") cursorY -= (lineHeight / 1.5) * scale;
     else if (baseline === "bottom") cursorY -= lineHeight * scale;
     else cursorY -= base * scale;
 
-    let x0 = cursorX + QUAD_PADDING + dummyGlyphOffsetX * scale;
-    let y0 = cursorY + QUAD_PADDING + dummyGlyphOffsetY * scale;
-    let x1 = cursorX + QUAD_PADDING + glyphWidth * scale;
-    let y1 = cursorY + QUAD_PADDING + glyphHeight * scale;
+    let x0 = cursorX + dummyGlyphOffsetX * scale;
+    let y0 = cursorY + dummyGlyphOffsetY * scale;
+    let x1 = cursorX + glyphWidth * 3 * scale;
+    let y1 = cursorY + glyphWidth * 3 * scale;
 
     const vIdx = this.vertexCount,
       iIdx = this.indexCount;

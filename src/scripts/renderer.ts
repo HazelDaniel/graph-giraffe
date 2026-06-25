@@ -849,7 +849,7 @@ export class Renderer {
           r,
           g,
           b,
-          1.0,
+          0.1,
           dumbGlyphWidth,
           dumbGlyphHeight,
           this.iconAtlas.common?.base || 0,
@@ -862,9 +862,9 @@ export class Renderer {
           worldX + xPos,
           worldY + titleY,
           16,
-          r,
-          g,
-          b,
+          220 / 255,
+          0 / 255,
+          0 / 255,
           1.0,
           "center",
           "middle"
@@ -886,7 +886,7 @@ export class Renderer {
           r,
           g,
           b,
-          1.0,
+          0.1,
           dumbGlyphWidth,
           dumbGlyphHeight,
           this.iconAtlas.common?.base || 0,
@@ -917,7 +917,7 @@ export class Renderer {
           r,
           g,
           b,
-          1.0,
+          0.1,
           dumbGlyphWidth,
           dumbGlyphHeight,
           this.iconAtlas.common?.base || 0,
@@ -1126,20 +1126,6 @@ export class Renderer {
                   "middle"
                 );
 
-                this.iconBackgroundRenderer.addQuad(
-                  xRight,
-                  cursorY,
-                  r,
-                  g,
-                  b,
-                  1.0,
-                  dumbGlyphWidth,
-                  dumbGlyphHeight,
-                  this.iconAtlas.common?.base || 0,
-                  this.iconAtlas.common?.lineHeight || 0,
-                  16,
-                  "center"
-                );
                 this.iconRenderer.addText(
                   p.value ? "" : "",
                   xRight,
@@ -1260,20 +1246,6 @@ export class Renderer {
                       "middle"
                     );
 
-                    this.iconBackgroundRenderer.addQuad(
-                      xRight,
-                      cursorY,
-                      r,
-                      g,
-                      b,
-                      1.0,
-                      dumbGlyphWidth,
-                      dumbGlyphHeight,
-                      this.iconAtlas.common?.base || 0,
-                      this.iconAtlas.common?.lineHeight || 0,
-                      11,
-                      "center"
-                    );
                     this.iconRenderer.addText(
                       p.value ? "" : "",
                       xRight,

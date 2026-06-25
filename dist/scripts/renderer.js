@@ -577,8 +577,8 @@ export class Renderer {
                 node.nodeType === "composition" ||
                 node.nodeType === "group") {
                 const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 1.0, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center");
-                this.iconRenderer.addText("", worldX + xPos, worldY + titleY, 16, r, g, b, 1.0, "center", "middle");
+                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.1, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center");
+                this.iconRenderer.addText("", worldX + xPos, worldY + titleY, 16, 220 / 255, 0 / 255, 0 / 255, 1.0, "center", "middle");
             }
             // Edit Icon (node only)
             if (node.nodeType === "node" ||
@@ -586,13 +586,13 @@ export class Renderer {
                 node.nodeType === "composition-child") {
                 const xPos = node.width - NODE_LAYOUT.editBtnPaddingRight;
                 // Using '...' because true pencil emoji isn't in MSDF atlas
-                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 1.0, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center");
+                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.1, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center");
                 this.iconRenderer.addText("", worldX + xPos, worldY + titleY, 16, r, g, b, 1.0, "center", "middle");
             }
             // Close Icon (composition child)
             if (isCollapsed && node.nodeType === "composition-child") {
                 const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 1.0, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center");
+                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.1, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center");
                 this.iconRenderer.addText("", worldX + xPos, worldY + node.height / 2, 16, r, g, b, 1.0, "center", "middle");
             }
             // Group Add (+) Icon
@@ -679,7 +679,6 @@ export class Renderer {
                             for (let i = 0; i < boolU.length; i++) {
                                 const p = boolU[i];
                                 this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 0.9, "left", "middle");
-                                this.iconBackgroundRenderer.addQuad(xRight, cursorY, r, g, b, 1.0, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center");
                                 this.iconRenderer.addText(p.value ? "" : "", xRight, cursorY, 11, r, g, b, 1.0, "right", "middle");
                                 cursorY += 20;
                             }
@@ -717,7 +716,6 @@ export class Renderer {
                                         const groupBottomPadding = i === boolGCount - 1 && !(textG || enumG) ? 8 : 0;
                                         const p = boolG[i];
                                         this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 1.0, "left", "middle");
-                                        this.iconBackgroundRenderer.addQuad(xRight, cursorY, r, g, b, 1.0, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 11, "center");
                                         this.iconRenderer.addText(p.value ? "" : "", xRight, cursorY, 11, r, g, b, 1.0, "right", "middle");
                                         cursorY += 20 + groupBottomPadding;
                                     }
