@@ -2,6 +2,7 @@ import {
   NodeShaderLocations,
   BGShaderLocations,
   MSDFShaderLocations,
+  IconBGShaderLocations,
 } from "./types.js";
 
 /**
@@ -108,6 +109,20 @@ export function getMSDFShaderLocations(
     u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix")!,
     u_ProjMatrix: gl.getUniformLocation(program, "u_ProjMatrix")!,
     u_Atlas: gl.getUniformLocation(program, "u_Atlas")!,
+  };
+  validateShaderLocations(locations);
+  return locations;
+}
+
+export function getIconBGLocations(
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram
+): IconBGShaderLocations {
+  const locations: IconBGShaderLocations = {
+    a_Position: gl.getAttribLocation(program, "a_Position"),
+    a_Color: gl.getAttribLocation(program, "a_Color"),
+    u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix")!,
+    u_ProjMatrix: gl.getUniformLocation(program, "u_ProjMatrix")!,
   };
   validateShaderLocations(locations);
   return locations;

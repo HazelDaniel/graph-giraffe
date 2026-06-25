@@ -1,4 +1,4 @@
-export type ThemeName = 'dark' | 'light' | 'neon';
+export type ThemeName = "dark" | "light" | "neon";
 export interface ThemeStyle {
   bgFill: string;
   borderStroke: string;
@@ -8,29 +8,29 @@ export interface ThemeStyle {
   borderWidth: number;
 }
 
-export type GeometryMeshType = 'rounded-square';
-export type BGGeometryMeshType = 'dotted' | 'grid';
-export type NodeType = 'node' | 'group' | 'composition' | 'composition-child';
-export type ContainerNodeType = 'group' | 'composition';
-export type LeafNodeType = 'node' | 'composition-child';
-export type CandidateNodeType = Exclude<NodeType, 'composition-child'>;
-export type ConnectionMode = 'group' | 'node';
-export type HandleSide = 'left' | 'right';
-export type HandleShape = 'circle' | 'square';
-export type EdgeType = 'line' | 'cubic' | 'line-curve' | 'orthogonal';
-export type EdgeHeadType = 'none' | 'arrow';
-export type EdgeHeadSkinId = 'arrow' | 'chevron' | 'diamond' | 'pill';
+export type GeometryMeshType = "rounded-square";
+export type BGGeometryMeshType = "dotted" | "grid";
+export type NodeType = "node" | "group" | "composition" | "composition-child";
+export type ContainerNodeType = "group" | "composition";
+export type LeafNodeType = "node" | "composition-child";
+export type CandidateNodeType = Exclude<NodeType, "composition-child">;
+export type ConnectionMode = "group" | "node";
+export type HandleSide = "left" | "right";
+export type HandleShape = "circle" | "square";
+export type EdgeType = "line" | "cubic" | "line-curve" | "orthogonal";
+export type EdgeHeadType = "none" | "arrow";
+export type EdgeHeadSkinId = "arrow" | "chevron" | "diamond" | "pill";
 export type TextureKind =
-  | 'node-body'
-  | 'node-head'
-  | 'group-body'
-  | 'group-head'
-  | 'composition-body'
-  | 'composition-head'
-  | 'composition-child-head'
-  | 'composition-reference-body'
-  | 'composition-reference-child-head';
-export type TextureSourceType = 'default' | 'upload';
+  | "node-body"
+  | "node-head"
+  | "group-body"
+  | "group-head"
+  | "composition-body"
+  | "composition-head"
+  | "composition-child-head"
+  | "composition-reference-body"
+  | "composition-reference-child-head";
+export type TextureSourceType = "default" | "upload";
 
 export interface TextureSource {
   id: string;
@@ -105,10 +105,10 @@ export const HANDLE_LAYOUT = {
 };
 
 export const DEFAULT_HANDLE_STYLE: HandleStyle = {
-  shape: 'circle',
-  backgroundColor: 'rgba(33, 36, 39, 0.95)',
-  connectedBorderColor: '#2C9F92',
-  disconnectedBorderColor: 'rgba(148, 163, 184, 0.85)',
+  shape: "circle",
+  backgroundColor: "rgba(33, 36, 39, 0.95)",
+  connectedBorderColor: "#2C9F92",
+  disconnectedBorderColor: "rgba(148, 163, 184, 0.85)",
   borderWidth: 2,
   size: 12,
 };
@@ -121,23 +121,25 @@ export const NODE_SIZE = {
   compositionChild: { width: 160, height: NODE_LAYOUT.headerHeight },
 } as const;
 
-export function isContainerNodeType(nodeType: NodeType): nodeType is ContainerNodeType {
-  return nodeType === 'group' || nodeType === 'composition';
+export function isContainerNodeType(
+  nodeType: NodeType
+): nodeType is ContainerNodeType {
+  return nodeType === "group" || nodeType === "composition";
 }
 
 export function isLeafNodeType(nodeType: NodeType): nodeType is LeafNodeType {
-  return nodeType === 'node' || nodeType === 'composition-child';
+  return nodeType === "node" || nodeType === "composition-child";
 }
 
 export function isCandidateNodeType(
   nodeType: NodeType,
   connectionMode: ConnectionMode
 ): nodeType is CandidateNodeType {
-  if (connectionMode === 'group') {
-    return nodeType === 'group';
+  if (connectionMode === "group") {
+    return nodeType === "group";
   }
 
-  return nodeType === 'node' || nodeType === 'composition';
+  return nodeType === "node" || nodeType === "composition";
 }
 
 export function getDefaultNodeSize(
@@ -145,12 +147,12 @@ export function getDefaultNodeSize(
   isCollapsed: boolean = false
 ): { width: number; height: number } {
   switch (nodeType) {
-    case 'group':
-    case 'composition':
+    case "group":
+    case "composition":
       return NODE_SIZE.group;
-    case 'composition-child':
+    case "composition-child":
       return NODE_SIZE.compositionChild;
-    case 'node':
+    case "node":
       return isCollapsed ? NODE_SIZE.nodeCollapsed : NODE_SIZE.node;
     default:
       return NODE_SIZE.node;
@@ -179,6 +181,13 @@ export interface MSDFShaderLocations {
   u_ViewMatrix: WebGLUniformLocation;
   u_ProjMatrix: WebGLUniformLocation;
   u_Atlas: WebGLUniformLocation;
+}
+
+export interface IconBGShaderLocations {
+  a_Position: number;
+  a_Color: number;
+  u_ViewMatrix: WebGLUniformLocation;
+  u_ProjMatrix: WebGLUniformLocation;
 }
 
 export interface BGShaderLocations {

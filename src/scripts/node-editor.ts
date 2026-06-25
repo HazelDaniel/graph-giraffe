@@ -139,7 +139,6 @@ export class NodeEditor {
   private selectedEdgeIds: Set<number> = new Set();
   private selectionKind: SelectionKind = null;
   private isMultiSelectMode: boolean = false;
-  private isZooming: boolean = false;
   private activeLabelEdit: ActiveLabelEdit | null = null;
   private selectionRep: NodeData | null = null;
   private draggingSelection: SelectionDragState | null = null;
@@ -159,6 +158,8 @@ export class NodeEditor {
     bgFsSource: string,
     msdfVsSource: string,
     msdfFsSource: string,
+    IconBGVsSource: string,
+    IconBGFsSource: string,
     options: NodeEditorConfig = {},
     nodeTextureUploadList: AddUploadedTextureParams[] = []
   ): Promise<NodeEditor> {
@@ -172,6 +173,8 @@ export class NodeEditor {
       bgFsSource,
       msdfVsSource,
       msdfFsSource,
+      IconBGVsSource,
+      IconBGFsSource,
       options,
       nodeTextureUploadList
     );
@@ -191,6 +194,8 @@ export class NodeEditor {
     private bgFsSource: string,
     private msdfVsSource: string,
     private msdfFsSource: string,
+    private IconBGVsSource: string,
+    private IconBGFsSource: string,
     options: NodeEditorConfig = {},
     private nodeTextureUploadList: AddUploadedTextureParams[]
   ) {
@@ -224,6 +229,7 @@ export class NodeEditor {
     const gl = canvas.getContext("webgl2") as WebGL2RenderingContext;
     const program = createProgram(gl, this.vsSource, this.fsSource);
     const msdfProgram = createProgram(gl, this.msdfVsSource, this.msdfFsSource);
+    const iconBGProgam = createProgram(gl, this.IconBGVsSource, this.IconBGFsSource);
     const bgProgram = createProgram(gl, this.bgVsSource, this.bgFsSource);
 
     this.msdfAtlas = new MsdfAtlas(gl);
@@ -250,6 +256,7 @@ export class NodeEditor {
       () => this.bgColor,
       () => this.fontColor,
       msdfProgram,
+      iconBGProgam,
       this.msdfAtlas,
       this.iconAtlas
     );
@@ -2496,12 +2503,12 @@ export class NodeEditor {
   private readonly ZOOM_THROTTLE_MS = 180;
 
   private triggerZoomThrottle(): void {
-    this.isZooming = true;
+    this.renderer.isZooming = true;
     if (this.zoomThrottleTimer) {
       clearTimeout(this.zoomThrottleTimer);
     }
     this.zoomThrottleTimer = setTimeout(() => {
-      this.isZooming = false;
+      this.renderer.isZooming = false;
       this.zoomThrottleTimer = null;
     }, this.ZOOM_THROTTLE_MS);
   }

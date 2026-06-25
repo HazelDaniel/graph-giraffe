@@ -28,6 +28,8 @@ export class NodeEditor {
     bgFsSource;
     msdfVsSource;
     msdfFsSource;
+    IconBGVsSource;
+    IconBGFsSource;
     nodeTextureUploadList;
     camera;
     store;
@@ -63,7 +65,6 @@ export class NodeEditor {
     selectedEdgeIds = new Set();
     selectionKind = null;
     isMultiSelectMode = false;
-    isZooming = false;
     activeLabelEdit = null;
     selectionRep = null;
     draggingSelection = null;
@@ -71,16 +72,16 @@ export class NodeEditor {
     gestureMode = false;
     pinchDistance = null;
     static _instance = null;
-    static async create(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, options = {}, nodeTextureUploadList = []) {
+    static async create(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, IconBGVsSource, IconBGFsSource, options = {}, nodeTextureUploadList = []) {
         if (this._instance)
             return this._instance;
-        this._instance = new NodeEditor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, options, nodeTextureUploadList);
+        this._instance = new NodeEditor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, IconBGVsSource, IconBGFsSource, options, nodeTextureUploadList);
         await this._instance.init();
         return this._instance;
     }
     msdfAtlas;
     iconAtlas;
-    constructor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, options = {}, nodeTextureUploadList) {
+    constructor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, IconBGVsSource, IconBGFsSource, options = {}, nodeTextureUploadList) {
         this.canvasId = canvasId;
         this.backgroundCanvasId = backgroundCanvasId;
         this.vsSource = vsSource;
@@ -89,6 +90,8 @@ export class NodeEditor {
         this.bgFsSource = bgFsSource;
         this.msdfVsSource = msdfVsSource;
         this.msdfFsSource = msdfFsSource;
+        this.IconBGVsSource = IconBGVsSource;
+        this.IconBGFsSource = IconBGFsSource;
         this.nodeTextureUploadList = nodeTextureUploadList;
         const canvas = document.getElementById(canvasId);
         const backgroundCanvas = document.getElementById(backgroundCanvasId);
@@ -112,6 +115,7 @@ export class NodeEditor {
         const gl = canvas.getContext("webgl2");
         const program = createProgram(gl, this.vsSource, this.fsSource);
         const msdfProgram = createProgram(gl, this.msdfVsSource, this.msdfFsSource);
+        const iconBGProgam = createProgram(gl, this.IconBGVsSource, this.IconBGFsSource);
         const bgProgram = createProgram(gl, this.bgVsSource, this.bgFsSource);
         this.msdfAtlas = new MsdfAtlas(gl);
         this.iconAtlas = new MsdfAtlas(gl);
@@ -127,7 +131,7 @@ export class NodeEditor {
         const labelCanvas = document.getElementById("2d-label-canvas");
         const geometry = new GeometryNode(gl, "rounded-square");
         const bgGeometry = new BGGeometryNode(gl, "grid", backgroundCanvas);
-        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, msdfProgram, this.msdfAtlas, this.iconAtlas);
+        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, msdfProgram, iconBGProgam, this.msdfAtlas, this.iconAtlas);
         const container = document.getElementById("sidebar");
         const historyPane = document.getElementById("undo-redo-wrapper");
         const toolPane = document.getElementById("tool-panel");
@@ -1896,12 +1900,12 @@ export class NodeEditor {
     zoomThrottleTimer = null;
     ZOOM_THROTTLE_MS = 180;
     triggerZoomThrottle() {
-        this.isZooming = true;
+        this.renderer.isZooming = true;
         if (this.zoomThrottleTimer) {
             clearTimeout(this.zoomThrottleTimer);
         }
         this.zoomThrottleTimer = setTimeout(() => {
-            this.isZooming = false;
+            this.renderer.isZooming = false;
             this.zoomThrottleTimer = null;
         }, this.ZOOM_THROTTLE_MS);
     }

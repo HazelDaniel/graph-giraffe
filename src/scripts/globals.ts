@@ -39,3 +39,7 @@ if (typeof CanvasRenderingContext2D.prototype.roundRect !== 'function') {
     return this;
   };
 }
+
+
+export const dumbGlyphHeight = 16;
+export const dumbGlyphWidth = 16;

@@ -13,10 +13,10 @@ export const HANDLE_LAYOUT = {
     offsetX: -2,
 };
 export const DEFAULT_HANDLE_STYLE = {
-    shape: 'circle',
-    backgroundColor: 'rgba(33, 36, 39, 0.95)',
-    connectedBorderColor: '#2C9F92',
-    disconnectedBorderColor: 'rgba(148, 163, 184, 0.85)',
+    shape: "circle",
+    backgroundColor: "rgba(33, 36, 39, 0.95)",
+    connectedBorderColor: "#2C9F92",
+    disconnectedBorderColor: "rgba(148, 163, 184, 0.85)",
     borderWidth: 2,
     size: 12,
 };
@@ -28,25 +28,25 @@ export const NODE_SIZE = {
     compositionChild: { width: 160, height: NODE_LAYOUT.headerHeight },
 };
 export function isContainerNodeType(nodeType) {
-    return nodeType === 'group' || nodeType === 'composition';
+    return nodeType === "group" || nodeType === "composition";
 }
 export function isLeafNodeType(nodeType) {
-    return nodeType === 'node' || nodeType === 'composition-child';
+    return nodeType === "node" || nodeType === "composition-child";
 }
 export function isCandidateNodeType(nodeType, connectionMode) {
-    if (connectionMode === 'group') {
-        return nodeType === 'group';
+    if (connectionMode === "group") {
+        return nodeType === "group";
     }
-    return nodeType === 'node' || nodeType === 'composition';
+    return nodeType === "node" || nodeType === "composition";
 }
 export function getDefaultNodeSize(nodeType, isCollapsed = false) {
     switch (nodeType) {
-        case 'group':
-        case 'composition':
+        case "group":
+        case "composition":
             return NODE_SIZE.group;
-        case 'composition-child':
+        case "composition-child":
             return NODE_SIZE.compositionChild;
-        case 'node':
+        case "node":
             return isCollapsed ? NODE_SIZE.nodeCollapsed : NODE_SIZE.node;
         default:
             return NODE_SIZE.node;

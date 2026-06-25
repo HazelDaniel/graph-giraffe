@@ -10,13 +10,17 @@ async function init() {
     const BGfsSource = document.getElementById("bg-f-shader")?.textContent;
     const msdfVsSource = document.getElementById("msdf-v-shader")?.textContent;
     const msdfFsSource = document.getElementById("msdf-f-shader")?.textContent;
+    const iconBGVsSource = document.getElementById("icon-bg-v-shader")?.textContent;
+    const iconBGFsSource = document.getElementById("icon-bg-f-shader")?.textContent;
     if (!vsSource || !fsSource)
         throw new Error("Shader source missing from DOM");
     if (!BGvsSource || !BGfsSource)
         throw new Error("Background shader source missing from DOM");
     if (!msdfVsSource || !msdfFsSource)
         throw new Error("MSDF shader source missing from DOM");
-    const editor = await NodeEditor.create("webgl-canvas", "2d-bg-canvas", vsSource, fsSource, BGvsSource, BGfsSource, msdfVsSource, msdfFsSource, { connectionMode: "node" }, 
+    if (!iconBGVsSource || !iconBGFsSource)
+        throw new Error("Icon background shader source missing from DOM");
+    const editor = await NodeEditor.create("webgl-canvas", "2d-bg-canvas", vsSource, fsSource, BGvsSource, BGfsSource, msdfVsSource, msdfFsSource, iconBGVsSource, iconBGFsSource, { connectionMode: "node" }, 
     //prettier-ignore
     [
         generateTetureSkinOption("node-head", "Custom Node Head", 0, "jkldfjsljfsdlfjlsdjlfjsl"),

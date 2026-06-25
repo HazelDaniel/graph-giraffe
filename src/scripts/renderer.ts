@@ -23,8 +23,10 @@ import { drawHandle } from "./texture.js";
 import { getHandleScreenGeometry } from "./handle-geometry.js";
 import { TextureCache } from "./texture-cache.js";
 import { NODE_LAYOUT } from "./types.js";
-import { getMSDFShaderLocations } from "./shader.js";
+import { getIconBGLocations, getMSDFShaderLocations } from "./shader.js";
 import { MsdfAtlas, MsdfTextRenderer } from "./msdf-text.js";
+import { IconBackgroundRenderer } from "./icon-background-renderer.js";
+import { dumbGlyphHeight, dumbGlyphWidth } from "./globals.js";
 
 /**
  * Owns the WebGL draw loop and all rendering logic.
@@ -53,6 +55,7 @@ export class Renderer {
     private getBgColor: () => [number, number, number, number],
     private getFontColor: () => [number, number, number, number],
     private msdfProgram: WebGLProgram,
+    private iconBGProgram: WebGLProgram,
     private msdfAtlas: MsdfAtlas,
     private iconAtlas: MsdfAtlas
   ) {
@@ -73,12 +76,29 @@ export class Renderer {
     });
 
     const msdfLocations = getMSDFShaderLocations(gl, msdfProgram);
-    this.textRenderer = new MsdfTextRenderer(gl, msdfProgram, msdfLocations, msdfAtlas);
-    this.iconRenderer = new MsdfTextRenderer(gl, msdfProgram, msdfLocations, iconAtlas);
+    const iconBGLocations = getIconBGLocations(gl, iconBGProgram);
+    this.textRenderer = new MsdfTextRenderer(
+      gl,
+      msdfProgram,
+      msdfLocations,
+      msdfAtlas
+    );
+    this.iconRenderer = new MsdfTextRenderer(
+      gl,
+      msdfProgram,
+      msdfLocations,
+      iconAtlas
+    );
+    this.iconBackgroundRenderer = new IconBackgroundRenderer(
+      gl,
+      iconBGProgram,
+      iconBGLocations
+    );
   }
 
   private textRenderer: MsdfTextRenderer;
   private iconRenderer: MsdfTextRenderer;
+  private iconBackgroundRenderer: IconBackgroundRenderer;
 
   private labelCtx: CanvasRenderingContext2D | null;
   private edgeVertexBuffer: WebGLBuffer;
@@ -86,6 +106,7 @@ export class Renderer {
   private edgeHeadTextures: EdgeHeadTextureLibrary;
   private edgeFrame: EdgeRouteGeometry[] = [];
   private textureCache: TextureCache;
+  public isZooming: boolean = false;
 
   /** Call once after each canvas resize to update the orthographic projection. */
   resize(width: number, height: number): void {
@@ -139,8 +160,7 @@ export class Renderer {
       this.drawHandles(node);
     }
 
-    //TODO: conditionally call based on '!isZooming'
-    this.drawGroupLabels();
+    if (!this.isZooming) this.drawGroupLabels();
   }
 
   private drawConnectionPreview(): void {
@@ -589,6 +609,7 @@ export class Renderer {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.textRenderer.beginBatch();
+      this.iconBackgroundRenderer.beginBatch();
       this.iconRenderer.beginBatch();
     }
 
@@ -641,7 +662,10 @@ export class Renderer {
     }
 
     if (!picking) {
+      this.iconBackgroundRenderer.msdfFontSize =
+        this.iconAtlas.info?.size || null;
       this.textRenderer.flush(this.camera, this.projMatrix);
+      this.iconBackgroundRenderer.flush(this.camera, this.projMatrix);
       this.iconRenderer.flush(this.camera, this.projMatrix);
     }
   }
@@ -783,44 +807,158 @@ export class Renderer {
       const [r, g, b, _] = this.getFontColor();
 
       const isCollapsed = this.store.shouldCollapseNode(node);
-      const headOnly = node.nodeType === 'composition-child' || isCollapsed;
+      const headOnly = node.nodeType === "composition-child" || isCollapsed;
 
-      const titleY = (node.nodeType === 'group' || node.nodeType === 'composition') && !isCollapsed
-        ? 20
-        : (headOnly ? node.height / 2 : NODE_LAYOUT.headerHeight / 2);
+      const titleY =
+        (node.nodeType === "group" || node.nodeType === "composition") &&
+        !isCollapsed
+          ? 20
+          : headOnly
+          ? node.height / 2
+          : NODE_LAYOUT.headerHeight / 2;
 
-      if (node.nodeType === 'node' || node.nodeType === 'composition-child' || isCollapsed) {
-        this.textRenderer.addText(node.text, worldX + NODE_LAYOUT.padding, worldY + titleY, 14, r, g, b, 1.0, 'left', 'middle');
+      if (
+        node.nodeType === "node" ||
+        node.nodeType === "composition-child" ||
+        isCollapsed
+      ) {
+        this.textRenderer.addText(
+          node.text,
+          worldX + NODE_LAYOUT.padding,
+          worldY + titleY,
+          14,
+          r,
+          g,
+          b,
+          1.0,
+          "left",
+          "middle"
+        );
       }
 
       // Close Icon
-      if (node.nodeType === 'node' || node.nodeType === 'composition' || node.nodeType === "group") {
+      if (
+        node.nodeType === "node" ||
+        node.nodeType === "composition" ||
+        node.nodeType === "group"
+      ) {
         const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-        this.iconRenderer.addText('', worldX + xPos, worldY + titleY, 16, r, g, b, 1.0, 'center', 'middle');
+        this.iconBackgroundRenderer.addQuad(
+          worldX + xPos,
+          worldY + titleY,
+          r,
+          g,
+          b,
+          1.0,
+          dumbGlyphWidth,
+          dumbGlyphHeight,
+          this.iconAtlas.common?.base || 0,
+          this.iconAtlas.common?.lineHeight || 0,
+          16,
+          "center",
+        );
+        this.iconRenderer.addText(
+          "",
+          worldX + xPos,
+          worldY + titleY,
+          16,
+          r,
+          g,
+          b,
+          1.0,
+          "center",
+          "middle"
+        );
       }
 
       // Edit Icon (node only)
-      if (node.nodeType === 'node' || node.nodeType === "group" || node.nodeType === "composition-child") {
+      if (
+        node.nodeType === "node" ||
+        node.nodeType === "group" ||
+        node.nodeType === "composition-child"
+      ) {
         const xPos = node.width - NODE_LAYOUT.editBtnPaddingRight;
         // Using '...' because true pencil emoji isn't in MSDF atlas
-        this.iconRenderer.addText('', worldX + xPos, worldY + titleY, 16, r, g, b, 1.0, 'center', 'middle');
+
+        this.iconBackgroundRenderer.addQuad(
+          worldX + xPos,
+          worldY + titleY,
+          r,
+          g,
+          b,
+          1.0,
+          dumbGlyphWidth,
+          dumbGlyphHeight,
+          this.iconAtlas.common?.base || 0,
+          this.iconAtlas.common?.lineHeight || 0,
+          16,
+          "center",
+        );
+        this.iconRenderer.addText(
+          "",
+          worldX + xPos,
+          worldY + titleY,
+          16,
+          r,
+          g,
+          b,
+          1.0,
+          "center",
+          "middle"
+        );
       }
 
       // Close Icon (composition child)
-      if (isCollapsed && node.nodeType === 'composition-child') {
+      if (isCollapsed && node.nodeType === "composition-child") {
         const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-        this.iconRenderer.addText('', worldX + xPos, worldY + node.height / 2, 16, r, g, b, 1.0, 'center', 'middle');
+        this.iconBackgroundRenderer.addQuad(
+          worldX + xPos,
+          worldY + titleY,
+          r,
+          g,
+          b,
+          1.0,
+          dumbGlyphWidth,
+          dumbGlyphHeight,
+          this.iconAtlas.common?.base || 0,
+          this.iconAtlas.common?.lineHeight || 0,
+          16,
+          "center",
+        );
+        this.iconRenderer.addText(
+          "",
+          worldX + xPos,
+          worldY + node.height / 2,
+          16,
+          r,
+          g,
+          b,
+          1.0,
+          "center",
+          "middle"
+        );
       }
 
       // Group Add (+) Icon
-      if (node.nodeType === 'group' && !isCollapsed) {
+      if (node.nodeType === "group" && !isCollapsed) {
         const xPos = node.width / 2;
         const yPos = node.height - NODE_LAYOUT.plusBtnPaddingBottom;
-        this.textRenderer.addText('+', worldX + xPos, worldY + yPos, 20, r, g, b, 1.0, 'center', 'middle');
+        this.textRenderer.addText(
+          "+",
+          worldX + xPos,
+          worldY + yPos,
+          20,
+          r,
+          g,
+          b,
+          1.0,
+          "center",
+          "middle"
+        );
       }
 
       if (!headOnly) {
-        if (node.nodeType === 'node' && node.compositionRefId !== null) {
+        if (node.nodeType === "node" && node.compositionRefId !== null) {
           const padding = NODE_LAYOUT.padding;
           const spacing = 8;
           const titleHeight = 8;
@@ -830,64 +968,139 @@ export class Renderer {
 
           const composition = this.store.get(node.compositionRefId!);
           if (composition) {
-            const children = composition.childIds.map(id => this.store.get(id)).filter(Boolean);
+            const children = composition.childIds
+              .map((id) => this.store.get(id))
+              .filter(Boolean);
             if (children.length === 0) {
-              this.textRenderer.addText('No nodes', worldX + padding, worldY + yOffset, 12, r, g, b, 0.5, 'left', 'top');
+              this.textRenderer.addText(
+                "No nodes",
+                worldX + padding,
+                worldY + yOffset,
+                12,
+                r,
+                g,
+                b,
+                0.5,
+                "left",
+                "top"
+              );
             } else {
               // We need to flush MSDF text first, then draw the children nodes using the main shader,
               // then we can resume queuing MSDF text. Wait, MSDF text is completely deferred to the end of the frame!
               // So we can just queue the child titles in textRenderer, and immediately draw their bodies using the main shader!
               gl.useProgram(this.program);
-              
+
               for (let i = 0; i < Math.min(children.length, 5); i++) {
                 const child = children[i]!;
                 const childWidth = Math.min(child.width, node.width - 40);
-                const childHeight = Math.max(NODE_LAYOUT.headerHeight, child.height);
+                const childHeight = Math.max(
+                  NODE_LAYOUT.headerHeight,
+                  child.height
+                );
                 const x = worldX + (node.width - childWidth) / 2;
                 const y = worldY + yOffset;
 
                 // Draw child body
-                const bodyCache = this.textureCache.getTexture(child.textureIds.body);
+                const bodyCache = this.textureCache.getTexture(
+                  child.textureIds.body
+                );
                 if (bodyCache) {
                   this.setModelMatrix(x, y, childWidth, childHeight);
                   gl.activeTexture(gl.TEXTURE0);
                   gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
                   gl.uniform1i(this.locations.u_UseTexture, 1);
                   gl.uniform1i(this.locations.u_Use9Slice, 1);
-                  gl.uniform2f(this.locations.u_Dimensions, childWidth, childHeight);
-                  gl.uniform2f(this.locations.u_TextureSize, bodyCache.nativeWidth, bodyCache.nativeHeight);
-                  gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
+                  gl.uniform2f(
+                    this.locations.u_Dimensions,
+                    childWidth,
+                    childHeight
+                  );
+                  gl.uniform2f(
+                    this.locations.u_TextureSize,
+                    bodyCache.nativeWidth,
+                    bodyCache.nativeHeight
+                  );
+                  gl.uniform4f(
+                    this.locations.u_SliceMargins,
+                    16.0,
+                    16.0,
+                    16.0,
+                    16.0
+                  );
                   gl.uniform1i(this.locations.u_Sampler, 0);
                   gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
                   gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
                 }
 
                 // Draw child head
-                const headCache = this.textureCache.getTexture(child.textureIds.head);
+                const headCache = this.textureCache.getTexture(
+                  child.textureIds.head
+                );
                 if (headCache) {
-                  this.setModelMatrix(x, y, childWidth, NODE_LAYOUT.headerHeight);
+                  this.setModelMatrix(
+                    x,
+                    y,
+                    childWidth,
+                    NODE_LAYOUT.headerHeight
+                  );
                   gl.activeTexture(gl.TEXTURE0);
                   gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
                   gl.uniform1i(this.locations.u_UseTexture, 1);
                   gl.uniform1i(this.locations.u_Use9Slice, 1);
-                  gl.uniform2f(this.locations.u_Dimensions, childWidth, NODE_LAYOUT.headerHeight);
-                  gl.uniform2f(this.locations.u_TextureSize, headCache.nativeWidth, headCache.nativeHeight);
-                  gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
+                  gl.uniform2f(
+                    this.locations.u_Dimensions,
+                    childWidth,
+                    NODE_LAYOUT.headerHeight
+                  );
+                  gl.uniform2f(
+                    this.locations.u_TextureSize,
+                    headCache.nativeWidth,
+                    headCache.nativeHeight
+                  );
+                  gl.uniform4f(
+                    this.locations.u_SliceMargins,
+                    16.0,
+                    16.0,
+                    16.0,
+                    16.0
+                  );
                   gl.uniform1i(this.locations.u_Sampler, 0);
                   gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
                   gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
                 }
 
-                this.textRenderer.addText(child.text, x + 12, y + NODE_LAYOUT.headerHeight / 2, 13, r, g, b, 1.0, 'left', 'middle');
+                this.textRenderer.addText(
+                  child.text,
+                  x + 12,
+                  y + NODE_LAYOUT.headerHeight / 2,
+                  13,
+                  r,
+                  g,
+                  b,
+                  1.0,
+                  "left",
+                  "middle"
+                );
 
                 yOffset += childHeight + 10;
               }
               if (children.length > 5) {
-                this.textRenderer.addText(`+ ${children.length - 5} more nodes`, worldX + padding, worldY + yOffset, 12, r, g, b, 0.5, 'left', 'top');
+                this.textRenderer.addText(
+                  `+ ${children.length - 5} more nodes`,
+                  worldX + padding,
+                  worldY + yOffset,
+                  12,
+                  r,
+                  g,
+                  b,
+                  0.5,
+                  "left",
+                  "top"
+                );
               }
             }
           }
-        } else if (node.nodeType === 'node') {
+        } else if (node.nodeType === "node") {
           if (node.props) {
             let cursorY = worldY + NODE_LAYOUT.headerHeight + 16;
             const xLeft = worldX + NODE_LAYOUT.padding + 4;
@@ -897,24 +1110,108 @@ export class Renderer {
             const boolU = node.props.booleans["ungrouped"];
             const textU = node.props.texts["ungrouped"];
             const enumU = node.props.enums["ungrouped"];
-            if (boolU) for (let i = 0; i < boolU.length; i++) {
-              const p = boolU[i];
-              this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 0.9, 'left', 'middle');
-              this.iconRenderer.addText(p.value ? '' : '', xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
-              cursorY += 20;
-            }
-            if (textU) for (let i = 0; i < textU.length; i++) {
-              const p = textU[i];
-              this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 0.9, 'left', 'middle');
-              this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
-              cursorY += 20;
-            }
-            if (enumU) for (let i = 0; i < enumU.length; i++) {
-              const p = enumU[i];
-              this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 0.9, 'left', 'middle');
-              this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
-              cursorY += 20;
-            }
+            if (boolU)
+              for (let i = 0; i < boolU.length; i++) {
+                const p = boolU[i];
+                this.textRenderer.addText(
+                  p.label,
+                  xLeft + 4,
+                  cursorY,
+                  11,
+                  r,
+                  g,
+                  b,
+                  0.9,
+                  "left",
+                  "middle"
+                );
+
+                this.iconBackgroundRenderer.addQuad(
+                  xRight,
+                  cursorY,
+                  r,
+                  g,
+                  b,
+                  1.0,
+          dumbGlyphWidth,
+          dumbGlyphHeight,
+          this.iconAtlas.common?.base || 0,
+          this.iconAtlas.common?.lineHeight || 0,
+          16,
+          "center",
+                );
+                this.iconRenderer.addText(
+                  p.value ? "" : "",
+                  xRight,
+                  cursorY,
+                  11,
+                  r,
+                  g,
+                  b,
+                  1.0,
+                  "right",
+                  "middle"
+                );
+                cursorY += 20;
+              }
+            if (textU)
+              for (let i = 0; i < textU.length; i++) {
+                const p = textU[i];
+                this.textRenderer.addText(
+                  p.label,
+                  xLeft + 4,
+                  cursorY,
+                  11,
+                  r,
+                  g,
+                  b,
+                  0.9,
+                  "left",
+                  "middle"
+                );
+                this.textRenderer.addText(
+                  String(p.value),
+                  xRight,
+                  cursorY,
+                  11,
+                  r,
+                  g,
+                  b,
+                  1.0,
+                  "right",
+                  "middle"
+                );
+                cursorY += 20;
+              }
+            if (enumU)
+              for (let i = 0; i < enumU.length; i++) {
+                const p = enumU[i];
+                this.textRenderer.addText(
+                  p.label,
+                  xLeft + 4,
+                  cursorY,
+                  11,
+                  r,
+                  g,
+                  b,
+                  0.9,
+                  "left",
+                  "middle"
+                );
+                this.textRenderer.addText(
+                  String(p.value),
+                  xRight,
+                  cursorY,
+                  11,
+                  r,
+                  g,
+                  b,
+                  1.0,
+                  "right",
+                  "middle"
+                );
+                cursorY += 20;
+              }
 
             // Draw grouped items
             const groups = node.props.groups;
@@ -923,42 +1220,152 @@ export class Renderer {
               const boolG = node.props.booleans[groupName];
               const textG = node.props.texts[groupName];
               const enumG = node.props.enums[groupName];
-              const hasItems = (boolG && boolG.length > 0) || (textG && textG.length > 0) || (enumG && enumG.length > 0);
+              const hasItems =
+                (boolG && boolG.length > 0) ||
+                (textG && textG.length > 0) ||
+                (enumG && enumG.length > 0);
 
               if (hasItems) {
                 // Subheading
-                this.textRenderer.addText(groupName.toUpperCase(), xLeft, cursorY, 10, r, g, b, 0.5, 'left', 'middle');
+                this.textRenderer.addText(
+                  groupName.toUpperCase(),
+                  xLeft,
+                  cursorY,
+                  10,
+                  r,
+                  g,
+                  b,
+                  0.5,
+                  "left",
+                  "middle"
+                );
                 cursorY += 20;
 
-
                 const boolGCount = boolG?.length;
-                if (boolG) for (let i = 0; i < boolGCount; i++) {
-                  const groupBottomPadding = i === boolGCount - 1 && !(textG || enumG) ? 8 : 0;
-                  const p = boolG[i];
-                  this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 1.0, 'left', 'middle');
-                  this.iconRenderer.addText(p.value ? '' : '', xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
-                  cursorY += 20 + groupBottomPadding;
-                }
+                if (boolG)
+                  for (let i = 0; i < boolGCount; i++) {
+                    const groupBottomPadding =
+                      i === boolGCount - 1 && !(textG || enumG) ? 8 : 0;
+                    const p = boolG[i];
+                    this.textRenderer.addText(
+                      p.label,
+                      xLeft + 4,
+                      cursorY,
+                      11,
+                      r,
+                      g,
+                      b,
+                      1.0,
+                      "left",
+                      "middle"
+                    );
+
+                    this.iconBackgroundRenderer.addQuad(
+                      xRight,
+                      cursorY,
+                      r,
+                      g,
+                      b,
+                      1.0,
+          dumbGlyphWidth,
+          dumbGlyphHeight,
+          this.iconAtlas.common?.base || 0,
+          this.iconAtlas.common?.lineHeight || 0,
+          11,
+          "center",
+                    );
+                    this.iconRenderer.addText(
+                      p.value ? "" : "",
+                      xRight,
+                      cursorY,
+                      11,
+                      r,
+                      g,
+                      b,
+                      1.0,
+                      "right",
+                      "middle"
+                    );
+                    cursorY += 20 + groupBottomPadding;
+                  }
                 const textGCount = textG?.length;
-                if (textG) for (let i = 0; i < textGCount; i++) {
-                  const groupBottomPadding = i === textGCount - 1  && !(enumG)? 8 : 0;
-                  const p = textG[i];
-                  this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 1.0, 'left', 'middle');
-                  this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
-                  cursorY += 20 + groupBottomPadding;
-                }
+                if (textG)
+                  for (let i = 0; i < textGCount; i++) {
+                    const groupBottomPadding =
+                      i === textGCount - 1 && !enumG ? 8 : 0;
+                    const p = textG[i];
+                    this.textRenderer.addText(
+                      p.label,
+                      xLeft + 4,
+                      cursorY,
+                      11,
+                      r,
+                      g,
+                      b,
+                      1.0,
+                      "left",
+                      "middle"
+                    );
+                    this.textRenderer.addText(
+                      String(p.value),
+                      xRight,
+                      cursorY,
+                      11,
+                      r,
+                      g,
+                      b,
+                      1.0,
+                      "right",
+                      "middle"
+                    );
+                    cursorY += 20 + groupBottomPadding;
+                  }
                 const enumGCount = enumG?.length;
-                if (enumG) for (let i = 0; i < enumGCount; i++) {
-                  const groupBottomPadding = i === enumGCount - 1 ? 8 : 0;
-                  const p = enumG[i];
-                  this.textRenderer.addText(p.label, xLeft + 4, cursorY, 11, r, g, b, 1.0, 'left', 'middle');
-                  this.textRenderer.addText(String(p.value), xRight, cursorY, 11, r, g, b, 1.0, 'right', 'middle');
-                  cursorY += 20 + groupBottomPadding;
-                }
+                if (enumG)
+                  for (let i = 0; i < enumGCount; i++) {
+                    const groupBottomPadding = i === enumGCount - 1 ? 8 : 0;
+                    const p = enumG[i];
+                    this.textRenderer.addText(
+                      p.label,
+                      xLeft + 4,
+                      cursorY,
+                      11,
+                      r,
+                      g,
+                      b,
+                      1.0,
+                      "left",
+                      "middle"
+                    );
+                    this.textRenderer.addText(
+                      String(p.value),
+                      xRight,
+                      cursorY,
+                      11,
+                      r,
+                      g,
+                      b,
+                      1.0,
+                      "right",
+                      "middle"
+                    );
+                    cursorY += 20 + groupBottomPadding;
+                  }
               }
             }
           } else {
-            this.textRenderer.addText('Properties...', worldX + NODE_LAYOUT.padding, worldY + NODE_LAYOUT.headerHeight + NODE_LAYOUT.padding, 12, r, g, b, 1.0, 'left', 'top');
+            this.textRenderer.addText(
+              "Properties...",
+              worldX + NODE_LAYOUT.padding,
+              worldY + NODE_LAYOUT.headerHeight + NODE_LAYOUT.padding,
+              12,
+              r,
+              g,
+              b,
+              1.0,
+              "left",
+              "top"
+            );
           }
         }
       }

@@ -84,6 +84,16 @@ export function getMSDFShaderLocations(gl, program) {
     validateShaderLocations(locations);
     return locations;
 }
+export function getIconBGLocations(gl, program) {
+    const locations = {
+        a_Position: gl.getAttribLocation(program, "a_Position"),
+        a_Color: gl.getAttribLocation(program, "a_Color"),
+        u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix"),
+        u_ProjMatrix: gl.getUniformLocation(program, "u_ProjMatrix"),
+    };
+    validateShaderLocations(locations);
+    return locations;
+}
 function validateShaderLocations(locs) {
     for (const [key, val] of Object.entries(locs)) {
         if (key.startsWith("a_") && val < 0) {
