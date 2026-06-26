@@ -255,6 +255,7 @@ export class NodeEditor {
       () => this.activeConnectionDrag,
       () => this.bgColor,
       () => this.fontColor,
+      () => this.selectedNodeIds,
       msdfProgram,
       iconBGProgam,
       this.msdfAtlas,

@@ -54,6 +54,7 @@ export class Renderer {
     /** Callback so Renderer never stores bgColor itself — it belongs to the editor. */
     private getBgColor: () => [number, number, number, number],
     private getFontColor: () => [number, number, number, number],
+    private getSelectedNodeIds: () => Set<number>,
     private msdfProgram: WebGLProgram,
     private iconBGProgram: WebGLProgram,
     private msdfAtlas: MsdfAtlas,
@@ -137,8 +138,10 @@ export class Renderer {
     this.textureCache.processUploads();
     const gl = this.gl;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    // gl.clearColor(0.0, 0.0, 0.0, 0.0);
-    // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // Only clear depth — color is already set by drawBGFrame()
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
     this.drawNodes(false);
     this.drawEdges();
     this.drawOverlay();
@@ -307,15 +310,22 @@ export class Renderer {
 
     const lineVertices: number[] = [];
     const headVertices: number[] = [];
-    const lineDraws: Array<{ first: number; count: number }> = [];
-    const headDraws: Array<{ first: number; count: number }> = [];
+    const lineDraws: Array<{ first: number; count: number; z: number }> = [];
+    const headDraws: Array<{ first: number; count: number; z: number }> = [];
     let lineCursor = 0;
     let headCursor = 0;
+
+    const selectedIds = this.getSelectedNodeIds();
 
     for (const edge of visibleEdges) {
       const sourceNode = this.store.get(edge.sourceNodeId);
       const targetNode = this.store.get(edge.targetNodeId);
       if (!sourceNode || !targetNode) continue;
+
+      // Compute edge z as average of source and target z
+      const sourceZ = this.store.getZForNode(sourceNode.id, selectedIds);
+      const targetZ = this.store.getZForNode(targetNode.id, selectedIds);
+      const edgeZ = (sourceZ + targetZ) / 2;
 
       const sPos = getWorldPosition(sourceNode.id, this.store.allNodesMap);
       const tPos = getWorldPosition(targetNode.id, this.store.allNodesMap);
@@ -340,19 +350,19 @@ export class Renderer {
       this.edgeFrame.push(geometry);
       if (edge.isSelected) continue;
 
-      lineDraws.push({ first: lineCursor, count: geometry.worldPoints.length });
+      lineDraws.push({ first: lineCursor, count: geometry.worldPoints.length, z: edgeZ });
       lineCursor += geometry.worldPoints.length;
 
       for (const point of geometry.worldPoints) {
-        lineVertices.push(point.x, point.y, 0, 0);
+        lineVertices.push(point.x, point.y, edgeZ, 0, 0);
       }
 
       if (geometry.arrowhead) {
         const region = this.edgeHeadTextures.getRegion(edge.headSkinId);
-        headDraws.push({ first: headCursor, count: 6 });
+        headDraws.push({ first: headCursor, count: 6, z: edgeZ });
         headCursor += 6;
         headVertices.push(
-          ...this.buildHeadQuadVertices(geometry.arrowhead, region)
+          ...this.buildHeadQuadVertices(geometry.arrowhead, region, edgeZ)
         );
       }
     }
@@ -441,7 +451,7 @@ export class Renderer {
     gl.bufferData(
       gl.ARRAY_BUFFER,
       new Float32Array(
-        geometry.worldPoints.flatMap((point) => [point.x, point.y, 0, 0])
+        geometry.worldPoints.flatMap((point) => [point.x, point.y, 0, 0, 0])
       ),
       gl.DYNAMIC_DRAW
     );
@@ -482,7 +492,8 @@ export class Renderer {
 
   private buildHeadQuadVertices(
     head: NonNullable<EdgeRouteGeometry["arrowhead"]>,
-    region: EdgeHeadTextureRegion
+    region: EdgeHeadTextureRegion,
+    z: number = 0
   ): number[] {
     const headLength = 18;
     const headWidth = 12;
@@ -516,30 +527,12 @@ export class Renderer {
     };
 
     return [
-      topLeft.x,
-      topLeft.y,
-      region.u0,
-      region.v0,
-      bottomLeft.x,
-      bottomLeft.y,
-      region.u0,
-      region.v1,
-      bottomRight.x,
-      bottomRight.y,
-      region.u1,
-      region.v1,
-      topLeft.x,
-      topLeft.y,
-      region.u0,
-      region.v0,
-      bottomRight.x,
-      bottomRight.y,
-      region.u1,
-      region.v1,
-      topRight.x,
-      topRight.y,
-      region.u1,
-      region.v0,
+      topLeft.x, topLeft.y, z, region.u0, region.v0,
+      bottomLeft.x, bottomLeft.y, z, region.u0, region.v1,
+      bottomRight.x, bottomRight.y, z, region.u1, region.v1,
+      topLeft.x, topLeft.y, z, region.u0, region.v0,
+      bottomRight.x, bottomRight.y, z, region.u1, region.v1,
+      topRight.x, topRight.y, z, region.u1, region.v0,
     ];
   }
 
@@ -547,7 +540,7 @@ export class Renderer {
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 
-    const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
+    const stride = 5 * Float32Array.BYTES_PER_ELEMENT;
     gl.vertexAttribPointer(
       this.locations.a_Position,
       2,
@@ -563,9 +556,18 @@ export class Renderer {
       gl.FLOAT,
       false,
       stride,
-      2 * Float32Array.BYTES_PER_ELEMENT
+      3 * Float32Array.BYTES_PER_ELEMENT
     );
     gl.enableVertexAttribArray(this.locations.a_TexCoord);
+    gl.vertexAttribPointer(
+      this.locations.a_Z,
+      1,
+      gl.FLOAT,
+      false,
+      stride,
+      2 * Float32Array.BYTES_PER_ELEMENT
+    );
+    gl.enableVertexAttribArray(this.locations.a_Z);
   }
 
   private parseColor(color: string): [number, number, number, number] {
@@ -637,6 +639,9 @@ export class Renderer {
     );
     gl.enableVertexAttribArray(this.locations.a_TexCoord);
 
+    // a_Z is set per-node via vertexAttrib1f (constant across all vertices of a node)
+    gl.disableVertexAttribArray(this.locations.a_Z);
+
     // Upload camera matrices (shared by all nodes this frame)
     gl.uniformMatrix4fv(
       this.locations.u_ProjMatrix,
@@ -649,6 +654,8 @@ export class Renderer {
       this.camera.getViewMatrix().elements
     );
 
+    const selectedIds = this.getSelectedNodeIds();
+
     for (const node of this.store.visibleNodes()) {
       // Scene graph: resolve the absolute world position before building model matrix
       const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
@@ -658,7 +665,16 @@ export class Renderer {
         continue;
       }
 
-      this.drawNode(node, x, y, picking);
+      const z = this.store.getZForNode(node.id, selectedIds);
+
+      if (!picking) {
+        // Set z for batch renderers (MSDF text, icon backgrounds, icons)
+        this.textRenderer._setZ?.(z);
+        this.iconBackgroundRenderer._setZ?.(z);
+        this.iconRenderer._setZ?.(z);
+      }
+
+      this.drawNode(node, x, y, z, picking);
     }
 
     if (!picking) {
@@ -710,6 +726,7 @@ export class Renderer {
     node: NodeData,
     worldX: number,
     worldY: number,
+    z: number,
     picking: boolean
   ): void {
     const gl = this.gl;
@@ -725,7 +742,7 @@ export class Renderer {
         node.pickColor[2],
         1.0
       );
-      this.setModelMatrix(worldX, worldY, node.width, node.height);
+      this.setModelMatrix(worldX, worldY, node.width, node.height, z);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 
       return;
@@ -736,7 +753,8 @@ export class Renderer {
         worldX - 6,
         worldY - 6,
         node.width + 12,
-        node.height + 12
+        node.height + 12,
+        z
       );
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
@@ -748,7 +766,8 @@ export class Renderer {
         worldX - 2,
         worldY - 2,
         node.width + 4,
-        node.height + 4
+        node.height + 4,
+        z
       );
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
@@ -759,7 +778,7 @@ export class Renderer {
     // Draw body
     const bodyCache = this.textureCache.getTexture(node.textureIds.body);
     if (bodyCache) {
-      this.setModelMatrix(worldX, worldY, node.width, node.height);
+      this.setModelMatrix(worldX, worldY, node.width, node.height, z);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
       gl.uniform1i(this.locations.u_UseTexture, 1);
@@ -785,7 +804,7 @@ export class Renderer {
     }
     const headCache = this.textureCache.getTexture(node.textureIds.head);
     if (headCache) {
-      this.setModelMatrix(worldX, worldY, node.width, headHeight);
+      this.setModelMatrix(worldX, worldY, node.width, headHeight, z);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
       gl.uniform1i(this.locations.u_UseTexture, 1);
@@ -949,6 +968,24 @@ export class Renderer {
       if (node.nodeType === "group" && !isCollapsed) {
         const xPos = node.width / 2;
         const yPos = node.height - NODE_LAYOUT.plusBtnPaddingBottom;
+
+        this.iconBackgroundRenderer.addQuad(
+          worldX + xPos,
+          worldY + yPos + 1.2,
+          r,
+          g,
+          b,
+          0.05,
+          dumbGlyphWidth,
+          dumbGlyphHeight,
+          this.iconAtlas.common?.base || 0,
+          this.iconAtlas.common?.lineHeight || 0,
+          16,
+          "center",
+          undefined,
+          "circle"
+        );
+
         this.textRenderer.addText(
           "+",
           worldX + xPos,
@@ -1011,7 +1048,7 @@ export class Renderer {
                   child.textureIds.body
                 );
                 if (bodyCache) {
-                  this.setModelMatrix(x, y, childWidth, childHeight);
+                  this.setModelMatrix(x, y, childWidth, childHeight, z);
                   gl.activeTexture(gl.TEXTURE0);
                   gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
                   gl.uniform1i(this.locations.u_UseTexture, 1);
@@ -1047,7 +1084,8 @@ export class Renderer {
                     x,
                     y,
                     childWidth,
-                    NODE_LAYOUT.headerHeight
+                    NODE_LAYOUT.headerHeight,
+                    z
                   );
                   gl.activeTexture(gl.TEXTURE0);
                   gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
@@ -1350,14 +1388,17 @@ export class Renderer {
     }
   }
 
-  private setModelMatrix(x: number, y: number, w: number, h: number): void {
+  private setModelMatrix(x: number, y: number, w: number, h: number, z: number = 0): void {
     this.modelMatrix.setIdentity();
-    this.modelMatrix.translate(x, y, 0.0);
+    this.modelMatrix.translate(x, y, z);
     this.modelMatrix.scale(w, h, 1.0);
     this.gl.uniformMatrix4fv(
       this.locations.u_ModelMatrix,
       false,
       this.modelMatrix.elements
     );
+    // Also set a_Z as a constant vertex attribute
+    this.gl.disableVertexAttribArray(this.locations.a_Z);
+    this.gl.vertexAttrib1f(this.locations.a_Z, z);
   }
 }

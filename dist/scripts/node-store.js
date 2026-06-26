@@ -14,6 +14,9 @@ export class NodeStore {
     /** Leaf nodes — drawn last (in front of groups and compositions). */
     nodes = new Map();
     _nextId = 0;
+    /** Tracks creation order for z-ordering: nodeId → order index (0-based). */
+    _creationOrder = new Map();
+    _nextCreationOrder = 0;
     a11yTree;
     connectionMode;
     handleStyle;
@@ -69,6 +72,8 @@ export class NodeStore {
     add(localX, localY, text, theme, nodeType = 'node', idOverride) {
         const id = idOverride ?? ++this._nextId;
         this._nextId = Math.max(this._nextId, id);
+        // Record creation order for z-ordering
+        this._creationOrder.set(id, this._nextCreationOrder++);
         const { width, height } = getDefaultNodeSize(nodeType);
         const node = this.createNodeRecord({
             id,
@@ -156,7 +161,42 @@ export class NodeStore {
         }
         this.groups.delete(id);
         this.nodes.delete(id);
+        this._creationOrder.delete(id);
         this.a11yTree.removeNode(id);
+    }
+    /**
+     * Compute the z-value for a node based on creation order and selection state.
+     * Base z = creationIndex * Z_STEP (small increment per node).
+     * Selected non-container nodes get Z_SELECTION_BOOST to render on top.
+     * Children of a selected container get Z_CHILD_BOOST (same as selection boost)
+     * so they render above their selected parent.
+     * Selected containers themselves use normal z — they don't need to be on top
+     * of their own children.
+     */
+    getZForNode(nodeId, selectedNodeIds) {
+        const Z_STEP = 0.001;
+        const Z_SELECTION_BOOST = 0.5;
+        const creationIdx = this._creationOrder.get(nodeId) ?? 0;
+        const baseZ = creationIdx * Z_STEP;
+        const node = this.allNodesMap.get(nodeId);
+        if (!node)
+            return baseZ;
+        // Selected non-container: boost to top
+        if (selectedNodeIds.has(nodeId) && !isContainerNodeType(node.nodeType)) {
+            return baseZ + Z_SELECTION_BOOST;
+        }
+        // Child of selected container: boost so it renders above parent
+        let currentId = node.parentId;
+        while (currentId !== null) {
+            if (selectedNodeIds.has(currentId)) {
+                return baseZ + Z_SELECTION_BOOST;
+            }
+            const parent = this.allNodesMap.get(currentId);
+            if (!parent)
+                break;
+            currentId = parent.parentId;
+        }
+        return baseZ;
     }
     /** Returns the currently selected node, if any. */
     getSelected() {

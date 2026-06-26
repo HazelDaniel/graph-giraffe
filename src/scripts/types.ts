@@ -163,6 +163,7 @@ export function getDefaultNodeSize(
 export interface NodeShaderLocations {
   a_Position: number;
   a_TexCoord: number;
+  a_Z: number;
   u_ModelMatrix: WebGLUniformLocation;
   u_ViewMatrix: WebGLUniformLocation;
   u_ProjMatrix: WebGLUniformLocation;
@@ -179,6 +180,7 @@ export interface MSDFShaderLocations {
   a_Position: number;
   a_TexCoord: number;
   a_Color: number;
+  a_Z: number;
   u_ViewMatrix: WebGLUniformLocation;
   u_ProjMatrix: WebGLUniformLocation;
   u_Atlas: WebGLUniformLocation;
@@ -190,6 +192,7 @@ export interface IconBGShaderLocations {
   a_Shape: number;
   a_BBoxMin: number;
   a_BBoxMax: number;
+  a_Z: number;
   u_ViewMatrix: WebGLUniformLocation;
   u_ProjMatrix: WebGLUniformLocation;
 }

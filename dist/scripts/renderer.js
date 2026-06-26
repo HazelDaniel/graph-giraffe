@@ -30,6 +30,7 @@ export class Renderer {
     getConnectionPreview;
     getBgColor;
     getFontColor;
+    getSelectedNodeIds;
     msdfProgram;
     iconBGProgram;
     msdfAtlas;
@@ -38,7 +39,7 @@ export class Renderer {
     projMatrix = new Matrix4();
     constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, 
     /** Callback so Renderer never stores bgColor itself — it belongs to the editor. */
-    getBgColor, getFontColor, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas) {
+    getBgColor, getFontColor, getSelectedNodeIds, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas) {
         this.gl = gl;
         this.canvas = canvas;
         this.bgCanvas = bgCanvas;
@@ -55,6 +56,7 @@ export class Renderer {
         this.getConnectionPreview = getConnectionPreview;
         this.getBgColor = getBgColor;
         this.getFontColor = getFontColor;
+        this.getSelectedNodeIds = getSelectedNodeIds;
         this.msdfProgram = msdfProgram;
         this.iconBGProgram = iconBGProgram;
         this.msdfAtlas = msdfAtlas;
@@ -113,8 +115,10 @@ export class Renderer {
         this.textureCache.processUploads();
         const gl = this.gl;
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-        // gl.clearColor(0.0, 0.0, 0.0, 0.0);
-        // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        // Only clear depth — color is already set by drawBGFrame()
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
         this.drawNodes(false);
         this.drawEdges();
         this.drawOverlay();
@@ -243,11 +247,16 @@ export class Renderer {
         const headDraws = [];
         let lineCursor = 0;
         let headCursor = 0;
+        const selectedIds = this.getSelectedNodeIds();
         for (const edge of visibleEdges) {
             const sourceNode = this.store.get(edge.sourceNodeId);
             const targetNode = this.store.get(edge.targetNodeId);
             if (!sourceNode || !targetNode)
                 continue;
+            // Compute edge z as average of source and target z
+            const sourceZ = this.store.getZForNode(sourceNode.id, selectedIds);
+            const targetZ = this.store.getZForNode(targetNode.id, selectedIds);
+            const edgeZ = (sourceZ + targetZ) / 2;
             const sPos = getWorldPosition(sourceNode.id, this.store.allNodesMap);
             const tPos = getWorldPosition(targetNode.id, this.store.allNodesMap);
             const minX = Math.min(sPos.x, tPos.x);
@@ -262,16 +271,16 @@ export class Renderer {
             this.edgeFrame.push(geometry);
             if (edge.isSelected)
                 continue;
-            lineDraws.push({ first: lineCursor, count: geometry.worldPoints.length });
+            lineDraws.push({ first: lineCursor, count: geometry.worldPoints.length, z: edgeZ });
             lineCursor += geometry.worldPoints.length;
             for (const point of geometry.worldPoints) {
-                lineVertices.push(point.x, point.y, 0, 0);
+                lineVertices.push(point.x, point.y, edgeZ, 0, 0);
             }
             if (geometry.arrowhead) {
                 const region = this.edgeHeadTextures.getRegion(edge.headSkinId);
-                headDraws.push({ first: headCursor, count: 6 });
+                headDraws.push({ first: headCursor, count: 6, z: edgeZ });
                 headCursor += 6;
-                headVertices.push(...this.buildHeadQuadVertices(geometry.arrowhead, region));
+                headVertices.push(...this.buildHeadQuadVertices(geometry.arrowhead, region, edgeZ));
             }
         }
         gl.useProgram(this.program);
@@ -317,7 +326,7 @@ export class Renderer {
     drawSingleEdge(geometry, strokeColor, headColor) {
         const gl = this.gl;
         this.bindEdgeVertexBuffer(this.edgeVertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometry.worldPoints.flatMap((point) => [point.x, point.y, 0, 0])), gl.DYNAMIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometry.worldPoints.flatMap((point) => [point.x, point.y, 0, 0, 0])), gl.DYNAMIC_DRAW);
         gl.uniformMatrix4fv(this.locations.u_ProjMatrix, false, this.projMatrix.elements);
         gl.uniformMatrix4fv(this.locations.u_ViewMatrix, false, this.camera.getViewMatrix().elements);
         this.modelMatrix.setIdentity();
@@ -338,7 +347,7 @@ export class Renderer {
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
     }
-    buildHeadQuadVertices(head, region) {
+    buildHeadQuadVertices(head, region, z = 0) {
         const headLength = 18;
         const headWidth = 12;
         const halfWidth = headWidth / 2;
@@ -367,40 +376,24 @@ export class Renderer {
             y: head.tip.y + normalY * halfWidth,
         };
         return [
-            topLeft.x,
-            topLeft.y,
-            region.u0,
-            region.v0,
-            bottomLeft.x,
-            bottomLeft.y,
-            region.u0,
-            region.v1,
-            bottomRight.x,
-            bottomRight.y,
-            region.u1,
-            region.v1,
-            topLeft.x,
-            topLeft.y,
-            region.u0,
-            region.v0,
-            bottomRight.x,
-            bottomRight.y,
-            region.u1,
-            region.v1,
-            topRight.x,
-            topRight.y,
-            region.u1,
-            region.v0,
+            topLeft.x, topLeft.y, z, region.u0, region.v0,
+            bottomLeft.x, bottomLeft.y, z, region.u0, region.v1,
+            bottomRight.x, bottomRight.y, z, region.u1, region.v1,
+            topLeft.x, topLeft.y, z, region.u0, region.v0,
+            bottomRight.x, bottomRight.y, z, region.u1, region.v1,
+            topRight.x, topRight.y, z, region.u1, region.v0,
         ];
     }
     bindEdgeVertexBuffer(buffer) {
         const gl = this.gl;
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
+        const stride = 5 * Float32Array.BYTES_PER_ELEMENT;
         gl.vertexAttribPointer(this.locations.a_Position, 2, gl.FLOAT, false, stride, 0);
         gl.enableVertexAttribArray(this.locations.a_Position);
-        gl.vertexAttribPointer(this.locations.a_TexCoord, 2, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+        gl.vertexAttribPointer(this.locations.a_TexCoord, 2, gl.FLOAT, false, stride, 3 * Float32Array.BYTES_PER_ELEMENT);
         gl.enableVertexAttribArray(this.locations.a_TexCoord);
+        gl.vertexAttribPointer(this.locations.a_Z, 1, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
+        gl.enableVertexAttribArray(this.locations.a_Z);
     }
     parseColor(color) {
         if (color.startsWith("rgba(")) {
@@ -451,9 +444,12 @@ export class Renderer {
         gl.enableVertexAttribArray(this.locations.a_Position);
         gl.vertexAttribPointer(this.locations.a_TexCoord, 2, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
         gl.enableVertexAttribArray(this.locations.a_TexCoord);
+        // a_Z is set per-node via vertexAttrib1f (constant across all vertices of a node)
+        gl.disableVertexAttribArray(this.locations.a_Z);
         // Upload camera matrices (shared by all nodes this frame)
         gl.uniformMatrix4fv(this.locations.u_ProjMatrix, false, this.projMatrix.elements);
         gl.uniformMatrix4fv(this.locations.u_ViewMatrix, false, this.camera.getViewMatrix().elements);
+        const selectedIds = this.getSelectedNodeIds();
         for (const node of this.store.visibleNodes()) {
             // Scene graph: resolve the absolute world position before building model matrix
             const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
@@ -461,7 +457,14 @@ export class Renderer {
             if (!this.isRectInViewport(x, y, node.width, node.height)) {
                 continue;
             }
-            this.drawNode(node, x, y, picking);
+            const z = this.store.getZForNode(node.id, selectedIds);
+            if (!picking) {
+                // Set z for batch renderers (MSDF text, icon backgrounds, icons)
+                this.textRenderer._setZ?.(z);
+                this.iconBackgroundRenderer._setZ?.(z);
+                this.iconRenderer._setZ?.(z);
+            }
+            this.drawNode(node, x, y, z, picking);
         }
         if (!picking) {
             this.iconBackgroundRenderer.msdfFontSize =
@@ -493,19 +496,19 @@ export class Renderer {
         gl.uniform1i(this.bgLocations.u_UsePointMask, this.bgGeometry.primitiveType === gl.POINTS ? 1 : 0);
         gl.drawArrays(this.bgGeometry.primitiveType, 0, this.bgGeometry.length);
     }
-    drawNode(node, worldX, worldY, picking) {
+    drawNode(node, worldX, worldY, z, picking) {
         const gl = this.gl;
         if (picking) {
             // Flat color silhouette — the RGB encodes the node id
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform4f(this.locations.u_Color, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1.0);
-            this.setModelMatrix(worldX, worldY, node.width, node.height);
+            this.setModelMatrix(worldX, worldY, node.width, node.height, z);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
             return;
         }
         if (node.isDropTarget) {
-            this.setModelMatrix(worldX - 6, worldY - 6, node.width + 12, node.height + 12);
+            this.setModelMatrix(worldX - 6, worldY - 6, node.width + 12, node.height + 12, z);
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform4f(this.locations.u_Color, 0.13, 0.86, 0.39, 0.8); // Green glow
@@ -513,7 +516,7 @@ export class Renderer {
         }
         else if (node.isSelected) {
             // Selection glow: draw a slightly larger quad behind the node
-            this.setModelMatrix(worldX - 2, worldY - 2, node.width + 4, node.height + 4);
+            this.setModelMatrix(worldX - 2, worldY - 2, node.width + 4, node.height + 4, z);
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform4f(this.locations.u_Color, 0.23, 0.23, 0.86, 1.0);
@@ -522,7 +525,7 @@ export class Renderer {
         // Draw body
         const bodyCache = this.textureCache.getTexture(node.textureIds.body);
         if (bodyCache) {
-            this.setModelMatrix(worldX, worldY, node.width, node.height);
+            this.setModelMatrix(worldX, worldY, node.width, node.height, z);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
             gl.uniform1i(this.locations.u_UseTexture, 1);
@@ -544,7 +547,7 @@ export class Renderer {
         }
         const headCache = this.textureCache.getTexture(node.textureIds.head);
         if (headCache) {
-            this.setModelMatrix(worldX, worldY, node.width, headHeight);
+            this.setModelMatrix(worldX, worldY, node.width, headHeight, z);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
             gl.uniform1i(this.locations.u_UseTexture, 1);
@@ -599,6 +602,7 @@ export class Renderer {
             if (node.nodeType === "group" && !isCollapsed) {
                 const xPos = node.width / 2;
                 const yPos = node.height - NODE_LAYOUT.plusBtnPaddingBottom;
+                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + yPos + 1.2, r, g, b, 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "circle");
                 this.textRenderer.addText("+", worldX + xPos, worldY + yPos, 20, r, g, b, 1.0, "center", "middle");
             }
             if (!headOnly) {
@@ -630,7 +634,7 @@ export class Renderer {
                                 // Draw child body
                                 const bodyCache = this.textureCache.getTexture(child.textureIds.body);
                                 if (bodyCache) {
-                                    this.setModelMatrix(x, y, childWidth, childHeight);
+                                    this.setModelMatrix(x, y, childWidth, childHeight, z);
                                     gl.activeTexture(gl.TEXTURE0);
                                     gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
                                     gl.uniform1i(this.locations.u_UseTexture, 1);
@@ -645,7 +649,7 @@ export class Renderer {
                                 // Draw child head
                                 const headCache = this.textureCache.getTexture(child.textureIds.head);
                                 if (headCache) {
-                                    this.setModelMatrix(x, y, childWidth, NODE_LAYOUT.headerHeight);
+                                    this.setModelMatrix(x, y, childWidth, NODE_LAYOUT.headerHeight, z);
                                     gl.activeTexture(gl.TEXTURE0);
                                     gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
                                     gl.uniform1i(this.locations.u_UseTexture, 1);
@@ -747,11 +751,14 @@ export class Renderer {
             }
         }
     }
-    setModelMatrix(x, y, w, h) {
+    setModelMatrix(x, y, w, h, z = 0) {
         this.modelMatrix.setIdentity();
-        this.modelMatrix.translate(x, y, 0.0);
+        this.modelMatrix.translate(x, y, z);
         this.modelMatrix.scale(w, h, 1.0);
         this.gl.uniformMatrix4fv(this.locations.u_ModelMatrix, false, this.modelMatrix.elements);
+        // Also set a_Z as a constant vertex attribute
+        this.gl.disableVertexAttribArray(this.locations.a_Z);
+        this.gl.vertexAttrib1f(this.locations.a_Z, z);
     }
 }
 //# sourceMappingURL=renderer.js.map

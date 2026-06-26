@@ -18,6 +18,7 @@ export class IconBackgroundRenderer {
   private indexCount = 0;
   public msdfFontSize: number | null = null;
   private maxQuads: number = 1000;
+  private _currentZ: number = 0;
 
   constructor(
     private gl: WebGL2RenderingContext,
@@ -26,14 +27,19 @@ export class IconBackgroundRenderer {
   ) {
     this.vertexBuffer = gl.createBuffer()!;
     this.indexBuffer = gl.createBuffer()!;
-    // 11 floats per vertex: x, y, r, g, b, a, shape, bboxMinX, bboxMinY, bboxMaxX, bboxMaxY
-    this.vertexData = new Float32Array(this.maxQuads * 4 * 11);
+    // 12 floats per vertex: x, y, r, g, b, a, shape, bboxMinX, bboxMinY, bboxMaxX, bboxMaxY, z
+    this.vertexData = new Float32Array(this.maxQuads * 4 * 12);
     this.indexData = new Uint16Array(this.maxQuads * 6);
   }
 
   beginBatch(): void {
     this.vertexCount = 0;
     this.indexCount = 0;
+    this._currentZ = 0;
+  }
+
+  _setZ(z: number): void {
+    this._currentZ = z;
   }
 
   addQuad(
@@ -50,7 +56,8 @@ export class IconBackgroundRenderer {
     fontSize: number = 16,
     align: "left" | "center" | "right" = "left",
     baseline: "middle" | "bottom" = "bottom",
-    geometry: GeometryType = "square"
+    geometry: GeometryType = "square",
+    z: number = 0
   ) {
     if (this.msdfFontSize === null) return;
     const scale = fontSize * 2 / this.msdfFontSize;
@@ -77,13 +84,11 @@ export class IconBackgroundRenderer {
     const vIdx = this.vertexCount,
       iIdx = this.indexCount;
 
-    const stride = 11;
-    // All 4 vertices share the same bbox and shape
-    const bboxData = [x0, y0, x1, y1]; // min.x, min.y, max.x, max.y
+    const stride = 12;
 
     for (let i = 0; i < 4; i++) {
       const vOffset = (vIdx + i) * stride;
-      // Position: corner coordinates
+      // Position
       if (i === 0) { this.vertexData[vOffset + 0] = x0; this.vertexData[vOffset + 1] = y0; }
       else if (i === 1) { this.vertexData[vOffset + 0] = x1; this.vertexData[vOffset + 1] = y0; }
       else if (i === 2) { this.vertexData[vOffset + 0] = x1; this.vertexData[vOffset + 1] = y1; }
@@ -105,6 +110,9 @@ export class IconBackgroundRenderer {
       // BBox max (x1, y1)
       this.vertexData[vOffset + 9] = x1;
       this.vertexData[vOffset + 10] = y1;
+
+      // Z
+      this.vertexData[vOffset + 11] = this._currentZ;
     }
 
     this.indexData[iIdx + 0] = vIdx + 0;
@@ -128,7 +136,7 @@ export class IconBackgroundRenderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
     gl.bufferData(
       gl.ARRAY_BUFFER,
-      this.vertexData.subarray(0, this.vertexCount * 11),
+      this.vertexData.subarray(0, this.vertexCount * 12),
       gl.DYNAMIC_DRAW
     );
 
@@ -139,9 +147,8 @@ export class IconBackgroundRenderer {
       gl.DYNAMIC_DRAW
     );
 
-    const stride = Float32Array.BYTES_PER_ELEMENT * 11;
+    const stride = Float32Array.BYTES_PER_ELEMENT * 12;
 
-    // a_Position: 2 floats (x, y) at offset 0
     gl.vertexAttribPointer(
       this.locations.a_Position,
       2,
@@ -152,7 +159,6 @@ export class IconBackgroundRenderer {
     );
     gl.enableVertexAttribArray(this.locations.a_Position);
 
-    // a_Color: 4 floats (r, g, b, a) at offset 2
     gl.vertexAttribPointer(
       this.locations.a_Color,
       4,
@@ -163,7 +169,6 @@ export class IconBackgroundRenderer {
     );
     gl.enableVertexAttribArray(this.locations.a_Color);
 
-    // a_Shape: 1 float at offset 6
     gl.vertexAttribPointer(
       this.locations.a_Shape,
       1,
@@ -174,7 +179,6 @@ export class IconBackgroundRenderer {
     );
     gl.enableVertexAttribArray(this.locations.a_Shape);
 
-    // a_BBoxMin: 2 floats (x0, y0) at offset 7
     gl.vertexAttribPointer(
       this.locations.a_BBoxMin,
       2,
@@ -185,7 +189,6 @@ export class IconBackgroundRenderer {
     );
     gl.enableVertexAttribArray(this.locations.a_BBoxMin);
 
-    // a_BBoxMax: 2 floats (x1, y1) at offset 9
     gl.vertexAttribPointer(
       this.locations.a_BBoxMax,
       2,
@@ -195,6 +198,16 @@ export class IconBackgroundRenderer {
       Float32Array.BYTES_PER_ELEMENT * 9
     );
     gl.enableVertexAttribArray(this.locations.a_BBoxMax);
+
+    gl.vertexAttribPointer(
+      this.locations.a_Z,
+      1,
+      gl.FLOAT,
+      false,
+      stride,
+      Float32Array.BYTES_PER_ELEMENT * 11
+    );
+    gl.enableVertexAttribArray(this.locations.a_Z);
 
     if (camera && projMatrix) {
       gl.uniformMatrix4fv(

@@ -70,6 +70,7 @@ export function getShaderLocations(
   const locations: NodeShaderLocations = {
     a_Position: gl.getAttribLocation(program, "a_Position"),
     a_TexCoord: gl.getAttribLocation(program, "a_TexCoord"),
+    a_Z: gl.getAttribLocation(program, "a_Z"),
     u_Color: gl.getUniformLocation(program, "u_Color")!,
     u_ModelMatrix: gl.getUniformLocation(program, "u_ModelMatrix")!,
     u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix")!,
@@ -106,6 +107,7 @@ export function getMSDFShaderLocations(
     a_Position: gl.getAttribLocation(program, "a_Position"),
     a_TexCoord: gl.getAttribLocation(program, "a_TexCoord"),
     a_Color: gl.getAttribLocation(program, "a_Color"),
+    a_Z: gl.getAttribLocation(program, "a_Z"),
     u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix")!,
     u_ProjMatrix: gl.getUniformLocation(program, "u_ProjMatrix")!,
     u_Atlas: gl.getUniformLocation(program, "u_Atlas")!,
@@ -124,6 +126,7 @@ export function getIconBGLocations(
     a_Shape: gl.getAttribLocation(program, "a_Shape"),
     a_BBoxMin: gl.getAttribLocation(program, "a_BBoxMin"),
     a_BBoxMax: gl.getAttribLocation(program, "a_BBoxMax"),
+    a_Z: gl.getAttribLocation(program, "a_Z"),
     u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix")!,
     u_ProjMatrix: gl.getUniformLocation(program, "u_ProjMatrix")!,
   };

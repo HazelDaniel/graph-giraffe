@@ -45,12 +45,13 @@ export class MsdfTextRenderer {
     atlas;
     vertexBuffer;
     indexBuffer;
-    // vertex: [x, y, u, v, r, g, b, a] = 8 floats per vertex -> 32 bytes
+    // vertex: [x, y, u, v, r, g, b, a, z] = 9 floats per vertex
     vertexData;
     indexData;
     vertexCount = 0;
     indexCount = 0;
     maxQuads = 10000;
+    _currentZ = 0;
     constructor(gl, program, locations, atlas) {
         this.gl = gl;
         this.program = program;
@@ -58,19 +59,22 @@ export class MsdfTextRenderer {
         this.atlas = atlas;
         this.vertexBuffer = gl.createBuffer();
         this.indexBuffer = gl.createBuffer();
-        this.vertexData = new Float32Array(this.maxQuads * 4 * 8);
+        this.vertexData = new Float32Array(this.maxQuads * 4 * 9);
         this.indexData = new Uint16Array(this.maxQuads * 6);
     }
     beginBatch() {
         this.vertexCount = 0;
         this.indexCount = 0;
+        this._currentZ = 0;
+    }
+    _setZ(z) {
+        this._currentZ = z;
     }
     addText(text, x, y, fontSize, r, g, b, a, align = "left", baseline = "alphabetic") {
         if (!this.atlas.common || !this.atlas.info)
             return;
         const scale = fontSize / this.atlas.info.size;
         const { scaleW, scaleH, lineHeight, base } = this.atlas.common;
-        // Calculate width for alignment
         let totalWidth = 0;
         for (let i = 0; i < text.length; i++) {
             const code = text.charCodeAt(i);
@@ -110,42 +114,47 @@ export class MsdfTextRenderer {
                 const v1 = (glyph.y + glyph.height) / scaleH;
                 const vIdx = this.vertexCount;
                 const iIdx = this.indexCount;
+                const stride = 9;
                 // TL
-                this.vertexData[vIdx * 8 + 0] = x0;
-                this.vertexData[vIdx * 8 + 1] = y0;
-                this.vertexData[vIdx * 8 + 2] = u0;
-                this.vertexData[vIdx * 8 + 3] = v0;
-                this.vertexData[vIdx * 8 + 4] = r;
-                this.vertexData[vIdx * 8 + 5] = g;
-                this.vertexData[vIdx * 8 + 6] = b;
-                this.vertexData[vIdx * 8 + 7] = a;
+                this.vertexData[vIdx * stride + 0] = x0;
+                this.vertexData[vIdx * stride + 1] = y0;
+                this.vertexData[vIdx * stride + 2] = u0;
+                this.vertexData[vIdx * stride + 3] = v0;
+                this.vertexData[vIdx * stride + 4] = r;
+                this.vertexData[vIdx * stride + 5] = g;
+                this.vertexData[vIdx * stride + 6] = b;
+                this.vertexData[vIdx * stride + 7] = a;
+                this.vertexData[vIdx * stride + 8] = this._currentZ;
                 // TR
-                this.vertexData[vIdx * 8 + 8] = x1;
-                this.vertexData[vIdx * 8 + 9] = y0;
-                this.vertexData[vIdx * 8 + 10] = u1;
-                this.vertexData[vIdx * 8 + 11] = v0;
-                this.vertexData[vIdx * 8 + 12] = r;
-                this.vertexData[vIdx * 8 + 13] = g;
-                this.vertexData[vIdx * 8 + 14] = b;
-                this.vertexData[vIdx * 8 + 15] = a;
+                this.vertexData[vIdx * stride + 9] = x1;
+                this.vertexData[vIdx * stride + 10] = y0;
+                this.vertexData[vIdx * stride + 11] = u1;
+                this.vertexData[vIdx * stride + 12] = v0;
+                this.vertexData[vIdx * stride + 13] = r;
+                this.vertexData[vIdx * stride + 14] = g;
+                this.vertexData[vIdx * stride + 15] = b;
+                this.vertexData[vIdx * stride + 16] = a;
+                this.vertexData[vIdx * stride + 17] = this._currentZ;
                 // BR
-                this.vertexData[vIdx * 8 + 16] = x1;
-                this.vertexData[vIdx * 8 + 17] = y1;
-                this.vertexData[vIdx * 8 + 18] = u1;
-                this.vertexData[vIdx * 8 + 19] = v1;
-                this.vertexData[vIdx * 8 + 20] = r;
-                this.vertexData[vIdx * 8 + 21] = g;
-                this.vertexData[vIdx * 8 + 22] = b;
-                this.vertexData[vIdx * 8 + 23] = a;
+                this.vertexData[vIdx * stride + 18] = x1;
+                this.vertexData[vIdx * stride + 19] = y1;
+                this.vertexData[vIdx * stride + 20] = u1;
+                this.vertexData[vIdx * stride + 21] = v1;
+                this.vertexData[vIdx * stride + 22] = r;
+                this.vertexData[vIdx * stride + 23] = g;
+                this.vertexData[vIdx * stride + 24] = b;
+                this.vertexData[vIdx * stride + 25] = a;
+                this.vertexData[vIdx * stride + 26] = this._currentZ;
                 // BL
-                this.vertexData[vIdx * 8 + 24] = x0;
-                this.vertexData[vIdx * 8 + 25] = y1;
-                this.vertexData[vIdx * 8 + 26] = u0;
-                this.vertexData[vIdx * 8 + 27] = v1;
-                this.vertexData[vIdx * 8 + 28] = r;
-                this.vertexData[vIdx * 8 + 29] = g;
-                this.vertexData[vIdx * 8 + 30] = b;
-                this.vertexData[vIdx * 8 + 31] = a;
+                this.vertexData[vIdx * stride + 27] = x0;
+                this.vertexData[vIdx * stride + 28] = y1;
+                this.vertexData[vIdx * stride + 29] = u0;
+                this.vertexData[vIdx * stride + 30] = v1;
+                this.vertexData[vIdx * stride + 31] = r;
+                this.vertexData[vIdx * stride + 32] = g;
+                this.vertexData[vIdx * stride + 33] = b;
+                this.vertexData[vIdx * stride + 34] = a;
+                this.vertexData[vIdx * stride + 35] = this._currentZ;
                 this.indexData[iIdx + 0] = vIdx + 0;
                 this.indexData[iIdx + 1] = vIdx + 1;
                 this.indexData[iIdx + 2] = vIdx + 2;
@@ -166,16 +175,18 @@ export class MsdfTextRenderer {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.vertexData.subarray(0, this.vertexCount * 8), gl.DYNAMIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, this.vertexData.subarray(0, this.vertexCount * 9), gl.DYNAMIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indexData.subarray(0, this.indexCount), gl.DYNAMIC_DRAW);
-        const stride = 32;
+        const stride = Float32Array.BYTES_PER_ELEMENT * 9;
         gl.vertexAttribPointer(this.locations.a_Position, 2, gl.FLOAT, false, stride, 0);
         gl.enableVertexAttribArray(this.locations.a_Position);
-        gl.vertexAttribPointer(this.locations.a_TexCoord, 2, gl.FLOAT, false, stride, 8);
+        gl.vertexAttribPointer(this.locations.a_TexCoord, 2, gl.FLOAT, false, stride, Float32Array.BYTES_PER_ELEMENT * 2);
         gl.enableVertexAttribArray(this.locations.a_TexCoord);
-        gl.vertexAttribPointer(this.locations.a_Color, 4, gl.FLOAT, false, stride, 16);
+        gl.vertexAttribPointer(this.locations.a_Color, 4, gl.FLOAT, false, stride, Float32Array.BYTES_PER_ELEMENT * 4);
         gl.enableVertexAttribArray(this.locations.a_Color);
+        gl.vertexAttribPointer(this.locations.a_Z, 1, gl.FLOAT, false, stride, Float32Array.BYTES_PER_ELEMENT * 8);
+        gl.enableVertexAttribArray(this.locations.a_Z);
         if (camera && projMatrix) {
             gl.uniformMatrix4fv(this.locations.u_ProjMatrix, false, projMatrix.elements);
             gl.uniformMatrix4fv(this.locations.u_ViewMatrix, false, camera.getViewMatrix().elements);
