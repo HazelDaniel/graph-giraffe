@@ -2179,16 +2179,10 @@ export class NodeEditor {
                   snapshot.localY,
                   snapshot.parentId
                 );
-                const createdClone = this.store.duplicateIntoComposition(
-                  source.id,
-                  hoveredContainer.id,
-                  this.theme
-                );
-                if (createdClone) {
-                  this.clearSelectionState();
-                  this.setNodeSelected(createdClone.id, true);
-                  this.refreshContainerChain(hoveredContainer.id);
-                }
+                this.applyNodeSnapshot(cloneSnapshot);
+                this.clearSelectionState();
+                this.setNodeSelected(cloneSnapshot.id, true);
+                this.refreshContainerChain(hoveredContainer.id);
                 this.syncToolbarState();
               },
             };
