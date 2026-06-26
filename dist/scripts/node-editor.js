@@ -492,7 +492,7 @@ export class NodeEditor {
             })),
         };
     }
-    moveSelectionDrag(worldX, worldY) {
+    moveSelectionDrag(worldX, worldY, screenX, screenY) {
         const selectionDrag = this.draggingSelection;
         if (!selectionDrag)
             return;
@@ -514,6 +514,12 @@ export class NodeEditor {
             node.localY = targetY - parentWorld.y;
         }
         this.store.clearDropTargets();
+        if (this.selectionRep && this.selectionRep.nodeType !== "group") {
+            const hoveredContainer = this.inferSelectionDropTarget(screenX, screenY, selectionDrag);
+            if (hoveredContainer) {
+                hoveredContainer.isDropTarget = true;
+            }
+        }
     }
     inferSelectionDropTarget(screenX, screenY, selectionDrag) {
         if (!this.selectionRep || this.selectionRep.nodeType === "group") {
@@ -1467,7 +1473,7 @@ export class NodeEditor {
             return;
         }
         if (this.draggingSelection) {
-            this.moveSelectionDrag(worldX, worldY);
+            this.moveSelectionDrag(worldX, worldY, screenX, screenY);
             return;
         }
         if (!this.draggingNode)
@@ -1811,6 +1817,33 @@ export class NodeEditor {
                 else {
                     this.store.restoreNodePlacement(source.id, snapshot.localX, snapshot.localY, snapshot.parentId);
                     this.refreshContainerChain(source.id);
+                }
+            }
+            else if (source.nodeType === "group") {
+                const beforePlacement = {
+                    localX: snapshot.localX,
+                    localY: snapshot.localY,
+                    parentId: snapshot.parentId,
+                };
+                const afterPlacement = {
+                    localX: source.localX,
+                    localY: source.localY,
+                    parentId: source.parentId,
+                };
+                if (beforePlacement.localX !== afterPlacement.localX ||
+                    beforePlacement.localY !== afterPlacement.localY) {
+                    historyEntry = {
+                        undo: () => {
+                            this.store.restoreNodePlacement(source.id, beforePlacement.localX, beforePlacement.localY, beforePlacement.parentId);
+                            this.restoreSelectionSnapshot(selectionBefore);
+                            this.syncToolbarState();
+                        },
+                        redo: () => {
+                            this.store.restoreNodePlacement(source.id, afterPlacement.localX, afterPlacement.localY, afterPlacement.parentId);
+                            this.restoreSelectionSnapshot(selectionBefore);
+                            this.syncToolbarState();
+                        },
+                    };
                 }
             }
             if (historyEntry) {

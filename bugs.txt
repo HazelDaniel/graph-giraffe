@@ -1,7 +1,3 @@
-- I did not change the current stacking-order behavior; selection still does not automatically reorder draw priority.
-- undo/redo doesn't apply to group node world-space translations
 - placing a multi-selection (whose selectionRep isn't a group node) doesn't highlight the group node as a drop target for placement - same with when moving a selectionRep out of a group node
 - on history traversal, the texture color of the headers of nodes in a group changed back to the color they had when the node was detached from a group
-- a change in the label of a composition-child (and how it propagates to all composition-reference child nodes referencing it) doesn't survive history traversal
-- the edges currently sit across all node types in the stacking context, we want them to sit on just group nodes so, let's introduce hidden-surface removal and give these polygons some z-indices
-- composition references created after a texture switch don't reflect the current texture picked
+- on 2x full history bi-directional traversal, a composition node that was a part of a multi-selection has just its children displayed and totally orphaned, as well as being the only visible primitives (composition-child) on the screen when i navigate to the last entry on the undo stack (the supposed initial state before any creation)

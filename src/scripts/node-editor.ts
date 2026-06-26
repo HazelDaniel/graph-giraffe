@@ -693,7 +693,12 @@ export class NodeEditor {
     };
   }
 
-  private moveSelectionDrag(worldX: number, worldY: number): void {
+  private moveSelectionDrag(
+    worldX: number,
+    worldY: number,
+    screenX: number,
+    screenY: number
+  ): void {
     const selectionDrag = this.draggingSelection;
     if (!selectionDrag) return;
 
@@ -722,6 +727,16 @@ export class NodeEditor {
     }
 
     this.store.clearDropTargets();
+    if (this.selectionRep && this.selectionRep.nodeType !== "group") {
+      const hoveredContainer = this.inferSelectionDropTarget(
+        screenX,
+        screenY,
+        selectionDrag
+      );
+      if (hoveredContainer) {
+        hoveredContainer.isDropTarget = true;
+      }
+    }
   }
 
   private inferSelectionDropTarget(
@@ -1914,7 +1929,7 @@ export class NodeEditor {
     }
 
     if (this.draggingSelection) {
-      this.moveSelectionDrag(worldX, worldY);
+      this.moveSelectionDrag(worldX, worldY, screenX, screenY);
       return;
     }
 
@@ -2375,6 +2390,44 @@ export class NodeEditor {
             snapshot.parentId
           );
           this.refreshContainerChain(source.id);
+        }
+      } else if (source.nodeType === "group") {
+        const beforePlacement: NodePlacementSnapshot = {
+          localX: snapshot.localX,
+          localY: snapshot.localY,
+          parentId: snapshot.parentId,
+        };
+        const afterPlacement: NodePlacementSnapshot = {
+          localX: source.localX,
+          localY: source.localY,
+          parentId: source.parentId,
+        };
+        if (
+          beforePlacement.localX !== afterPlacement.localX ||
+          beforePlacement.localY !== afterPlacement.localY
+        ) {
+          historyEntry = {
+            undo: () => {
+              this.store.restoreNodePlacement(
+                source.id,
+                beforePlacement.localX,
+                beforePlacement.localY,
+                beforePlacement.parentId
+              );
+              this.restoreSelectionSnapshot(selectionBefore);
+              this.syncToolbarState();
+            },
+            redo: () => {
+              this.store.restoreNodePlacement(
+                source.id,
+                afterPlacement.localX,
+                afterPlacement.localY,
+                afterPlacement.parentId
+              );
+              this.restoreSelectionSnapshot(selectionBefore);
+              this.syncToolbarState();
+            },
+          };
         }
       }
 

@@ -423,10 +423,12 @@ export class NodeStore {
         }
         const shouldCollapse = this.shouldCollapseNode(node);
         const { width, height } = this.getPresentedNodeSize(node, shouldCollapse);
-        if (node.width === width && node.height === height)
-            return;
+        const expectedTextureIds = node.compositionRefId !== null
+            ? getCompositionReferenceTextureIds()
+            : getDefaultTextureIds(node.nodeType);
         node.width = width;
         node.height = height;
+        node.textureIds = expectedTextureIds;
     }
     shouldCollapseNode(node) {
         if (node.compositionRefId !== null)

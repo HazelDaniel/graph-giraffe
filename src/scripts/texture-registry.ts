@@ -247,6 +247,21 @@ const DEFAULT_TEXTURE_SOURCES: TextureSource[] = [
 
 type TextureLookupKeys = NodeType | "composition-reference";
 
+const TEXTURE_KIND_TO_LOOKUP: Record<
+  TextureKind,
+  { lookupKey: TextureLookupKeys; suffixKey: string }
+> = {
+  "node-body": { lookupKey: "node", suffixKey: "body" },
+  "node-head": { lookupKey: "node", suffixKey: "head" },
+  "group-body": { lookupKey: "group", suffixKey: "body" },
+  "group-head": { lookupKey: "group", suffixKey: "head" },
+  "composition-body": { lookupKey: "composition", suffixKey: "body" },
+  "composition-head": { lookupKey: "composition", suffixKey: "head" },
+  "composition-child-head": { lookupKey: "composition-child", suffixKey: "head" },
+  "composition-reference-body": { lookupKey: "composition-reference", suffixKey: "body" },
+  "composition-reference-child-head": { lookupKey: "composition-reference", suffixKey: "head" },
+};
+
 const NODE_ID_TEXTURE_LOOKUP: Record<TextureLookupKeys, NodeTextureIds> = {
   node: {
     body: "gg-node-body-default",
@@ -375,12 +390,11 @@ class textureRegistry {
       const customEvent: CustomEvent<TextureSource & { value: string }> =
         e as CustomEvent<TextureSource & { value: string }>;
       const kind = customEvent.detail.kind;
-      const prefixKey = kind.substring(0, kind.lastIndexOf("-"));
-      const suffixKey = kind.substring(prefixKey.length + 1, kind.length);
-      const lookupKey = prefixKey as TextureLookupKeys;
-      NODE_ID_TEXTURE_LOOKUP[lookupKey] = {
-        ...NODE_ID_TEXTURE_LOOKUP[lookupKey],
-        [suffixKey]: customEvent.detail.value,
+      const mapping = TEXTURE_KIND_TO_LOOKUP[kind];
+      if (!mapping) return;
+      NODE_ID_TEXTURE_LOOKUP[mapping.lookupKey] = {
+        ...NODE_ID_TEXTURE_LOOKUP[mapping.lookupKey],
+        [mapping.suffixKey]: customEvent.detail.value,
       };
     });
   }

@@ -178,6 +178,17 @@ const DEFAULT_TEXTURE_SOURCES = [
     createDefaultSource("gg-composition-child-head-default", "Default Child Head", "composition-child-head", "var(--theme)", "var(--stroke-theme)"),
     createDefaultSource("gg-composition-reference-body", "Default Reference Body", "composition-reference-body", "var(--theme)", "var(--stroke-theme)"),
 ];
+const TEXTURE_KIND_TO_LOOKUP = {
+    "node-body": { lookupKey: "node", suffixKey: "body" },
+    "node-head": { lookupKey: "node", suffixKey: "head" },
+    "group-body": { lookupKey: "group", suffixKey: "body" },
+    "group-head": { lookupKey: "group", suffixKey: "head" },
+    "composition-body": { lookupKey: "composition", suffixKey: "body" },
+    "composition-head": { lookupKey: "composition", suffixKey: "head" },
+    "composition-child-head": { lookupKey: "composition-child", suffixKey: "head" },
+    "composition-reference-body": { lookupKey: "composition-reference", suffixKey: "body" },
+    "composition-reference-child-head": { lookupKey: "composition-reference", suffixKey: "head" },
+};
 const NODE_ID_TEXTURE_LOOKUP = {
     node: {
         body: "gg-node-body-default",
@@ -288,12 +299,12 @@ class textureRegistry {
         document?.addEventListener("gg-texture-select-change", (e) => {
             const customEvent = e;
             const kind = customEvent.detail.kind;
-            const prefixKey = kind.substring(0, kind.lastIndexOf("-"));
-            const suffixKey = kind.substring(prefixKey.length + 1, kind.length);
-            const lookupKey = prefixKey;
-            NODE_ID_TEXTURE_LOOKUP[lookupKey] = {
-                ...NODE_ID_TEXTURE_LOOKUP[lookupKey],
-                [suffixKey]: customEvent.detail.value,
+            const mapping = TEXTURE_KIND_TO_LOOKUP[kind];
+            if (!mapping)
+                return;
+            NODE_ID_TEXTURE_LOOKUP[mapping.lookupKey] = {
+                ...NODE_ID_TEXTURE_LOOKUP[mapping.lookupKey],
+                [mapping.suffixKey]: customEvent.detail.value,
             };
         });
     }
