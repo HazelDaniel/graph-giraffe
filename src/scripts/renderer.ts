@@ -846,25 +846,27 @@ export class Renderer {
         this.iconBackgroundRenderer.addQuad(
           worldX + xPos,
           worldY + titleY,
-          r,
-          g,
-          b,
-          0.1,
+          Math.min(r + 0.5, 1.0),
+          Math.min(0.1, g),
+          Math.min(0.1, b),
+          0.05,
           dumbGlyphWidth,
           dumbGlyphHeight,
           this.iconAtlas.common?.base || 0,
           this.iconAtlas.common?.lineHeight || 0,
           16,
-          "center"
+          "center",
+					undefined,
+					"rounded-square",
         );
         this.iconRenderer.addText(
           "",
           worldX + xPos,
           worldY + titleY,
           16,
-          220 / 255,
-          0 / 255,
-          0 / 255,
+          200 / 255,
+          1 / 255,
+          1 / 255,
           1.0,
           "center",
           "middle"
@@ -886,13 +888,15 @@ export class Renderer {
           r,
           g,
           b,
-          0.1,
+          0.05,
           dumbGlyphWidth,
           dumbGlyphHeight,
           this.iconAtlas.common?.base || 0,
           this.iconAtlas.common?.lineHeight || 0,
           16,
-          "center"
+          "center",
+          undefined,
+          "rounded-square"
         );
         this.iconRenderer.addText(
           "",
@@ -917,13 +921,15 @@ export class Renderer {
           r,
           g,
           b,
-          0.1,
+          0.05,
           dumbGlyphWidth,
           dumbGlyphHeight,
           this.iconAtlas.common?.base || 0,
           this.iconAtlas.common?.lineHeight || 0,
           16,
-          "center"
+          "center",
+          undefined,
+          "rounded-square"
         );
         this.iconRenderer.addText(
           "",

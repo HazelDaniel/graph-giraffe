@@ -577,8 +577,8 @@ export class Renderer {
                 node.nodeType === "composition" ||
                 node.nodeType === "group") {
                 const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.1, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center");
-                this.iconRenderer.addText("", worldX + xPos, worldY + titleY, 16, 220 / 255, 0 / 255, 0 / 255, 1.0, "center", "middle");
+                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, Math.min(r + 0.5, 1.0), Math.min(0.1, g), Math.min(0.1, b), 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "rounded-square");
+                this.iconRenderer.addText("", worldX + xPos, worldY + titleY, 16, 200 / 255, 1 / 255, 1 / 255, 1.0, "center", "middle");
             }
             // Edit Icon (node only)
             if (node.nodeType === "node" ||
@@ -586,13 +586,13 @@ export class Renderer {
                 node.nodeType === "composition-child") {
                 const xPos = node.width - NODE_LAYOUT.editBtnPaddingRight;
                 // Using '...' because true pencil emoji isn't in MSDF atlas
-                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.1, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center");
+                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "rounded-square");
                 this.iconRenderer.addText("", worldX + xPos, worldY + titleY, 16, r, g, b, 1.0, "center", "middle");
             }
             // Close Icon (composition child)
             if (isCollapsed && node.nodeType === "composition-child") {
                 const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.1, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center");
+                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "rounded-square");
                 this.iconRenderer.addText("", worldX + xPos, worldY + node.height / 2, 16, r, g, b, 1.0, "center", "middle");
             }
             // Group Add (+) Icon

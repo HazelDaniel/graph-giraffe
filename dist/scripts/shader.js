@@ -88,6 +88,9 @@ export function getIconBGLocations(gl, program) {
     const locations = {
         a_Position: gl.getAttribLocation(program, "a_Position"),
         a_Color: gl.getAttribLocation(program, "a_Color"),
+        a_Shape: gl.getAttribLocation(program, "a_Shape"),
+        a_BBoxMin: gl.getAttribLocation(program, "a_BBoxMin"),
+        a_BBoxMax: gl.getAttribLocation(program, "a_BBoxMax"),
         u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix"),
         u_ProjMatrix: gl.getUniformLocation(program, "u_ProjMatrix"),
     };

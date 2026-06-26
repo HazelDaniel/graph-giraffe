@@ -10,6 +10,7 @@ export interface ThemeStyle {
 
 export type GeometryMeshType = "rounded-square";
 export type BGGeometryMeshType = "dotted" | "grid";
+export type GeometryType = "circle" | "square" | "rounded-square";
 export type NodeType = "node" | "group" | "composition" | "composition-child";
 export type ContainerNodeType = "group" | "composition";
 export type LeafNodeType = "node" | "composition-child";
@@ -186,6 +187,9 @@ export interface MSDFShaderLocations {
 export interface IconBGShaderLocations {
   a_Position: number;
   a_Color: number;
+  a_Shape: number;
+  a_BBoxMin: number;
+  a_BBoxMax: number;
   u_ViewMatrix: WebGLUniformLocation;
   u_ProjMatrix: WebGLUniformLocation;
 }

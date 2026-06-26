@@ -176,19 +176,30 @@
       }
     </script>
 
-    <script type="x-shader/fragment" id="icon-bg-v-shader">
+    <script type="x-shader/vertex" id="icon-bg-v-shader">
       #version 300 es
 
       in vec2 a_Position;
       in vec4 a_Color;
+      in float a_Shape;
+      in vec2 a_BBoxMin;
+      in vec2 a_BBoxMax;
 
       uniform mat4 u_ViewMatrix;
       uniform mat4 u_ProjMatrix;
 
       out vec4 v_Color;
+      out float v_Shape;
+      out vec2 v_BBoxMin;
+      out vec2 v_BBoxMax;
+      out vec2 v_Pos;
 
       void main() {
         v_Color = a_Color;
+        v_Shape = a_Shape;
+        v_BBoxMin = a_BBoxMin;
+        v_BBoxMax = a_BBoxMax;
+        v_Pos = a_Position;
         gl_Position = u_ProjMatrix * u_ViewMatrix * vec4(a_Position, 0.0, 1.0);
       }
     </script>
@@ -198,10 +209,36 @@
 
       precision mediump float;
       in vec4 v_Color;
+      in float v_Shape;
+      in vec2 v_BBoxMin;
+      in vec2 v_BBoxMax;
+      in vec2 v_Pos;
       out vec4 fragColor;
 
       void main() {
-        fragColor = v_Color;
+        vec4 resColor = v_Color;
+        if (v_Shape > 0.5) {
+          vec2 bboxSize = v_BBoxMax - v_BBoxMin;
+          vec2 normalized = (v_Pos - v_BBoxMin) / (bboxSize + 0.001);
+
+          if (v_Shape < 1.5) {
+            // Circle: discard if distance from center > 0.5
+            float dist = distance(normalized, vec2(0.5));
+            if (dist > 0.5) discard;
+          } else {
+            // Rounded-square: discard corners outside rounded rect
+            // Rounding radius as a fraction of the box (0.25 = quarter-circle corners)
+            float r = 0.25;
+            // Distance from center in [0, 1] space, scaled to [-1, 1]
+            vec2 p = abs(normalized - 0.5) * 2.0;
+            // Subtract the inner rounded-rect extent
+            vec2 d = p - (1.0 - r);
+            // If outside the rounded region, discard
+            if (length(max(d, 0.0)) > r) discard;
+          }
+        }
+
+        fragColor = resColor;
       }
     </script>
 

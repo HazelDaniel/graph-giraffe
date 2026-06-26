@@ -1,5 +1,11 @@
 import { Camera } from "./camera";
-import { IconBGShaderLocations } from "./types";
+import { GeometryType, IconBGShaderLocations } from "./types";
+
+const SHAPE_ENUM: Record<GeometryType, number> = {
+  square: 0,
+  circle: 1,
+  "rounded-square": 2,
+};
 
 export class IconBackgroundRenderer {
   private vertexBuffer: WebGLBuffer;
@@ -20,7 +26,8 @@ export class IconBackgroundRenderer {
   ) {
     this.vertexBuffer = gl.createBuffer()!;
     this.indexBuffer = gl.createBuffer()!;
-    this.vertexData = new Float32Array(this.maxQuads * 4 * 6);
+    // 11 floats per vertex: x, y, r, g, b, a, shape, bboxMinX, bboxMinY, bboxMaxX, bboxMaxY
+    this.vertexData = new Float32Array(this.maxQuads * 4 * 11);
     this.indexData = new Uint16Array(this.maxQuads * 6);
   }
 
@@ -42,66 +49,63 @@ export class IconBackgroundRenderer {
     lineHeight: number,
     fontSize: number = 16,
     align: "left" | "center" | "right" = "left",
-    baseline: "middle" | "bottom" = "middle"
+    baseline: "middle" | "bottom" = "bottom",
+    geometry: GeometryType = "square"
   ) {
-    const QUAD_PADDING = 1.2;
-    glyphWidth += QUAD_PADDING * 2;
-    glyphHeight += QUAD_PADDING * 2;
-
     if (this.msdfFontSize === null) return;
-    let scale = fontSize / this.msdfFontSize;
-    // scale = 2;
-    const dummyGlyphOffsetX = 1.5;
-    const dummyGlyphOffsetY = 1.5;
-    let cursorX = x;
+    const scale = fontSize * 2 / this.msdfFontSize;
 
-    if (align === "center") cursorX -= glyphWidth / 2;
-    else if (align === "right") cursorX -= glyphWidth;
+    const scaledWidth = glyphWidth * scale;
+    const scaledHeight = glyphHeight * scale;
+    const padding = 2.8;
+
+    let cursorX = x;
+    if (align === "center") cursorX -= scaledWidth / 2;
+    else if (align === "right") cursorX -= scaledWidth;
 
     let cursorY = y;
-    if (baseline === "middle") cursorY -= (lineHeight / 1.5) * scale;
-    else if (baseline === "bottom") cursorY -= lineHeight * scale;
+    if (baseline === "middle") cursorY = cursorY - ((lineHeight * (padding / glyphHeight)) / 2) * scale;
+    else if (baseline === "bottom") cursorY = cursorY - (lineHeight * (padding / glyphHeight)) * scale;
     else cursorY -= base * scale;
 
-    let x0 = cursorX + dummyGlyphOffsetX * scale;
-    let y0 = cursorY + dummyGlyphOffsetY * scale;
-    let x1 = cursorX + glyphWidth * 3 * scale;
-    let y1 = cursorY + glyphWidth * 3 * scale;
+    const x0 = cursorX - padding;
+    const y0 = cursorY - padding;
+    const x1 = cursorX + scaledWidth + padding;
+    const y1 = cursorY + scaledHeight + padding;
 
+    const shapeVal = SHAPE_ENUM[geometry];
     const vIdx = this.vertexCount,
       iIdx = this.indexCount;
 
-    this.vertexData[vIdx * 6 + 0] = x0;
-    this.vertexData[vIdx * 6 + 1] = y0;
-    // color-info
-    this.vertexData[vIdx * 6 + 2] = r;
-    this.vertexData[vIdx * 6 + 3] = g;
-    this.vertexData[vIdx * 6 + 4] = b;
-    this.vertexData[vIdx * 6 + 5] = a;
+    const stride = 11;
+    // All 4 vertices share the same bbox and shape
+    const bboxData = [x0, y0, x1, y1]; // min.x, min.y, max.x, max.y
 
-    this.vertexData[vIdx * 6 + 6] = x1;
-    this.vertexData[vIdx * 6 + 7] = y0;
-    // color-info
-    this.vertexData[vIdx * 6 + 8] = r;
-    this.vertexData[vIdx * 6 + 9] = g;
-    this.vertexData[vIdx * 6 + 10] = b;
-    this.vertexData[vIdx * 6 + 11] = a;
+    for (let i = 0; i < 4; i++) {
+      const vOffset = (vIdx + i) * stride;
+      // Position: corner coordinates
+      if (i === 0) { this.vertexData[vOffset + 0] = x0; this.vertexData[vOffset + 1] = y0; }
+      else if (i === 1) { this.vertexData[vOffset + 0] = x1; this.vertexData[vOffset + 1] = y0; }
+      else if (i === 2) { this.vertexData[vOffset + 0] = x1; this.vertexData[vOffset + 1] = y1; }
+      else { this.vertexData[vOffset + 0] = x0; this.vertexData[vOffset + 1] = y1; }
 
-    this.vertexData[vIdx * 6 + 12] = x1;
-    this.vertexData[vIdx * 6 + 13] = y1;
-    // color-info
-    this.vertexData[vIdx * 6 + 14] = r;
-    this.vertexData[vIdx * 6 + 15] = g;
-    this.vertexData[vIdx * 6 + 16] = b;
-    this.vertexData[vIdx * 6 + 17] = a;
+      // Color (r, g, b, a)
+      this.vertexData[vOffset + 2] = r;
+      this.vertexData[vOffset + 3] = g;
+      this.vertexData[vOffset + 4] = b;
+      this.vertexData[vOffset + 5] = a;
 
-    this.vertexData[vIdx * 6 + 18] = x0;
-    this.vertexData[vIdx * 6 + 19] = y1;
-    // color-info
-    this.vertexData[vIdx * 6 + 20] = r;
-    this.vertexData[vIdx * 6 + 21] = g;
-    this.vertexData[vIdx * 6 + 22] = b;
-    this.vertexData[vIdx * 6 + 23] = a;
+      // Shape
+      this.vertexData[vOffset + 6] = shapeVal;
+
+      // BBox min (x0, y0)
+      this.vertexData[vOffset + 7] = x0;
+      this.vertexData[vOffset + 8] = y0;
+
+      // BBox max (x1, y1)
+      this.vertexData[vOffset + 9] = x1;
+      this.vertexData[vOffset + 10] = y1;
+    }
 
     this.indexData[iIdx + 0] = vIdx + 0;
     this.indexData[iIdx + 1] = vIdx + 1;
@@ -112,7 +116,6 @@ export class IconBackgroundRenderer {
 
     this.vertexCount += 4;
     this.indexCount += 6;
-    // console.log(this.vertexData, this.indexData);
   }
 
   flush(camera?: Camera, projMatrix?: Matrix4): void {
@@ -125,7 +128,7 @@ export class IconBackgroundRenderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
     gl.bufferData(
       gl.ARRAY_BUFFER,
-      this.vertexData.subarray(0, this.vertexCount * 6),
+      this.vertexData.subarray(0, this.vertexCount * 11),
       gl.DYNAMIC_DRAW
     );
 
@@ -136,36 +139,73 @@ export class IconBackgroundRenderer {
       gl.DYNAMIC_DRAW
     );
 
+    const stride = Float32Array.BYTES_PER_ELEMENT * 11;
+
+    // a_Position: 2 floats (x, y) at offset 0
     gl.vertexAttribPointer(
       this.locations.a_Position,
       2,
       gl.FLOAT,
       false,
-      Float32Array.BYTES_PER_ELEMENT * 6,
+      stride,
       0
     );
     gl.enableVertexAttribArray(this.locations.a_Position);
 
+    // a_Color: 4 floats (r, g, b, a) at offset 2
     gl.vertexAttribPointer(
       this.locations.a_Color,
       4,
       gl.FLOAT,
       false,
-      Float32Array.BYTES_PER_ELEMENT * 6,
+      stride,
       Float32Array.BYTES_PER_ELEMENT * 2
     );
     gl.enableVertexAttribArray(this.locations.a_Color);
 
+    // a_Shape: 1 float at offset 6
+    gl.vertexAttribPointer(
+      this.locations.a_Shape,
+      1,
+      gl.FLOAT,
+      false,
+      stride,
+      Float32Array.BYTES_PER_ELEMENT * 6
+    );
+    gl.enableVertexAttribArray(this.locations.a_Shape);
+
+    // a_BBoxMin: 2 floats (x0, y0) at offset 7
+    gl.vertexAttribPointer(
+      this.locations.a_BBoxMin,
+      2,
+      gl.FLOAT,
+      false,
+      stride,
+      Float32Array.BYTES_PER_ELEMENT * 7
+    );
+    gl.enableVertexAttribArray(this.locations.a_BBoxMin);
+
+    // a_BBoxMax: 2 floats (x1, y1) at offset 9
+    gl.vertexAttribPointer(
+      this.locations.a_BBoxMax,
+      2,
+      gl.FLOAT,
+      false,
+      stride,
+      Float32Array.BYTES_PER_ELEMENT * 9
+    );
+    gl.enableVertexAttribArray(this.locations.a_BBoxMax);
+
     if (camera && projMatrix) {
-      gl.uniformMatrix4fv(
-        this.locations.u_ProjMatrix,
-        false,
-        projMatrix.elements
-      );
       gl.uniformMatrix4fv(
         this.locations.u_ViewMatrix,
         false,
         camera.getViewMatrix().elements
+      );
+      gl.uniformMatrix4fv(
+        this.locations.u_ProjMatrix,
+        false,
+        projMatrix.elements
       );
     }
 
