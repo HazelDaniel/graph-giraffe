@@ -29,9 +29,13 @@ export class NodeStore {
   /** Leaf nodes — drawn last (in front of groups and compositions). */
   readonly nodes: Map<number, NodeData> = new Map();
   private _nextId: number = 0;
-  /** Tracks creation order for z-ordering: nodeId → order index (0-based). */
-  private _creationOrder: Map<number, number> = new Map();
-  private _nextCreationOrder: number = 0;
+  /** Per-type creation order for tiered z-ordering. */
+  private _groupOrder: Map<number, number> = new Map();
+  private _nextGroupOrder: number = 0;
+  private _compositionOrder: Map<number, number> = new Map();
+  private _nextCompositionOrder: number = 0;
+  private _leafOrder: Map<number, number> = new Map();
+  private _nextLeafOrder: number = 0;
   private a11yTree: AccessibilityTree;
   private connectionMode: ConnectionMode;
   private handleStyle: HandleStyle;
@@ -106,8 +110,18 @@ export class NodeStore {
     const id = idOverride ?? ++this._nextId;
     this._nextId = Math.max(this._nextId, id);
 
-    // Record creation order for z-ordering
-    this._creationOrder.set(id, this._nextCreationOrder++);
+    // Record per-type creation order for tiered z-ordering
+    switch (nodeType) {
+      case 'group':
+        this._groupOrder.set(id, this._nextGroupOrder++);
+        break;
+      case 'composition':
+        this._compositionOrder.set(id, this._nextCompositionOrder++);
+        break;
+      default:
+        this._leafOrder.set(id, this._nextLeafOrder++);
+        break;
+    }
 
     const { width, height } = getDefaultNodeSize(nodeType);
     const node = this.createNodeRecord({
@@ -205,29 +219,53 @@ export class NodeStore {
 
     this.groups.delete(id);
     this.nodes.delete(id);
-    this._creationOrder.delete(id);
+    switch (node.nodeType) {
+      case 'group':
+        this._groupOrder.delete(id);
+        break;
+      case 'composition':
+        this._compositionOrder.delete(id);
+        break;
+      default:
+        this._leafOrder.delete(id);
+        break;
+    }
     this.a11yTree.removeNode(id);
   }
 
   /**
-   * Compute the z-value for a node based on creation order and selection state.
-   * Base z = creationIndex * Z_STEP (small increment per node).
-   * Selected non-container nodes get Z_SELECTION_BOOST to render on top.
-   * Children of a selected container get Z_CHILD_BOOST (same as selection boost)
-   * so they render above their selected parent.
-   * Selected containers themselves use normal z — they don't need to be on top
-   * of their own children.
+   * Compute the z-value for a node using tiered per-type creation order.
+   *
+   * Three tiers ensure containers always render behind leaves:
+   *   Groups        → base z = groupIdx * Z_STEP           (lowest)
+   *   Compositions  → base z = Z_COMP_TIER + compIdx * Z_STEP
+   *   Leaves        → base z = Z_LEAF_TIER + leafIdx * Z_STEP (highest)
+   *
+   * Selected non-container nodes and children of selected containers
+   * get Z_SELECTION_BOOST to render on top of everything.
    */
   getZForNode(nodeId: number, selectedNodeIds: Set<number>): number {
     const Z_STEP = 0.001;
+    const Z_COMP_TIER = 0.2;
+    const Z_LEAF_TIER = 0.4;
     const Z_SELECTION_BOOST = 0.5;
-    const creationIdx = this._creationOrder.get(nodeId) ?? 0;
-    const baseZ = creationIdx * Z_STEP;
 
-    const node = this.allNodesMap.get(nodeId);
-    if (!node) return baseZ;
+    const node = this.get(nodeId);
+    if (!node) return 0;
 
-    // Selected non-container: boost to top
+    let baseZ: number;
+    switch (node.nodeType) {
+      case 'group':
+        baseZ = (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
+        break;
+      case 'composition':
+        baseZ = Z_COMP_TIER + (this._compositionOrder.get(nodeId) ?? 0) * Z_STEP;
+        break;
+      default:
+        baseZ = Z_LEAF_TIER + (this._leafOrder.get(nodeId) ?? 0) * Z_STEP;
+        break;
+    }
+
     if (selectedNodeIds.has(nodeId) && !isContainerNodeType(node.nodeType)) {
       return baseZ + Z_SELECTION_BOOST;
     }
@@ -238,7 +276,7 @@ export class NodeStore {
       if (selectedNodeIds.has(currentId)) {
         return baseZ + Z_SELECTION_BOOST;
       }
-      const parent = this.allNodesMap.get(currentId);
+      const parent = this.get(currentId);
       if (!parent) break;
       currentId = parent.parentId;
     }
