@@ -653,6 +653,7 @@ export class NodeStore {
     visible?: boolean;
     isSelected?: boolean;
     isDropTarget?: boolean;
+    isLocked?: boolean;
   }): NodeData {
     const {
       id,
@@ -667,6 +668,7 @@ export class NodeStore {
       visible = true,
       isSelected = false,
       isDropTarget = false,
+      isLocked = false,
     } = params;
 
     const r = id & 0xff;
@@ -690,6 +692,7 @@ export class NodeStore {
       nodeType,
       compositionRefId: null,
       isDropTarget,
+      isLocked: false,
       handles,
       props: nodeType === 'node' ? this.createDefaultProps() : undefined,
     };

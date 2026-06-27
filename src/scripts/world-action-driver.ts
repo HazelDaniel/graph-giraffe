@@ -582,6 +582,7 @@ export class WorldActionDriver {
     node.visible = snapshot.visible;
     node.isSelected = snapshot.isSelected;
     node.isDropTarget = snapshot.isDropTarget;
+    node.isLocked = snapshot.isLocked;
     node.childIds = [...snapshot.childIds];
     node.compositionRefId = snapshot.compositionRefId;
     node.props = cloneNodeProps(snapshot.props);

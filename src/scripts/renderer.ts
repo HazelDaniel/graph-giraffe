@@ -855,6 +855,41 @@ export class Renderer {
         );
       }
 
+      // Group Lock Icon
+      if (node.nodeType === "group") {
+        const lockX = node.width / 2;
+        const lockY = NODE_LAYOUT.lockBtnTopY;
+        const isLocked = Boolean(node.isLocked);
+        this.iconBackgroundRenderer.addQuad(
+          worldX + lockX,
+          worldY + lockY + 1.2,
+          r,
+          g,
+          b,
+          isLocked ? 0.12 : 0.05,
+          dumbGlyphWidth,
+          dumbGlyphHeight,
+          this.iconAtlas.common?.base || 0,
+          this.iconAtlas.common?.lineHeight || 0,
+          16,
+          "center",
+          undefined,
+          "circle"
+        );
+        this.iconRenderer.addText(
+          isLocked ? "\uF006" : "\uF007", // Placeholder — swap with lock/unlock codepoints
+          worldX + lockX,
+          worldY + lockY,
+          16,
+          r,
+          g,
+          b,
+          1.0,
+          "center",
+          "middle"
+        );
+      }
+
       // Close Icon
       if (
         node.nodeType === "node" ||

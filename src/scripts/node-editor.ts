@@ -665,7 +665,7 @@ export class NodeEditor {
         currentParentId = parent?.parentId ?? null;
       }
 
-      if (!isDescendantOfSelection) {
+      if (!isDescendantOfSelection && !this.isInLockedGroup(nodeId)) {
         roots.push(node);
       }
     }
@@ -1128,6 +1128,7 @@ export class NodeEditor {
     node.visible = snapshot.visible;
     node.isSelected = snapshot.isSelected;
     node.isDropTarget = snapshot.isDropTarget;
+    node.isLocked = snapshot.isLocked;
     node.childIds = [...snapshot.childIds];
     node.compositionRefId = snapshot.compositionRefId;
     node.props = cloneNodeProps(snapshot.props);
@@ -1297,6 +1298,26 @@ export class NodeEditor {
     const targetPanY = canvas.height / 2 - centerY * targetZoom;
 
     this.camera.animateTo(targetPanX, targetPanY, targetZoom);
+  }
+
+  /** Check if a node is a locked group or is a descendant of one. */
+  private isInLockedGroup(nodeId: number): boolean {
+    const node = this.store.get(nodeId);
+    if (!node) return false;
+
+    // A locked group itself cannot be dragged
+    if (node.isLocked && node.nodeType === "group") return true;
+
+    // Walk ancestor chain — any locked group ancestor blocks dragging
+    let currentId: number | null = node.parentId;
+    while (currentId !== null) {
+      const ancestor = this.store.get(currentId);
+      if (!ancestor) break;
+      if (ancestor.isLocked && ancestor.nodeType === "group") return true;
+      currentId = ancestor.parentId;
+    }
+
+    return false;
   }
 
   private deleteNodeTreeWithHistory(nodeId: number): void {
@@ -1808,6 +1829,28 @@ export class NodeEditor {
       return;
     }
 
+    // Group Lock toggle
+    if (node.nodeType === "group") {
+      const lockX = node.width / 2;
+      const lockY = NODE_LAYOUT.lockBtnTopY;
+      const lockDx = localClickX - lockX;
+      const lockDy = localClickY - lockY;
+      if (
+        lockDx * lockDx + lockDy * lockDy <=
+        NODE_LAYOUT.lockBtnClickRadius * NODE_LAYOUT.lockBtnClickRadius
+      ) {
+        const beforeSnapshot = this.captureNodeSnapshot(node);
+        node.isLocked = !node.isLocked;
+        const afterSnapshot = this.captureNodeSnapshot(node);
+        this.pushHistory({
+          undo: () => { this.applyNodeSnapshot(beforeSnapshot); },
+          redo: () => { this.applyNodeSnapshot(afterSnapshot); },
+        });
+        this.hoveredHandle = null;
+        return;
+      }
+    }
+
     if (
       node.nodeType === "node" ||
       node.nodeType === "composition-child" ||
@@ -1865,7 +1908,8 @@ export class NodeEditor {
       this.isMultiSelectMode &&
       this.selectionKind === "node" &&
       this.selectedNodeIds.size > 1 &&
-      this.selectedNodeIds.has(node.id);
+      this.selectedNodeIds.has(node.id) &&
+      !this.isInLockedGroup(node.id);
 
     if (canDragSelection) {
       this.controls.hideProperties();
@@ -1880,6 +1924,14 @@ export class NodeEditor {
     this.controls.hideProperties();
     this.selectNodeByClick(node.id);
     this.hoveredHandle = null;
+
+    if (this.isInLockedGroup(node.id)) {
+      this.draggingNode = null;
+      this.dragSnapshot = null;
+      this.syncToolbarState();
+      return;
+    }
+
     this.draggingNode = node;
     this.dragSnapshot = {
       localX: node.localX,

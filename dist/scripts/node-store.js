@@ -525,7 +525,7 @@ export class NodeStore {
         }));
     }
     createNodeRecord(params) {
-        const { id, localX, localY, width, height, text, theme, nodeType, parentId, visible = true, isSelected = false, isDropTarget = false, } = params;
+        const { id, localX, localY, width, height, text, theme, nodeType, parentId, visible = true, isSelected = false, isDropTarget = false, isLocked = false, } = params;
         const r = id & 0xff;
         const g = (id >> 8) & 0xff;
         const b = (id >> 16) & 0xff;
@@ -546,6 +546,7 @@ export class NodeStore {
             nodeType,
             compositionRefId: null,
             isDropTarget,
+            isLocked: false,
             handles,
             props: nodeType === 'node' ? this.createDefaultProps() : undefined,
         };

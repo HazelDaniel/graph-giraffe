@@ -36,6 +36,7 @@
 	* node prop change
 	* label update
 	* re-parenting
+	* group node locking/unlocking
     * [others not yet mapped out]
 
 - TEXTURE BUTTON ACTIONS (the events that canvas triggers)

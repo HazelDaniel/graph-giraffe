@@ -101,6 +101,8 @@ export const NODE_LAYOUT = {
   spotlightBtnPaddingRight: 20,
   spotlightBtnPaddingBottom: 20,
   spotlightBtnClickRadius: 12,
+  lockBtnTopY: 20,     // matches group header titleY
+  lockBtnClickRadius: 12,
 };
 
 export const HANDLE_LAYOUT = {
@@ -238,6 +240,8 @@ export interface NodeData {
   /** Referenced composition id when an ordinary node is promoted visually. */
   compositionRefId: number | null;
   isDropTarget?: boolean;
+  /** When true on a group node, neither the group nor its children can be dragged. */
+  isLocked?: boolean;
   /** Position relative to parent node (or world origin if parentId is null). */
   localX: number;
   localY: number;

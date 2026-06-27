@@ -10,6 +10,8 @@ export const NODE_LAYOUT = {
     spotlightBtnPaddingRight: 20,
     spotlightBtnPaddingBottom: 20,
     spotlightBtnClickRadius: 12,
+    lockBtnTopY: 20, // matches group header titleY
+    lockBtnClickRadius: 12,
 };
 export const HANDLE_LAYOUT = {
     sideInset: 8,

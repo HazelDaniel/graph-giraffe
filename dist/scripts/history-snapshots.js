@@ -31,6 +31,7 @@ export function captureNodeHistorySnapshot(node) {
         visible: node.visible,
         isSelected: node.isSelected,
         isDropTarget: Boolean(node.isDropTarget),
+        isLocked: Boolean(node.isLocked),
         parentId: node.parentId,
         childIds: [...node.childIds],
         compositionRefId: node.compositionRefId,
