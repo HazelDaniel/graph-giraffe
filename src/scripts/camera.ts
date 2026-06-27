@@ -10,10 +10,16 @@ export class Camera {
   panY: number = 0;
   zoom: number = 1;
 
+  private _animating = false;
+  private _targetPanX: number = 0;
+  private _targetPanY: number = 0;
+  private _targetZoom: number = 1;
+
   private _viewMatrix: Matrix4 = new Matrix4();
 
   /** Translate the viewport by (dx, dy) in screen pixels. */
   pan(dx: number, dy: number): void {
+    this._animating = false;
     this.panX += dx;
     this.panY += dy;
   }
@@ -23,6 +29,7 @@ export class Camera {
    * under the mouse cursor stays fixed after the zoom.
    */
   zoomAt(mouseX: number, mouseY: number, deltaY: number): void {
+    this._animating = false;
     const sensitivity = 0.001;
     const factor = 1.0 - deltaY * sensitivity;
     const newZoom = Math.max(0.1, Math.min(this.zoom * factor, 5.0));
@@ -56,10 +63,42 @@ export class Camera {
   }
 
   /**
+   * Smoothly animate the camera to a target pan/zoom state.
+   * The animation is driven by exponential easing in getViewMatrix(),
+   * which is called every frame - no extra requestAnimationFrame needed.
+   * User pan/zoom input cancels the animation.
+   */
+  animateTo(panX: number, panY: number, zoom: number): void {
+    this._targetPanX = panX;
+    this._targetPanY = panY;
+    this._targetZoom = Math.max(0.1, Math.min(zoom, 5.0));
+    this._animating = true;
+  }
+
+  /**
    * Compute and return the current view matrix.
-   * The matrix is: Translate(panX, panY) * Scale(zoom, zoom, 1).
+   * When animating, each frame moves 12% closer to the target,
+   * creating a smooth exponential ease-out.
    */
   getViewMatrix(): Matrix4 {
+    if (this._animating) {
+      const ease = 0.10;
+      this.panX += (this._targetPanX - this.panX) * ease;
+      this.panY += (this._targetPanY - this.panY) * ease;
+      this.zoom += (this._targetZoom - this.zoom) * ease;
+
+      if (
+        Math.abs(this.panX - this._targetPanX) < 0.5 &&
+        Math.abs(this.panY - this._targetPanY) < 0.5 &&
+        Math.abs(this.zoom - this._targetZoom) < 0.001
+      ) {
+        this.panX = this._targetPanX;
+        this.panY = this._targetPanY;
+        this.zoom = this._targetZoom;
+        this._animating = false;
+      }
+    }
+
     this._viewMatrix.setIdentity();
     this._viewMatrix.translate(this.panX, this.panY, 0);
     this._viewMatrix.scale(this.zoom, this.zoom, 1.0);

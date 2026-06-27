@@ -13,18 +13,20 @@
 - introduce another primitive called composition-reference []
 
 - texture picker (with preview list) for both group nodes and nodes
-		* edges (types: cubic, line, line-curve) [)
-		* edge labels  ()
+		* edges (types: cubic, line, line-curve, orthogonal) []
 		* node heads
 			(they represent the header portion of the nodes,
 			they come in different variants based on the buttons they allow (max 3),
 			and they will have different textures from the node body, node heads only apply to ordinary nodes and composite-child nodes - composite child nodes will use whatever node heads the node chooses)
 		* node buttons (types: functional, inert) (to be displayed on the node header,comes with chosen texture, max 3)
-- orthogonal edge routing	 []
-- node prop overlay [)
+- node prop overlay []
+
+# OPEN FEATURES
 - group node spotlight (lerp camera movement to show current node. keeps track of a new camera system - in collaboration contexts)
+- group node locking
 - minimap/radar view
 - simulation
+- edge labels
 
 - EVENT ACTIONS (undoable/redoable):
 	* connection

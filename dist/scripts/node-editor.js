@@ -942,6 +942,21 @@ export class NodeEditor {
         }
         this.syncToolbarState();
     }
+    /** Zoom the camera to center a group node in the viewport with padding. */
+    spotlightGroup(groupId) {
+        const node = this.store.get(groupId);
+        if (!node)
+            return;
+        const world = getWorldPosition(groupId, this.store.allNodesMap);
+        const centerX = world.x + node.width / 2;
+        const centerY = world.y + node.height / 2;
+        const canvas = document.getElementById(this.canvasId);
+        const margin = 0.8;
+        const targetZoom = Math.min(canvas.width * margin / node.width, canvas.height * margin / node.height, 2.0);
+        const targetPanX = canvas.width / 2 - centerX * targetZoom;
+        const targetPanY = canvas.height / 2 - centerY * targetZoom;
+        this.camera.animateTo(targetPanX, targetPanY, targetZoom);
+    }
     deleteNodeTreeWithHistory(nodeId) {
         const node = this.store.get(nodeId);
         if (!node)
@@ -1386,6 +1401,18 @@ export class NodeEditor {
                 this.createNodeWithHistory("node", 0, 0, node.id);
                 this.hoveredHandle = null;
                 this.syncToolbarState();
+                return;
+            }
+        }
+        if (node.nodeType === "group") {
+            const spotX = node.width - NODE_LAYOUT.spotlightBtnPaddingRight;
+            const spotY = node.height - NODE_LAYOUT.spotlightBtnPaddingBottom;
+            const spotDx = localClickX - spotX;
+            const spotDy = localClickY - spotY;
+            if (spotDx * spotDx + spotDy * spotDy <=
+                NODE_LAYOUT.spotlightBtnClickRadius * NODE_LAYOUT.spotlightBtnClickRadius) {
+                this.spotlightGroup(node.id);
+                this.hoveredHandle = null;
                 return;
             }
         }

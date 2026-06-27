@@ -7,6 +7,9 @@ export const NODE_LAYOUT = {
     editBtnClickRadius: 15,
     plusBtnPaddingBottom: 20,
     plusBtnClickRadius: 12,
+    spotlightBtnPaddingRight: 20,
+    spotlightBtnPaddingBottom: 20,
+    spotlightBtnClickRadius: 12,
 };
 export const HANDLE_LAYOUT = {
     sideInset: 8,
