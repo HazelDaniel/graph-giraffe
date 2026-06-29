@@ -14,13 +14,32 @@ import {
 import { NodeStore } from "./node-store.js";
 import { Renderer } from "./renderer.js";
 import { UIControls } from "./controls.js";
-import { HistoryStack, HistoryEntry } from "./history.js";
+import { HistoryStack } from "./history.js";
 import {
   EdgeHistorySnapshot,
   NodeHistorySnapshot,
+  NodePlacementSnapshot,
+  SelectionKind,
+  SelectionSnapshot,
   captureNodeHistorySnapshot,
   cloneNodeProps,
 } from "./history-snapshots.js";
+import {
+  Command,
+  CommandContext,
+  CreateNodeCommand,
+  ConnectCommand,
+  DeleteNodeCommand,
+  DeleteEdgeCommand,
+  DeleteSelectionCommand,
+  DuplicateIntoCompositionCommand,
+  MoveNodeCommand,
+  MoveSelectionCommand,
+  ReparentCommand,
+  ToggleLockCommand,
+  UpdateLabelCommand,
+  UpdatePropCommand,
+} from "./commands.js";
 import {
   ConnectionMode,
   EdgeHeadSkinId,
@@ -64,19 +83,8 @@ interface ConnectionDragState {
   screenY: number;
 }
 
-interface NodePlacementSnapshot {
-  localX: number;
-  localY: number;
-  parentId: number | null;
-}
-
-type SelectionKind = "node" | "edge" | null;
-
-interface SelectionSnapshot {
-  kind: SelectionKind;
-  nodeIds: number[];
-  edgeIds: number[];
-}
+// NodePlacementSnapshot, SelectionKind, SelectionSnapshot
+// are now imported from history-snapshots.ts
 
 interface ActiveLabelEdit {
   nodeId: number;
@@ -341,22 +349,12 @@ export class NodeEditor {
             this.refreshContainerChain(parentId);
           }
 
-          this.pushHistory({
-            undo: () => {
-              this.applyNodeSnapshot(beforeSnapshot);
-              this.restoreSelectionSnapshot(selectionBefore);
-              this.syncPropertiesPanelForSelection();
-              this.refreshContainerChain(parentId);
-              this.syncToolbarState();
-            },
-            redo: () => {
-              this.applyNodeSnapshot(afterSnapshot);
-              this.restoreSelectionSnapshot(selectionBefore);
-              this.syncPropertiesPanelForSelection();
-              this.refreshContainerChain(parentId);
-              this.syncToolbarState();
-            },
-          });
+          this.pushCommand(new UpdatePropCommand({
+            beforeSnapshot,
+            afterSnapshot,
+            selectionBefore,
+            parentId,
+          }));
         }
       }
     });
@@ -488,12 +486,12 @@ export class NodeEditor {
   }
 
   private undo(): void {
-    if (!this.history.undo()) return;
+    if (!this.history.undo(this.commandContext)) return;
     this.syncToolbarState();
   }
 
   private redo(): void {
-    if (!this.history.redo()) return;
+    if (!this.history.redo(this.commandContext)) return;
     this.syncToolbarState();
   }
 
@@ -504,9 +502,34 @@ export class NodeEditor {
     this.pickFBO.resize(canvas.width, canvas.height);
   }
 
-  private pushHistory(entry: HistoryEntry): void {
-    this.history.push(entry);
+  private pushCommand(command: Command): void {
+    this.history.push(command);
     this.syncToolbarState();
+  }
+
+  private get commandContext(): CommandContext {
+    return {
+      store: this.store,
+      edgeStore: this.edgeStore,
+      theme: this.theme,
+      applyNodeSnapshot: (s) => this.applyNodeSnapshot(s),
+      restoreNodeSnapshots: (s) => this.restoreNodeSnapshots(s),
+      restoreEdgeSnapshots: (s) => this.restoreEdgeSnapshots(s),
+      removeNodeAndIncidentEdges: (id) => this.removeNodeAndIncidentEdges(id),
+      removeNodesAndEdges: (nIds, eIds) =>
+        this.removeNodesAndEdges(nIds, eIds),
+      clearSelectionState: () => this.clearSelectionState(),
+      setNodeSelected: (id, sel) => this.setNodeSelected(id, sel),
+      restoreSelectionSnapshot: (s) => this.restoreSelectionSnapshot(s),
+      refreshContainerChain: (id) => this.refreshContainerChain(id),
+      syncPropertiesPanel: () => this.syncPropertiesPanelForSelection(),
+      syncToolbarState: () => this.syncToolbarState(),
+      syncHandleStates: (id) => this.syncHandleStates(id),
+      applyCompositionReferenceForEdge: (e) =>
+        this.applyCompositionReferenceForEdge(e),
+      clearCompositionReferenceForEdge: (e) =>
+        this.clearCompositionReferenceForEdge(e),
+    };
   }
 
   private captureSelectionSnapshot(): SelectionSnapshot {
@@ -996,32 +1019,11 @@ export class NodeEditor {
     if (!node || node.text === session.previousLabel) return;
 
     const nextLabel = node.text;
-    this.pushHistory({
-      undo: () => {
-        this.store.updateLabel(node.id, session.previousLabel, this.theme);
-        if (
-          this.getSingleSelectedNode()?.id === node.id &&
-          node.nodeType !== "composition"
-        ) {
-          const nodeId = this.selectedNodeIds.values().next().value;
-          const selectedNode = nodeId !== undefined ? this.store.get(nodeId) : undefined;
-          if (selectedNode) this.controls.showProperties(selectedNode);
-        }
-        this.syncToolbarState();
-      },
-      redo: () => {
-        this.store.updateLabel(node.id, nextLabel, this.theme);
-        if (
-          this.getSingleSelectedNode()?.id === node.id &&
-          node.nodeType !== "composition"
-        ) {
-          const nodeId = this.selectedNodeIds.values().next().value;
-          const selectedNode = nodeId !== undefined ? this.store.get(nodeId) : undefined;
-          if (selectedNode) this.controls.showProperties(selectedNode);
-        }
-        this.syncToolbarState();
-      },
-    });
+    this.pushCommand(new UpdateLabelCommand({
+      nodeId: node.id,
+      previousLabel: session.previousLabel,
+      nextLabel,
+    }));
   }
 
   private captureNodeSnapshot(node: NodeData): NodeHistorySnapshot {
@@ -1337,22 +1339,13 @@ export class NodeEditor {
       this.refreshContainerChain(parentId);
     }
 
-    this.pushHistory({
-      undo: () => {
-        this.restoreNodeSnapshots(snapshots);
-        this.restoreEdgeSnapshots(edgeSnapshots);
-        this.restoreSelectionSnapshot(selectionBefore);
-        this.refreshAfterRestoration(parentId);
-      },
-      redo: () => {
-        this.removeNodeAndIncidentEdges(nodeId);
-        this.clearSelectionAndHideProperties();
-        if (parentId !== null) {
-          this.refreshContainerChain(parentId);
-        }
-        this.syncToolbarState();
-      },
-    });
+    this.pushCommand(new DeleteNodeCommand({
+      nodeId,
+      nodeSnapshots: snapshots,
+      edgeSnapshots,
+      selectionBefore,
+      parentId,
+    }));
   }
 
   private deleteEdgeWithHistory(edgeId: number): void {
@@ -1369,32 +1362,10 @@ export class NodeEditor {
     this.syncHandleStates(edge.targetNodeId);
     this.clearSelectionAndHideProperties();
 
-    this.pushHistory({
-      undo: () => {
-        const restored = this.edgeStore.add({
-          ...snapshot,
-          idOverride: snapshot.id,
-        });
-
-        if (restored) {
-          this.syncHandleStates(restored.sourceNodeId);
-          this.syncHandleStates(restored.targetNodeId);
-          this.applyCompositionReferenceForEdge(restored);
-        }
-        this.restoreSelectionSnapshot(selectionBefore);
-        this.syncToolbarState();
-      },
-      redo: () => {
-        const removed = this.edgeStore.remove(edgeId);
-        if (removed) {
-          this.clearCompositionReferenceForEdge(removed);
-          this.syncHandleStates(removed.sourceNodeId);
-          this.syncHandleStates(removed.targetNodeId);
-        }
-        this.clearSelectionAndHideProperties();
-        this.syncToolbarState();
-      },
-    });
+    this.pushCommand(new DeleteEdgeCommand({
+      edgeSnapshot: snapshot,
+      selectionBefore,
+    }));
   }
 
   private deleteCurrentSelectionWithHistory(): void {
@@ -1442,25 +1413,14 @@ export class NodeEditor {
       this.refreshContainerChain(parentId);
     }
 
-    this.pushHistory({
-      undo: () => {
-        this.restoreNodeSnapshots(snapshots);
-        this.restoreEdgeSnapshots(edgeSnapshots);
-        this.restoreSelectionSnapshot(selectionBefore);
-        for (const parentId of parentIds) {
-          this.refreshContainerChain(parentId);
-        }
-        this.syncToolbarState();
-      },
-      redo: () => {
-        this.removeNodesAndEdges(removedIds, edgeIds);
-        this.clearSelectionAndHideProperties();
-        for (const parentId of parentIds) {
-          this.refreshContainerChain(parentId);
-        }
-        this.syncToolbarState();
-      },
-    });
+    this.pushCommand(new DeleteSelectionCommand({
+      nodeSnapshots: snapshots,
+      edgeSnapshots,
+      selectionBefore,
+      removedNodeIds: [...removedIds],
+      removedEdgeIds: [...edgeIds],
+      parentIds: [...parentIds],
+    }));
   }
 
   private createNodeWithHistory(
@@ -1487,24 +1447,12 @@ export class NodeEditor {
 
     const snapshot = this.captureNodeSnapshot(node);
 
-    this.pushHistory({
-      undo: () => {
-        this.removeNodeAndIncidentEdges(snapshot.id);
-        this.restoreSelectionSnapshot(selectionBefore);
-        if (parentId !== null) {
-          this.refreshContainerChain(parentId);
-        }
-        this.syncToolbarState();
-      },
-      redo: () => {
-        this.applyNodeSnapshot(snapshot);
-        if (parentId !== null) {
-          this.refreshContainerChain(parentId);
-        }
-        this.restoreSelectionSnapshot(selectionBefore);
-        this.syncToolbarState();
-      },
-    });
+    this.pushCommand(new CreateNodeCommand({
+      snapshot,
+      parentId,
+      selectionBefore,
+      selectOnRedo: false,
+    }));
 
     return node;
   }
@@ -1543,23 +1491,12 @@ export class NodeEditor {
     this.setNodeSelected(composition.id, true);
     this.controls.hideProperties();
 
-    this.pushHistory({
-      undo: () => {
-        this.removeNodeAndIncidentEdges(snapshot.id);
-        this.restoreSelectionSnapshot(selectionBefore);
-        this.refreshContainerChain(snapshot.parentId);
-        this.controls.hideProperties();
-        this.syncToolbarState();
-      },
-      redo: () => {
-        this.applyNodeSnapshot(snapshot);
-        this.clearSelectionState();
-        this.setNodeSelected(snapshot.id, true);
-        this.controls.hideProperties();
-        this.refreshContainerChain(snapshot.parentId);
-        this.syncToolbarState();
-      },
-    });
+    this.pushCommand(new CreateNodeCommand({
+      snapshot,
+      parentId: snapshot.parentId,
+      selectionBefore,
+      selectOnRedo: true,
+    }));
   }
 
   private handleDeleteSelected(): void {
@@ -1842,10 +1779,10 @@ export class NodeEditor {
         const beforeSnapshot = this.captureNodeSnapshot(node);
         node.isLocked = !node.isLocked;
         const afterSnapshot = this.captureNodeSnapshot(node);
-        this.pushHistory({
-          undo: () => { this.applyNodeSnapshot(beforeSnapshot); },
-          redo: () => { this.applyNodeSnapshot(afterSnapshot); },
-        });
+        this.pushCommand(new ToggleLockCommand({
+          beforeSnapshot,
+          afterSnapshot,
+        }));
         this.hoveredHandle = null;
         return;
       }
@@ -2128,29 +2065,9 @@ export class NodeEditor {
           this.syncHandleStates(edge.targetNodeId);
           this.applyCompositionReferenceForEdge(edge);
           const snapshot: EdgeHistorySnapshot = { ...edge };
-          this.pushHistory({
-            undo: () => {
-              const removed = this.edgeStore.remove(snapshot.id);
-              if (removed) {
-                this.clearCompositionReferenceForEdge(removed);
-                this.syncHandleStates(removed.sourceNodeId);
-                this.syncHandleStates(removed.targetNodeId);
-              }
-              this.syncToolbarState();
-            },
-            redo: () => {
-              const restored = this.edgeStore.add({
-                ...snapshot,
-                idOverride: snapshot.id,
-              });
-              if (restored) {
-                this.syncHandleStates(restored.sourceNodeId);
-                this.syncHandleStates(restored.targetNodeId);
-                this.applyCompositionReferenceForEdge(restored);
-              }
-              this.syncToolbarState();
-            },
-          });
+          this.pushCommand(new ConnectCommand({
+            edgeSnapshot: snapshot,
+          }));
         }
       }
 
@@ -2183,39 +2100,14 @@ export class NodeEditor {
       this.store.clearDropTargets();
 
       if (dropResult.didChange) {
-        this.pushHistory({
-          undo: () => {
-            for (const snapshot of dropResult.cloneSnapshots) {
-              this.removeNodeAndIncidentEdges(snapshot.id);
-            }
-            this.restoreNodeSnapshots(dropResult.beforeSnapshots);
-            this.restoreEdgeSnapshots(dropResult.removedReferenceEdgeSnapshots);
-            this.restoreSelectionSnapshot(selectionBefore);
-            for (const parentId of dropResult.affectedParentIds) {
-              this.refreshContainerChain(parentId);
-            }
-            this.syncToolbarState();
-          },
-          redo: () => {
-            this.restoreNodeSnapshots(dropResult.afterSnapshots);
-            for (const snapshot of dropResult.removedReferenceEdgeSnapshots) {
-              const removed = this.edgeStore.remove(snapshot.id);
-              if (removed) {
-                this.clearCompositionReferenceForEdge(removed);
-                this.syncHandleStates(removed.sourceNodeId);
-                this.syncHandleStates(removed.targetNodeId);
-              }
-            }
-            for (const snapshot of dropResult.cloneSnapshots) {
-              this.restoreNodeSnapshots([snapshot]);
-            }
-            this.restoreSelectionSnapshot(selectionBefore);
-            for (const parentId of dropResult.affectedParentIds) {
-              this.refreshContainerChain(parentId);
-            }
-            this.syncToolbarState();
-          },
-        });
+        this.pushCommand(new MoveSelectionCommand({
+          beforeSnapshots: dropResult.beforeSnapshots,
+          afterSnapshots: dropResult.afterSnapshots,
+          cloneSnapshots: dropResult.cloneSnapshots,
+          removedReferenceEdgeSnapshots: dropResult.removedReferenceEdgeSnapshots,
+          selectionBefore,
+          affectedParentIds: dropResult.affectedParentIds,
+        }));
       }
 
       this.syncToolbarState();
@@ -2229,7 +2121,8 @@ export class NodeEditor {
       const source = this.draggingNode;
       const snapshot = this.dragSnapshot;
       const selectionBefore = this.captureSelectionSnapshot();
-      let historyEntry: HistoryEntry | null = null;
+      const sourceId = source.id;  // capture as primitive, not mutable ref
+      let command: Command | null = null;
 
       if (source.nodeType === "node") {
         const hoveredContainer = this.getHoveredContainer(
@@ -2254,30 +2147,19 @@ export class NodeEditor {
             this.clearSelectionState();
             this.setNodeSelected(clone.id, true);
             this.refreshContainerChain(hoveredContainer.id);
-            historyEntry = {
-              undo: () => {
-                this.removeNodeAndIncidentEdges(cloneSnapshot.id);
-                this.restoreSelectionSnapshot(selectionBefore);
-                this.refreshContainerChain(hoveredContainer.id);
-                this.syncToolbarState();
+            command = new DuplicateIntoCompositionCommand({
+              sourceId,
+              sourcePlacement: {
+                localX: snapshot.localX,
+                localY: snapshot.localY,
+                parentId: snapshot.parentId,
               },
-              redo: () => {
-                this.store.restoreNodePlacement(
-                  source.id,
-                  snapshot.localX,
-                  snapshot.localY,
-                  snapshot.parentId
-                );
-                this.applyNodeSnapshot(cloneSnapshot);
-                this.clearSelectionState();
-                this.setNodeSelected(cloneSnapshot.id, true);
-                this.refreshContainerChain(hoveredContainer.id);
-                this.syncToolbarState();
-              },
-            };
+              cloneSnapshot,
+              compositionId: hoveredContainer.id,
+              selectionBefore,
+            });
           }
         } else if (hoveredContainer?.nodeType === "group") {
-          const oldParentId = source.parentId;
           const beforePlacement: NodePlacementSnapshot = {
             localX: snapshot.localX,
             localY: snapshot.localY,
@@ -2290,6 +2172,7 @@ export class NodeEditor {
               parentId: source.parentId,
             };
             this.refreshContainerChain(hoveredContainer.id);
+            const oldParentId = beforePlacement.parentId;
             if (oldParentId !== null && oldParentId !== hoveredContainer.id) {
               this.refreshContainerChain(oldParentId);
             }
@@ -2298,32 +2181,14 @@ export class NodeEditor {
               beforePlacement.localY !== afterPlacement.localY ||
               beforePlacement.parentId !== afterPlacement.parentId
             ) {
-              historyEntry = {
-                undo: () => {
-                  this.store.restoreNodePlacement(
-                    source.id,
-                    beforePlacement.localX,
-                    beforePlacement.localY,
-                    beforePlacement.parentId
-                  );
-                  this.refreshContainerChain(afterPlacement.parentId);
-                  this.refreshContainerChain(beforePlacement.parentId);
-                  this.restoreSelectionSnapshot(selectionBefore);
-                  this.syncToolbarState();
-                },
-                redo: () => {
-                  this.store.restoreNodePlacement(
-                    source.id,
-                    afterPlacement.localX,
-                    afterPlacement.localY,
-                    afterPlacement.parentId
-                  );
-                  this.refreshContainerChain(beforePlacement.parentId);
-                  this.refreshContainerChain(afterPlacement.parentId);
-                  this.restoreSelectionSnapshot(selectionBefore);
-                  this.syncToolbarState();
-                },
-              };
+              command = new ReparentCommand({
+                nodeId: sourceId,
+                beforePlacement,
+                afterPlacement,
+                selectionBefore,
+                removedReferenceEdgeSnapshots: [],
+                extraRefreshIds: [],
+              });
             }
           } else {
             this.store.restoreNodePlacement(
@@ -2334,7 +2199,6 @@ export class NodeEditor {
             );
           }
         } else {
-          const oldParentId = source.parentId;
           const beforePlacement: NodePlacementSnapshot = {
             localX: snapshot.localX,
             localY: snapshot.localY,
@@ -2348,6 +2212,7 @@ export class NodeEditor {
               localY: source.localY,
               parentId: source.parentId,
             };
+            const oldParentId = beforePlacement.parentId;
             if (oldParentId !== null) {
               this.refreshContainerChain(oldParentId);
             }
@@ -2356,41 +2221,14 @@ export class NodeEditor {
               beforePlacement.localY !== afterPlacement.localY ||
               beforePlacement.parentId !== afterPlacement.parentId
             ) {
-              historyEntry = {
-                undo: () => {
-                  this.store.restoreNodePlacement(
-                    source.id,
-                    beforePlacement.localX,
-                    beforePlacement.localY,
-                    beforePlacement.parentId
-                  );
-                  this.restoreEdgeSnapshots(removedReferenceEdgeSnapshots);
-                  this.refreshContainerChain(afterPlacement.parentId);
-                  this.refreshContainerChain(beforePlacement.parentId);
-                  this.restoreSelectionSnapshot(selectionBefore);
-                  this.syncToolbarState();
-                },
-                redo: () => {
-                  this.store.restoreNodePlacement(
-                    source.id,
-                    afterPlacement.localX,
-                    afterPlacement.localY,
-                    afterPlacement.parentId
-                  );
-                  for (const edgeSnapshot of removedReferenceEdgeSnapshots) {
-                    const removed = this.edgeStore.remove(edgeSnapshot.id);
-                    if (removed) {
-                      this.clearCompositionReferenceForEdge(removed);
-                      this.syncHandleStates(removed.sourceNodeId);
-                      this.syncHandleStates(removed.targetNodeId);
-                    }
-                  }
-                  this.refreshContainerChain(beforePlacement.parentId);
-                  this.refreshContainerChain(afterPlacement.parentId);
-                  this.restoreSelectionSnapshot(selectionBefore);
-                  this.syncToolbarState();
-                },
-              };
+              command = new ReparentCommand({
+                nodeId: sourceId,
+                beforePlacement,
+                afterPlacement,
+                selectionBefore,
+                removedReferenceEdgeSnapshots,
+                extraRefreshIds: [],
+              });
             }
           } else {
             this.store.restoreNodePlacement(
@@ -2408,7 +2246,6 @@ export class NodeEditor {
           source
         );
         if (hoveredContainer?.nodeType === "group") {
-          const oldParentId = source.parentId;
           const beforePlacement: NodePlacementSnapshot = {
             localX: snapshot.localX,
             localY: snapshot.localY,
@@ -2421,6 +2258,7 @@ export class NodeEditor {
               parentId: source.parentId,
             };
             this.refreshContainerChain(source.id);
+            const oldParentId = beforePlacement.parentId;
             if (oldParentId !== null && oldParentId !== hoveredContainer.id) {
               this.refreshContainerChain(oldParentId);
             }
@@ -2429,32 +2267,14 @@ export class NodeEditor {
               beforePlacement.localY !== afterPlacement.localY ||
               beforePlacement.parentId !== afterPlacement.parentId
             ) {
-              historyEntry = {
-                undo: () => {
-                  this.store.restoreNodePlacement(
-                    source.id,
-                    beforePlacement.localX,
-                    beforePlacement.localY,
-                    beforePlacement.parentId
-                  );
-                  this.refreshContainerChain(source.id);
-                  this.refreshContainerChain(beforePlacement.parentId);
-                  this.restoreSelectionSnapshot(selectionBefore);
-                  this.syncToolbarState();
-                },
-                redo: () => {
-                  this.store.restoreNodePlacement(
-                    source.id,
-                    afterPlacement.localX,
-                    afterPlacement.localY,
-                    afterPlacement.parentId
-                  );
-                  this.refreshContainerChain(source.id);
-                  this.refreshContainerChain(beforePlacement.parentId);
-                  this.restoreSelectionSnapshot(selectionBefore);
-                  this.syncToolbarState();
-                },
-              };
+              command = new ReparentCommand({
+                nodeId: sourceId,
+                beforePlacement,
+                afterPlacement,
+                selectionBefore,
+                removedReferenceEdgeSnapshots: [],
+                extraRefreshIds: [sourceId],
+              });
             }
           } else {
             this.store.restoreNodePlacement(
@@ -2489,33 +2309,17 @@ export class NodeEditor {
           beforePlacement.localX !== afterPlacement.localX ||
           beforePlacement.localY !== afterPlacement.localY
         ) {
-          historyEntry = {
-            undo: () => {
-              this.store.restoreNodePlacement(
-                source.id,
-                beforePlacement.localX,
-                beforePlacement.localY,
-                beforePlacement.parentId
-              );
-              this.restoreSelectionSnapshot(selectionBefore);
-              this.syncToolbarState();
-            },
-            redo: () => {
-              this.store.restoreNodePlacement(
-                source.id,
-                afterPlacement.localX,
-                afterPlacement.localY,
-                afterPlacement.parentId
-              );
-              this.restoreSelectionSnapshot(selectionBefore);
-              this.syncToolbarState();
-            },
-          };
+          command = new MoveNodeCommand({
+            nodeId: sourceId,
+            beforePlacement,
+            afterPlacement,
+            selectionBefore,
+          });
         }
       }
 
-      if (historyEntry) {
-        this.pushHistory(historyEntry);
+      if (command) {
+        this.pushCommand(command);
       }
     }
 

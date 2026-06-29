@@ -1,6 +1,7 @@
 import { EdgeStore } from "./edge-store.js";
 import { HistoryStack } from "./history.js";
 import { captureEdgeHistorySnapshot, captureNodeHistorySnapshot, cloneNodeProps, } from "./history-snapshots.js";
+import { CreateNodeCommand, ConnectCommand, DeleteNodeCommand, DuplicateIntoCompositionCommand, MoveSelectionCommand, ReparentCommand, UpdateLabelCommand, UpdatePropCommand, } from "./commands.js";
 import { NodeStore } from "./node-store.js";
 import { getWorldPosition } from "./scene-graph.js";
 import { DEFAULT_HANDLE_STYLE, isContainerNodeType, } from "./types.js";
@@ -8,6 +9,7 @@ const noopSideEffects = {
     showProperties: () => { },
     hideProperties: () => { },
 };
+// NodePlacementSnapshot is imported from history-snapshots.ts
 export class WorldActionDriver {
     store;
     edgeStore;
@@ -61,21 +63,12 @@ export class WorldActionDriver {
         this.refreshContainerChain(parentId);
         this.syncPropertiesPanel();
         const snapshot = this.captureNodeSnapshot(node);
-        this.pushHistory({
-            undo: () => {
-                this.removeNodeAndIncidentEdges(snapshot.id);
-                this.restoreSelectionSnapshot(selectionBefore);
-                this.refreshContainerChain(parentId);
-                this.syncPropertiesPanel();
-            },
-            redo: () => {
-                this.applyNodeSnapshot(snapshot);
-                this.clearSelectionState();
-                this.setNodeSelected(snapshot.id, true);
-                this.refreshContainerChain(parentId);
-                this.syncPropertiesPanel();
-            },
-        });
+        this.pushCommand(new CreateNodeCommand({
+            snapshot,
+            parentId,
+            selectionBefore,
+            selectOnRedo: true,
+        }));
         return node;
     }
     connect(sourceNodeId, sourceHandleSide, targetNodeId, targetHandleSide) {
@@ -94,19 +87,9 @@ export class WorldActionDriver {
         this.syncHandleStates(edge.targetNodeId);
         this.applyCompositionReferenceForEdge(edge);
         const snapshot = captureEdgeHistorySnapshot(edge);
-        this.pushHistory({
-            undo: () => {
-                const removed = this.edgeStore.remove(snapshot.id);
-                if (removed) {
-                    this.clearCompositionReferenceForEdge(removed);
-                    this.syncHandleStates(removed.sourceNodeId);
-                    this.syncHandleStates(removed.targetNodeId);
-                }
-            },
-            redo: () => {
-                this.restoreEdgeSnapshots([snapshot]);
-            },
-        });
+        this.pushCommand(new ConnectCommand({
+            edgeSnapshot: snapshot,
+        }));
         return edge;
     }
     deleteNode(nodeId) {
@@ -122,21 +105,13 @@ export class WorldActionDriver {
         this.clearSelectionState();
         this.refreshContainerChain(parentId);
         this.syncPropertiesPanel();
-        this.pushHistory({
-            undo: () => {
-                this.restoreNodeSnapshots(snapshots);
-                this.restoreEdgeSnapshots(edgeSnapshots);
-                this.restoreSelectionSnapshot(selectionBefore);
-                this.refreshContainerChain(parentId);
-                this.syncPropertiesPanel();
-            },
-            redo: () => {
-                this.removeNodeAndIncidentEdges(nodeId);
-                this.clearSelectionState();
-                this.refreshContainerChain(parentId);
-                this.syncPropertiesPanel();
-            },
-        });
+        this.pushCommand(new DeleteNodeCommand({
+            nodeId,
+            nodeSnapshots: snapshots,
+            edgeSnapshots,
+            selectionBefore,
+            parentId,
+        }));
     }
     moveNodes(nodeIds, deltaX, deltaY, affectedParentIds = []) {
         const roots = nodeIds
@@ -168,20 +143,14 @@ export class WorldActionDriver {
         ]);
         this.refreshContainerChains(refreshIds);
         const afterSnapshots = this.captureNodeSnapshots(nodeIds);
-        this.pushHistory({
-            undo: () => {
-                this.restoreNodeSnapshots(beforeSnapshots);
-                this.restoreSelectionSnapshot(selectionBefore);
-                this.refreshContainerChains(refreshIds);
-                this.syncPropertiesPanel();
-            },
-            redo: () => {
-                this.restoreNodeSnapshots(afterSnapshots);
-                this.restoreSelectionSnapshot(selectionBefore);
-                this.refreshContainerChains(refreshIds);
-                this.syncPropertiesPanel();
-            },
-        });
+        this.pushCommand(new MoveSelectionCommand({
+            beforeSnapshots,
+            afterSnapshots,
+            cloneSnapshots: [],
+            removedReferenceEdgeSnapshots: [],
+            selectionBefore,
+            affectedParentIds: [...refreshIds],
+        }));
     }
     reparentNode(nodeId, parentId) {
         const node = this.store.get(nodeId);
@@ -195,22 +164,14 @@ export class WorldActionDriver {
         const afterSnapshot = this.captureNodeSnapshot(node);
         this.refreshContainerChain(oldParentId);
         this.refreshContainerChain(parentId);
-        this.pushHistory({
-            undo: () => {
-                this.applyNodeSnapshot(beforeSnapshot);
-                this.restoreSelectionSnapshot(selectionBefore);
-                this.refreshContainerChain(oldParentId);
-                this.refreshContainerChain(parentId);
-                this.syncPropertiesPanel();
-            },
-            redo: () => {
-                this.applyNodeSnapshot(afterSnapshot);
-                this.restoreSelectionSnapshot(selectionBefore);
-                this.refreshContainerChain(oldParentId);
-                this.refreshContainerChain(parentId);
-                this.syncPropertiesPanel();
-            },
-        });
+        this.pushCommand(new ReparentCommand({
+            nodeId,
+            beforePlacement: { localX: beforeSnapshot.localX, localY: beforeSnapshot.localY, parentId: oldParentId },
+            afterPlacement: { localX: afterSnapshot.localX, localY: afterSnapshot.localY, parentId },
+            selectionBefore,
+            removedReferenceEdgeSnapshots: [],
+            extraRefreshIds: [],
+        }));
         return true;
     }
     duplicateIntoComposition(sourceId, compositionId) {
@@ -223,21 +184,16 @@ export class WorldActionDriver {
         this.setNodeSelected(clone.id, true);
         this.refreshContainerChain(compositionId);
         this.syncPropertiesPanel();
-        this.pushHistory({
-            undo: () => {
-                this.removeNodeAndIncidentEdges(cloneSnapshot.id);
-                this.restoreSelectionSnapshot(selectionBefore);
-                this.refreshContainerChain(compositionId);
-                this.syncPropertiesPanel();
-            },
-            redo: () => {
-                this.restoreNodeSnapshots([cloneSnapshot]);
-                this.clearSelectionState();
-                this.setNodeSelected(cloneSnapshot.id, true);
-                this.refreshContainerChain(compositionId);
-                this.syncPropertiesPanel();
-            },
-        });
+        const source = this.store.get(sourceId);
+        if (!source)
+            return null;
+        this.pushCommand(new DuplicateIntoCompositionCommand({
+            sourceId,
+            sourcePlacement: { localX: source.localX, localY: source.localY, parentId: source.parentId },
+            cloneSnapshot,
+            compositionId,
+            selectionBefore,
+        }));
         return clone;
     }
     updateLabel(nodeId, label) {
@@ -247,16 +203,11 @@ export class WorldActionDriver {
         const beforeSnapshot = this.captureNodeSnapshot(node);
         this.store.updateLabel(nodeId, label, this.theme);
         const afterSnapshot = this.captureNodeSnapshot(node);
-        this.pushHistory({
-            undo: () => {
-                this.applyNodeSnapshot(beforeSnapshot);
-                this.syncPropertiesPanel();
-            },
-            redo: () => {
-                this.applyNodeSnapshot(afterSnapshot);
-                this.syncPropertiesPanel();
-            },
-        });
+        this.pushCommand(new UpdateLabelCommand({
+            nodeId,
+            previousLabel: beforeSnapshot.text,
+            nextLabel: label,
+        }));
         this.syncPropertiesPanel();
         return true;
     }
@@ -267,38 +218,53 @@ export class WorldActionDriver {
         const beforeSnapshot = this.captureNodeSnapshot(node);
         if (!this.setPropValue(node.props, label, value))
             return false;
-        node.height = this.estimateNodePropHeight(node.props);
+        this.store.syncNodePresentation(nodeId);
         const afterSnapshot = this.captureNodeSnapshot(node);
         const parentId = node.parentId;
         this.refreshContainerChain(parentId);
-        this.pushHistory({
-            undo: () => {
-                this.applyNodeSnapshot(beforeSnapshot);
-                this.refreshContainerChain(parentId);
-                this.syncPropertiesPanel();
-            },
-            redo: () => {
-                this.applyNodeSnapshot(afterSnapshot);
-                this.refreshContainerChain(parentId);
-                this.syncPropertiesPanel();
-            },
-        });
+        this.pushCommand(new UpdatePropCommand({
+            beforeSnapshot,
+            afterSnapshot,
+            selectionBefore: this.captureSelectionSnapshot(),
+            parentId,
+        }));
         this.syncPropertiesPanel();
         return true;
     }
     undo() {
-        const changed = this.history.undo();
+        const changed = this.history.undo(this.commandContext);
         this.syncToolbarState();
         return changed;
     }
     redo() {
-        const changed = this.history.redo();
+        const changed = this.history.redo(this.commandContext);
         this.syncToolbarState();
         return changed;
     }
-    pushHistory(entry) {
-        this.history.push(entry);
+    pushCommand(command) {
+        this.history.push(command);
         this.syncToolbarState();
+    }
+    get commandContext() {
+        return {
+            store: this.store,
+            edgeStore: this.edgeStore,
+            theme: this.theme,
+            applyNodeSnapshot: (s) => this.applyNodeSnapshot(s),
+            restoreNodeSnapshots: (s) => this.restoreNodeSnapshots(s),
+            restoreEdgeSnapshots: (s) => this.restoreEdgeSnapshots(s),
+            removeNodeAndIncidentEdges: (id) => this.removeNodeAndIncidentEdges(id),
+            removeNodesAndEdges: (nIds, eIds) => this.removeNodesAndEdges(nIds, eIds),
+            clearSelectionState: () => this.clearSelectionState(),
+            setNodeSelected: (id, sel) => this.setNodeSelected(id, sel),
+            restoreSelectionSnapshot: (s) => this.restoreSelectionSnapshot(s),
+            refreshContainerChain: (id) => this.refreshContainerChain(id),
+            syncPropertiesPanel: () => this.syncPropertiesPanel(),
+            syncToolbarState: () => this.syncToolbarState(),
+            syncHandleStates: (id) => this.syncHandleStates(id),
+            applyCompositionReferenceForEdge: (e) => this.applyCompositionReferenceForEdge(e),
+            clearCompositionReferenceForEdge: (e) => this.clearCompositionReferenceForEdge(e),
+        };
     }
     captureSelectionSnapshot() {
         return {
@@ -554,26 +520,43 @@ export class WorldActionDriver {
             this.refreshContainerChain(oldParentId);
         }
     }
-    removeNodeAndIncidentEdges(nodeId) {
-        const removedIds = this.store.collectRemovedIds(nodeId);
-        const removedIdSet = new Set(removedIds);
-        const removedEdges = this.edgeStore.removeEdgesForNodes(removedIds);
+    removeNodesAndEdges(nodeIds, edgeIds) {
+        const removedNodeIds = new Set();
+        for (const nodeId of nodeIds) {
+            for (const removedId of this.store.collectRemovedIds(nodeId)) {
+                removedNodeIds.add(removedId);
+            }
+        }
+        const removedIdSet = new Set(removedNodeIds);
+        const removedEdges = this.edgeStore.removeEdgesForNodes(removedNodeIds);
         const affectedNodeIds = new Set();
+        const selectedEdgeIdSet = new Set(edgeIds);
+        for (const edgeId of selectedEdgeIdSet) {
+            const removed = this.edgeStore.remove(edgeId);
+            if (removed) {
+                removedEdges.push(removed);
+            }
+        }
         for (const edge of removedEdges) {
             if (!removedIdSet.has(edge.sourceNodeId)) {
                 this.clearCompositionReferenceForEdge(edge);
+            }
+            if (!removedIdSet.has(edge.sourceNodeId)) {
                 affectedNodeIds.add(edge.sourceNodeId);
             }
             if (!removedIdSet.has(edge.targetNodeId)) {
                 affectedNodeIds.add(edge.targetNodeId);
             }
         }
-        for (const removedId of removedIds) {
-            this.store.remove(removedId);
+        for (const nodeId of removedNodeIds) {
+            this.store.remove(nodeId);
         }
         for (const affectedNodeId of affectedNodeIds) {
             this.syncHandleStates(affectedNodeId);
         }
+    }
+    removeNodeAndIncidentEdges(nodeId) {
+        this.removeNodesAndEdges([nodeId], []);
     }
     syncHandleStates(nodeId) {
         this.store.updateHandleConnectionState(nodeId, "left", this.edgeStore.hasConnection(nodeId, "left"));
@@ -610,21 +593,6 @@ export class WorldActionDriver {
             return true;
         }
         return false;
-    }
-    estimateNodePropHeight(props) {
-        let lineCount = 0;
-        lineCount += props.booleans.ungrouped?.length ?? 0;
-        lineCount += props.texts.ungrouped?.length ?? 0;
-        lineCount += props.enums.ungrouped?.length ?? 0;
-        for (const group of props.groups) {
-            const itemCount = (props.booleans[group]?.length ?? 0) +
-                (props.texts[group]?.length ?? 0) +
-                (props.enums[group]?.length ?? 0);
-            if (itemCount > 0) {
-                lineCount += 1 + itemCount;
-            }
-        }
-        return 30 + 16 + lineCount * 20 + 16;
     }
 }
 //# sourceMappingURL=world-action-driver.js.map

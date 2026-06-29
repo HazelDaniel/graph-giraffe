@@ -1,32 +1,22 @@
-#MAJOR
-- a computation stack for undo-redo
-- multi-node selection
-- a composition node (can only nest inside of a group node, and can only contain ordinary nodes)
-- other primitives like:
-		* node handles []
-		* labels (types: group and node) []
-		* edge heads []
-- handle-to-handle animation of edge labels
-- Group dragging of multiple selected nodes. (Right now multi-select is mainly for selection and bulk actions, not moving the whole selection as a unit)
-- resizing of composite-child nodes to show just the head
-- collapsibility of nodes to show just the head when placed in a group, and expandability when moved out
-- introduce another primitive called composition-reference []
-
-- texture picker (with preview list) for both group nodes and nodes
-		* edges (types: cubic, line, line-curve, orthogonal) []
-		* node heads
-			(they represent the header portion of the nodes,
-			they come in different variants based on the buttons they allow (max 3),
-			and they will have different textures from the node body, node heads only apply to ordinary nodes and composite-child nodes - composite child nodes will use whatever node heads the node chooses)
-		* node buttons (types: functional, inert) (to be displayed on the node header,comes with chosen texture, max 3)
-- node prop overlay []
-
 # OPEN FEATURES
-- group node spotlight (lerp camera movement to show current node. keeps track of a new camera system - in collaboration contexts)
-- group node locking
-- minimap/radar view
-- simulation
-- edge labels
+ 1. minimap/radar view
+
+ 2. simulation
+
+ 3. edge labels
+
+ 4. Command-based history system — replaces closures with serializable command objects + snapshots. This is foundational: it unblocks simulation (you
+		can replay command streams), persistence (serialize state), and multiplayer (sync commands). There's already a skill for this.
+
+ 5. Node type plugin/registry system — open up NodeType to a registry where each type declares its own: layout rules, handle config, rendering
+		delegate, prop schema, reparenting constraints, default textures. This is the single most important architectural change for adding
+		sliders/dropdowns/etc without touching 6 files each time.
+
+ 6. Animation/tweening engine — a lightweight tween system (not a full physics engine) that can drive: edge label position along edge paths, node
+		position transitions, edge pulse/glow effects, camera smooth pan. This feeds into both the "handle-to-handle animation" feature and simulation.
+
+ 7. Node buttons — the feature already tracked in features.txt. These are interactive click targets on node headers (max 3), which will be the pattern
+		 for future interactive node primitives like sliders.
 
 - EVENT ACTIONS (undoable/redoable):
 	* connection

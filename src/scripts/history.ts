@@ -1,3 +1,9 @@
+import { Command, CommandContext } from "./commands.js";
+
+/**
+ * @deprecated Use {@link Command} instead.
+ * Kept for backward compatibility during migration.
+ */
 export interface HistoryEntry {
   undo(): void;
   redo(): void;
@@ -8,22 +14,22 @@ export interface HistoryStackOptions {
 }
 
 /**
- * Minimal undo/redo stack for editor actions.
+ * Undo/redo stack for editor actions.
  *
- * The caller is responsible for applying the action before pushing it onto
- * the stack. Undo and redo simply replay the captured closures.
+ * Accepts {@link Command} objects (serializable, context-driven) as well as
+ * legacy {@link HistoryEntry} closures for backward compatibility.
  */
 export class HistoryStack {
-  private undoStack: HistoryEntry[] = [];
-  private redoStack: HistoryEntry[] = [];
+  private undoStack: Command[] = [];
+  private redoStack: Command[] = [];
   private readonly maxHistory: number;
 
   constructor(options: HistoryStackOptions = {}) {
     this.maxHistory = Math.max(1, options.maxHistory ?? 100);
   }
 
-  push(entry: HistoryEntry): void {
-    this.undoStack.push(entry);
+  push(command: Command): void {
+    this.undoStack.push(command);
     if (this.undoStack.length > this.maxHistory) {
       this.undoStack.splice(0, this.undoStack.length - this.maxHistory);
     }
@@ -46,21 +52,21 @@ export class HistoryStack {
     return this.redoStack.length > 0;
   }
 
-  undo(): boolean {
-    const entry = this.undoStack.pop();
-    if (!entry) return false;
+  undo(ctx: CommandContext): boolean {
+    const command = this.undoStack.pop();
+    if (!command) return false;
 
-    entry.undo();
-    this.redoStack.push(entry);
+    command.undo(ctx);
+    this.redoStack.push(command);
     return true;
   }
 
-  redo(): boolean {
-    const entry = this.redoStack.pop();
-    if (!entry) return false;
+  redo(ctx: CommandContext): boolean {
+    const command = this.redoStack.pop();
+    if (!command) return false;
 
-    entry.redo();
-    this.undoStack.push(entry);
+    command.redo(ctx);
+    this.undoStack.push(command);
     return true;
   }
 }

@@ -103,3 +103,17 @@ export function captureNodeHistorySnapshot(node: NodeData): NodeHistorySnapshot 
 export function captureEdgeHistorySnapshot(edge: EdgeData): EdgeHistorySnapshot {
   return { ...edge };
 }
+
+export type SelectionKind = "node" | "edge" | null;
+
+export interface SelectionSnapshot {
+  kind: SelectionKind;
+  nodeIds: number[];
+  edgeIds: number[];
+}
+
+export interface NodePlacementSnapshot {
+  localX: number;
+  localY: number;
+  parentId: number | null;
+}

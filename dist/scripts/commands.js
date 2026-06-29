@@ -1,0 +1,328 @@
+// ---------------------------------------------------------------------------
+// Command implementations
+// ---------------------------------------------------------------------------
+/**
+ * Node property mutation (checkbox, text field, enum change in sidebar).
+ */
+export class UpdatePropCommand {
+    type = "update-prop";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.applyNodeSnapshot(this.payload.beforeSnapshot);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.syncPropertiesPanel();
+        ctx.refreshContainerChain(this.payload.parentId);
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.applyNodeSnapshot(this.payload.afterSnapshot);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.syncPropertiesPanel();
+        ctx.refreshContainerChain(this.payload.parentId);
+        ctx.syncToolbarState();
+    }
+}
+/**
+ * Label text edit (double-click node → type → commit).
+ */
+export class UpdateLabelCommand {
+    type = "update-label";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.store.updateLabel(this.payload.nodeId, this.payload.previousLabel, ctx.theme);
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.store.updateLabel(this.payload.nodeId, this.payload.nextLabel, ctx.theme);
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+}
+/**
+ * Single node tree deletion (node + all descendants + incident edges).
+ */
+export class DeleteNodeCommand {
+    type = "delete-node";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.restoreNodeSnapshots(this.payload.nodeSnapshots);
+        ctx.restoreEdgeSnapshots(this.payload.edgeSnapshots);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.refreshContainerChain(this.payload.parentId);
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.removeNodeAndIncidentEdges(this.payload.nodeId);
+        ctx.clearSelectionState();
+        ctx.syncPropertiesPanel();
+        if (this.payload.parentId !== null) {
+            ctx.refreshContainerChain(this.payload.parentId);
+        }
+        ctx.syncToolbarState();
+    }
+}
+/**
+ * Single edge deletion.
+ */
+export class DeleteEdgeCommand {
+    type = "delete-edge";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.restoreEdgeSnapshots([this.payload.edgeSnapshot]);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        const removed = ctx.edgeStore.remove(this.payload.edgeSnapshot.id);
+        if (removed) {
+            ctx.clearCompositionReferenceForEdge(removed);
+            ctx.syncHandleStates(removed.sourceNodeId);
+            ctx.syncHandleStates(removed.targetNodeId);
+        }
+        ctx.clearSelectionState();
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+}
+/**
+ * Multi-selection deletion (multiple nodes and/or edges at once).
+ */
+export class DeleteSelectionCommand {
+    type = "delete-selection";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.restoreNodeSnapshots(this.payload.nodeSnapshots);
+        ctx.restoreEdgeSnapshots(this.payload.edgeSnapshots);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        for (const parentId of this.payload.parentIds) {
+            ctx.refreshContainerChain(parentId);
+        }
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.removeNodesAndEdges(this.payload.removedNodeIds, this.payload.removedEdgeIds);
+        ctx.clearSelectionState();
+        ctx.syncPropertiesPanel();
+        for (const parentId of this.payload.parentIds) {
+            ctx.refreshContainerChain(parentId);
+        }
+        ctx.syncToolbarState();
+    }
+}
+/**
+ * Node creation (regular node, group, or composition).
+ */
+export class CreateNodeCommand {
+    type = "create-node";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.removeNodeAndIncidentEdges(this.payload.snapshot.id);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.refreshContainerChain(this.payload.parentId);
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.applyNodeSnapshot(this.payload.snapshot);
+        ctx.refreshContainerChain(this.payload.parentId);
+        if (this.payload.selectOnRedo) {
+            ctx.clearSelectionState();
+            ctx.setNodeSelected(this.payload.snapshot.id, true);
+        }
+        else {
+            ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        }
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+}
+/**
+ * Edge creation (handle-to-handle connection drag).
+ */
+export class ConnectCommand {
+    type = "connect";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        const removed = ctx.edgeStore.remove(this.payload.edgeSnapshot.id);
+        if (removed) {
+            ctx.clearCompositionReferenceForEdge(removed);
+            ctx.syncHandleStates(removed.sourceNodeId);
+            ctx.syncHandleStates(removed.targetNodeId);
+        }
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.restoreEdgeSnapshots([this.payload.edgeSnapshot]);
+        ctx.syncToolbarState();
+    }
+}
+/**
+ * Group lock/unlock toggle.
+ */
+export class ToggleLockCommand {
+    type = "toggle-lock";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.applyNodeSnapshot(this.payload.beforeSnapshot);
+    }
+    redo(ctx) {
+        ctx.applyNodeSnapshot(this.payload.afterSnapshot);
+    }
+}
+/**
+ * Multi-selection drop (drag a group of selected nodes, potentially onto
+ * a container — may create clones and remove reference edges).
+ */
+export class MoveSelectionCommand {
+    type = "move-selection";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        for (const snapshot of this.payload.cloneSnapshots) {
+            ctx.removeNodeAndIncidentEdges(snapshot.id);
+        }
+        ctx.restoreNodeSnapshots(this.payload.beforeSnapshots);
+        ctx.restoreEdgeSnapshots(this.payload.removedReferenceEdgeSnapshots);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        for (const parentId of this.payload.affectedParentIds) {
+            ctx.refreshContainerChain(parentId);
+        }
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.restoreNodeSnapshots(this.payload.afterSnapshots);
+        for (const snapshot of this.payload.removedReferenceEdgeSnapshots) {
+            const removed = ctx.edgeStore.remove(snapshot.id);
+            if (removed) {
+                ctx.clearCompositionReferenceForEdge(removed);
+                ctx.syncHandleStates(removed.sourceNodeId);
+                ctx.syncHandleStates(removed.targetNodeId);
+            }
+        }
+        for (const snapshot of this.payload.cloneSnapshots) {
+            ctx.restoreNodeSnapshots([snapshot]);
+        }
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        for (const parentId of this.payload.affectedParentIds) {
+            ctx.refreshContainerChain(parentId);
+        }
+        ctx.syncToolbarState();
+    }
+}
+/**
+ * Node duplication into a composition (drag node → drop onto composition).
+ * The source node snaps back; a clone is created inside the composition.
+ */
+export class DuplicateIntoCompositionCommand {
+    type = "duplicate-into-composition";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.removeNodeAndIncidentEdges(this.payload.cloneSnapshot.id);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.refreshContainerChain(this.payload.compositionId);
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.store.restoreNodePlacement(this.payload.sourceId, this.payload.sourcePlacement.localX, this.payload.sourcePlacement.localY, this.payload.sourcePlacement.parentId);
+        ctx.applyNodeSnapshot(this.payload.cloneSnapshot);
+        ctx.clearSelectionState();
+        ctx.setNodeSelected(this.payload.cloneSnapshot.id, true);
+        ctx.refreshContainerChain(this.payload.compositionId);
+        ctx.syncToolbarState();
+    }
+}
+/**
+ * Single-node reparent (drag a node into / out of a group or composition).
+ * Optionally removes composition reference edges when un-parenting.
+ */
+export class ReparentCommand {
+    type = "reparent";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.store.restoreNodePlacement(this.payload.nodeId, this.payload.beforePlacement.localX, this.payload.beforePlacement.localY, this.payload.beforePlacement.parentId);
+        if (this.payload.removedReferenceEdgeSnapshots.length > 0) {
+            ctx.restoreEdgeSnapshots(this.payload.removedReferenceEdgeSnapshots);
+        }
+        ctx.refreshContainerChain(this.payload.afterPlacement.parentId);
+        ctx.refreshContainerChain(this.payload.beforePlacement.parentId);
+        for (const id of this.payload.extraRefreshIds) {
+            ctx.refreshContainerChain(id);
+        }
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.store.restoreNodePlacement(this.payload.nodeId, this.payload.afterPlacement.localX, this.payload.afterPlacement.localY, this.payload.afterPlacement.parentId);
+        for (const edgeSnapshot of this.payload.removedReferenceEdgeSnapshots) {
+            const removed = ctx.edgeStore.remove(edgeSnapshot.id);
+            if (removed) {
+                ctx.clearCompositionReferenceForEdge(removed);
+                ctx.syncHandleStates(removed.sourceNodeId);
+                ctx.syncHandleStates(removed.targetNodeId);
+            }
+        }
+        ctx.refreshContainerChain(this.payload.beforePlacement.parentId);
+        ctx.refreshContainerChain(this.payload.afterPlacement.parentId);
+        for (const id of this.payload.extraRefreshIds) {
+            ctx.refreshContainerChain(id);
+        }
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.syncToolbarState();
+    }
+}
+/**
+ * Simple world-space position change (group drag, no reparenting).
+ */
+export class MoveNodeCommand {
+    type = "move-node";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.store.restoreNodePlacement(this.payload.nodeId, this.payload.beforePlacement.localX, this.payload.beforePlacement.localY, this.payload.beforePlacement.parentId);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.store.restoreNodePlacement(this.payload.nodeId, this.payload.afterPlacement.localX, this.payload.afterPlacement.localY, this.payload.afterPlacement.parentId);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.syncToolbarState();
+    }
+}
+//# sourceMappingURL=commands.js.map

@@ -1,8 +1,8 @@
 /**
- * Minimal undo/redo stack for editor actions.
+ * Undo/redo stack for editor actions.
  *
- * The caller is responsible for applying the action before pushing it onto
- * the stack. Undo and redo simply replay the captured closures.
+ * Accepts {@link Command} objects (serializable, context-driven) as well as
+ * legacy {@link HistoryEntry} closures for backward compatibility.
  */
 export class HistoryStack {
     undoStack = [];
@@ -11,8 +11,8 @@ export class HistoryStack {
     constructor(options = {}) {
         this.maxHistory = Math.max(1, options.maxHistory ?? 100);
     }
-    push(entry) {
-        this.undoStack.push(entry);
+    push(command) {
+        this.undoStack.push(command);
         if (this.undoStack.length > this.maxHistory) {
             this.undoStack.splice(0, this.undoStack.length - this.maxHistory);
         }
@@ -30,20 +30,20 @@ export class HistoryStack {
     canRedo() {
         return this.redoStack.length > 0;
     }
-    undo() {
-        const entry = this.undoStack.pop();
-        if (!entry)
+    undo(ctx) {
+        const command = this.undoStack.pop();
+        if (!command)
             return false;
-        entry.undo();
-        this.redoStack.push(entry);
+        command.undo(ctx);
+        this.redoStack.push(command);
         return true;
     }
-    redo() {
-        const entry = this.redoStack.pop();
-        if (!entry)
+    redo(ctx) {
+        const command = this.redoStack.pop();
+        if (!command)
             return false;
-        entry.redo();
-        this.undoStack.push(entry);
+        command.redo(ctx);
+        this.undoStack.push(command);
         return true;
     }
 }
