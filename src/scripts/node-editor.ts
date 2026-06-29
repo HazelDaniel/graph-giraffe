@@ -256,7 +256,7 @@ export class NodeEditor {
     const labelCanvas = document.getElementById("2d-label-canvas") as HTMLCanvasElement;
     
     const geometry = new GeometryNode(gl, "rounded-square");
-    const bgGeometry = new BGGeometryNode(gl, "grid", backgroundCanvas);
+    const bgGeometry = new BGGeometryNode(gl, "dotted", backgroundCanvas);
 
     this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations,
       geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas,

@@ -492,7 +492,7 @@ export class Renderer {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.bgGeometry.vertexBuffer);
         gl.vertexAttribPointer(this.bgLocations.a_Position, 2, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this.bgLocations.a_Position);
-        gl.uniform4f(this.bgLocations.u_Color, 0.1, 0.1, 0.1, 0.02); // dull gray pattern
+        gl.uniform4f(this.bgLocations.u_Color, 0.05, 0.05, 0.05, 0.12); // dull gray pattern
         gl.uniform1i(this.bgLocations.u_UsePointMask, this.bgGeometry.primitiveType === gl.POINTS ? 1 : 0);
         gl.drawArrays(this.bgGeometry.primitiveType, 0, this.bgGeometry.length);
     }
@@ -589,7 +589,7 @@ export class Renderer {
                 node.nodeType === "composition" ||
                 node.nodeType === "group") {
                 const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, Math.min(r + 0.5, 1.0), Math.min(0.1, g), Math.min(0.1, b), 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "rounded-square");
+                this.iconBackgroundRenderer.addQuad(worldX + xPos + 0.3, worldY + titleY, 1 - r, 1 - g, 1 - b, 0.75, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "rounded-square");
                 this.iconRenderer.addText("", worldX + xPos, worldY + titleY, 16, 200 / 255, 1 / 255, 1 / 255, 1.0, "center", "middle");
             }
             // Edit Icon (node only)

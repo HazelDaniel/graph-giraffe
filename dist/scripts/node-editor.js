@@ -131,7 +131,7 @@ export class NodeEditor {
         const backgroundCanvas = document.getElementById(this.backgroundCanvasId);
         const labelCanvas = document.getElementById("2d-label-canvas");
         const geometry = new GeometryNode(gl, "rounded-square");
-        const bgGeometry = new BGGeometryNode(gl, "grid", backgroundCanvas);
+        const bgGeometry = new BGGeometryNode(gl, "dotted", backgroundCanvas);
         this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, () => this.selectedNodeIds, msdfProgram, iconBGProgam, this.msdfAtlas, this.iconAtlas);
         const container = document.getElementById("sidebar");
         const historyPane = document.getElementById("undo-redo-wrapper");

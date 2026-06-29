@@ -714,7 +714,7 @@ export class Renderer {
     );
     gl.enableVertexAttribArray(this.bgLocations.a_Position);
 
-    gl.uniform4f(this.bgLocations.u_Color, 0.1, 0.1, 0.1, 0.02); // dull gray pattern
+    gl.uniform4f(this.bgLocations.u_Color, 0.05, 0.05, 0.05, 0.12); // dull gray pattern
     gl.uniform1i(
       this.bgLocations.u_UsePointMask,
       this.bgGeometry.primitiveType === gl.POINTS ? 1 : 0
@@ -898,12 +898,12 @@ export class Renderer {
       ) {
         const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
         this.iconBackgroundRenderer.addQuad(
-          worldX + xPos,
+          worldX + xPos + 0.3,
           worldY + titleY,
-          Math.min(r + 0.5, 1.0),
-          Math.min(0.1, g),
-          Math.min(0.1, b),
-          0.05,
+          1 - r,
+          1 - g,
+          1 - b,
+          0.75,
           dumbGlyphWidth,
           dumbGlyphHeight,
           this.iconAtlas.common?.base || 0,
