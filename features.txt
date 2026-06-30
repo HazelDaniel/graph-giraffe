@@ -18,6 +18,9 @@
  7. Node buttons — the feature already tracked in features.txt. These are interactive click targets on node headers (max 3), which will be the pattern
 		 for future interactive node primitives like sliders.
 
+ 8. subgraphs — a re-usable family of primitives that can be collapsed/viewed as ordinary nodes
+ 9. type propagation — input and output types are inferred on connection to determine compatible types, validations rules are then inferred by the editor before runtime
+
 - EVENT ACTIONS (undoable/redoable):
 	* connection
 	* deletion (node, edge, groupnode, composition)
@@ -26,6 +29,7 @@
 	* node prop change
 	* label update
 	* re-parenting
+	* exporting selections to sub-graphs
 	* group node locking/unlocking
     * [others not yet mapped out]
 

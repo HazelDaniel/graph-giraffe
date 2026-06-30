@@ -730,16 +730,17 @@ export class NodeStore {
 
   private createDefaultProps(): NodePropType {
     return {
-      groups: ["Appearance", "Data"],
+      groups: ["Appearance", "Data", "Meta"],
       booleans: {
-        "ungrouped": [{ label: "Visible", value: true, uiPrimitive: "checkbox" }],
+        "ungrouped": [{ label: "Visible", value: true, uiPrimitive: "checkbox" }, {label: "Primary", value: false, uiPrimitive: "checkbox"},],
         "Appearance": [{ label: "Shadow", value: true, uiPrimitive: "checkbox" }]
       },
       texts: {
-        "Data": [{ label: "Value", value: "0", uiPrimitive: "range" }]
+        "Data": [{ label: "Value", value: "0", uiPrimitive: "range" }, {label: "default", value: "0", uiPrimitive: "range"}],
       },
       enums: {
-        "Appearance": [{ label: "Size", value: "Medium", uiPrimitive: "select", options: ["Medium", "Large", "ExtraLarge"] }]
+        "Appearance": [{ label: "Size", value: "Medium", uiPrimitive: "select", options: ["Medium", "Large", "ExtraLarge"] }],
+        "Meta": [{ label: "Depth", value: "Deep", uiPrimitive: "select", options: ["Shallow", "Steep", "Deep"] }],
       }
     };
   }
