@@ -24,6 +24,7 @@ export interface NodeHistorySnapshot {
   isSelected: boolean;
   isDropTarget: boolean;
   isLocked: boolean;
+  isCollapsed: boolean;
   parentId: number | null;
   childIds: number[];
   compositionRefId: number | null;
@@ -89,6 +90,7 @@ export function captureNodeHistorySnapshot(node: NodeData): NodeHistorySnapshot 
     isSelected: node.isSelected,
     isDropTarget: Boolean(node.isDropTarget),
     isLocked: Boolean(node.isLocked),
+    isCollapsed: Boolean(node.isCollapsed),
     parentId: node.parentId,
     childIds: [...node.childIds],
     compositionRefId: node.compositionRefId,

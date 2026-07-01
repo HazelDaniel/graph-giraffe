@@ -11,8 +11,8 @@ export interface ThemeStyle {
 export type GeometryMeshType = "rounded-square";
 export type BGGeometryMeshType = "dotted" | "grid";
 export type GeometryType = "circle" | "square" | "rounded-square";
-export type NodeType = "node" | "group" | "composition" | "composition-child";
-export type ContainerNodeType = "group" | "composition";
+export type NodeType = "node" | "group" | "composition" | "composition-child" | "subgraph";
+export type ContainerNodeType = "group" | "composition" | "subgraph";
 export type LeafNodeType = "node" | "composition-child";
 export type CandidateNodeType = Exclude<NodeType, "composition-child">;
 export type ConnectionMode = "group" | "node";
@@ -103,6 +103,9 @@ export const NODE_LAYOUT = {
   spotlightBtnClickRadius: 12,
   lockBtnTopY: 20,     // matches group header titleY
   lockBtnClickRadius: 12,
+  subgraphBtnPaddingRight: 18,
+  subgraphBtnSpacing: 24,
+  subgraphBtnClickRadius: 12,
 };
 
 export const HANDLE_LAYOUT = {
@@ -125,12 +128,14 @@ export const NODE_SIZE = {
   group: { width: 220, height: 200 },
   composition: { width: 140, height: 200 },
   compositionChild: { width: 160, height: NODE_LAYOUT.headerHeight },
+  subgraph: { width: 220, height: 160 },
+  subgraphCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
 } as const;
 
 export function isContainerNodeType(
   nodeType: NodeType
 ): nodeType is ContainerNodeType {
-  return nodeType === "group" || nodeType === "composition";
+  return nodeType === "group" || nodeType === "composition" || nodeType === "subgraph";
 }
 
 export function isLeafNodeType(nodeType: NodeType): nodeType is LeafNodeType {
@@ -145,7 +150,7 @@ export function isCandidateNodeType(
     return nodeType === "group";
   }
 
-  return nodeType === "node" || nodeType === "composition";
+  return nodeType === "node" || nodeType === "composition" || nodeType === "subgraph";
 }
 
 export function getDefaultNodeSize(
@@ -156,6 +161,8 @@ export function getDefaultNodeSize(
     case "group":
     case "composition":
       return NODE_SIZE.group;
+    case "subgraph":
+      return isCollapsed ? NODE_SIZE.subgraphCollapsed : NODE_SIZE.subgraph;
     case "composition-child":
       return NODE_SIZE.compositionChild;
     case "node":
@@ -179,6 +186,10 @@ export interface NodeShaderLocations {
   u_Dimensions: WebGLUniformLocation;
   u_TextureSize: WebGLUniformLocation;
   u_SliceMargins: WebGLUniformLocation;
+  u_RenderMode: WebGLUniformLocation;
+  u_BorderColor: WebGLUniformLocation;
+  u_BorderWidth: WebGLUniformLocation;
+  u_Radius: WebGLUniformLocation;
 }
 
 export interface MSDFShaderLocations {
@@ -242,6 +253,8 @@ export interface NodeData {
   isDropTarget?: boolean;
   /** When true on a group node, neither the group nor its children can be dragged. */
   isLocked?: boolean;
+  /** When true on a subgraph, descendants are hidden and the subgraph draws compactly. */
+  isCollapsed?: boolean;
   /** Position relative to parent node (or world origin if parentId is null). */
   localX: number;
   localY: number;

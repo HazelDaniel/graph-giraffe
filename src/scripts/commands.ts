@@ -53,6 +53,7 @@ export interface CommandContext {
     nodeIds: Iterable<number>,
     edgeIds: Iterable<number>
   ): void;
+  removeContainerOnly(nodeId: number): void;
 
   // Selection management
   clearSelectionState(): void;
@@ -346,6 +347,114 @@ export class ToggleLockCommand implements Command {
 
   redo(ctx: CommandContext): void {
     ctx.applyNodeSnapshot(this.payload.afterSnapshot);
+  }
+}
+
+export class ToggleSubgraphCollapseCommand implements Command {
+  readonly type = "toggle-subgraph-collapse";
+  readonly payload: {
+    beforeSnapshot: NodeHistorySnapshot;
+    afterSnapshot: NodeHistorySnapshot;
+  };
+
+  constructor(payload: ToggleSubgraphCollapseCommand["payload"]) {
+    this.payload = payload;
+  }
+
+  undo(ctx: CommandContext): void {
+    ctx.applyNodeSnapshot(this.payload.beforeSnapshot);
+    ctx.refreshContainerChain(this.payload.beforeSnapshot.id);
+    ctx.syncToolbarState();
+  }
+
+  redo(ctx: CommandContext): void {
+    ctx.applyNodeSnapshot(this.payload.afterSnapshot);
+    ctx.refreshContainerChain(this.payload.afterSnapshot.id);
+    ctx.syncToolbarState();
+  }
+}
+
+export class CreateSubgraphCommand implements Command {
+  readonly type = "create-subgraph";
+  readonly payload: {
+    subgraphSnapshot: NodeHistorySnapshot;
+    childBeforeSnapshots: NodeHistorySnapshot[];
+    childAfterSnapshots: NodeHistorySnapshot[];
+    removedEdgeSnapshots: EdgeHistorySnapshot[];
+    selectionBefore: SelectionSnapshot;
+  };
+
+  constructor(payload: CreateSubgraphCommand["payload"]) {
+    this.payload = payload;
+  }
+
+  undo(ctx: CommandContext): void {
+    ctx.removeContainerOnly(this.payload.subgraphSnapshot.id);
+    ctx.restoreNodeSnapshots(this.payload.childBeforeSnapshots);
+    ctx.restoreEdgeSnapshots(this.payload.removedEdgeSnapshots);
+    ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+    ctx.refreshContainerChain(this.payload.subgraphSnapshot.parentId);
+    ctx.syncPropertiesPanel();
+    ctx.syncToolbarState();
+  }
+
+  redo(ctx: CommandContext): void {
+    ctx.applyNodeSnapshot(this.payload.subgraphSnapshot);
+    ctx.restoreNodeSnapshots(this.payload.childAfterSnapshots);
+    for (const edge of this.payload.removedEdgeSnapshots) {
+      const removed = ctx.edgeStore.remove(edge.id);
+      if (removed) {
+        ctx.syncHandleStates(removed.sourceNodeId);
+        ctx.syncHandleStates(removed.targetNodeId);
+      }
+    }
+    ctx.clearSelectionState();
+    ctx.setNodeSelected(this.payload.subgraphSnapshot.id, true);
+    ctx.refreshContainerChain(this.payload.subgraphSnapshot.id);
+    ctx.syncPropertiesPanel();
+    ctx.syncToolbarState();
+  }
+}
+
+export class UngraphCommand implements Command {
+  readonly type = "ungraph";
+  readonly payload: {
+    subgraphSnapshot: NodeHistorySnapshot;
+    childBeforeSnapshots: NodeHistorySnapshot[];
+    childAfterSnapshots: NodeHistorySnapshot[];
+    removedEdgeSnapshots: EdgeHistorySnapshot[];
+    selectionBefore: SelectionSnapshot;
+  };
+
+  constructor(payload: UngraphCommand["payload"]) {
+    this.payload = payload;
+  }
+
+  undo(ctx: CommandContext): void {
+    ctx.applyNodeSnapshot(this.payload.subgraphSnapshot);
+    ctx.restoreNodeSnapshots(this.payload.childBeforeSnapshots);
+    ctx.restoreEdgeSnapshots(this.payload.removedEdgeSnapshots);
+    ctx.clearSelectionState();
+    ctx.setNodeSelected(this.payload.subgraphSnapshot.id, true);
+    ctx.refreshContainerChain(this.payload.subgraphSnapshot.id);
+    ctx.syncPropertiesPanel();
+    ctx.syncToolbarState();
+  }
+
+  redo(ctx: CommandContext): void {
+    ctx.removeContainerOnly(this.payload.subgraphSnapshot.id);
+    for (const edge of this.payload.removedEdgeSnapshots) {
+      const removed = ctx.edgeStore.remove(edge.id);
+      if (removed) {
+        ctx.syncHandleStates(removed.sourceNodeId);
+        ctx.syncHandleStates(removed.targetNodeId);
+      }
+    }
+    ctx.restoreNodeSnapshots(this.payload.childAfterSnapshots);
+    ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+    ctx.refreshContainerChain(this.payload.subgraphSnapshot.parentId);
+    ctx.syncPropertiesPanel();
+    ctx.syncToolbarState();
   }
 }
 

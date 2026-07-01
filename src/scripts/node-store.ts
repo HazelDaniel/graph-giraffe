@@ -113,6 +113,7 @@ export class NodeStore {
     // Record per-type creation order for tiered z-ordering
     switch (nodeType) {
       case 'group':
+      case 'subgraph':
         this._groupOrder.set(id, this._nextGroupOrder++);
         break;
       case 'composition':
@@ -221,6 +222,7 @@ export class NodeStore {
     this.nodes.delete(id);
     switch (node.nodeType) {
       case 'group':
+      case 'subgraph':
         this._groupOrder.delete(id);
         break;
       case 'composition':
@@ -231,6 +233,42 @@ export class NodeStore {
         break;
     }
     this.a11yTree.removeNode(id);
+  }
+
+  /**
+   * Removes a container while preserving its children in their current visual
+   * positions by promoting them to the removed container's parent.
+   */
+  removeContainerOnly(id: number): boolean {
+    const node = this.get(id);
+    if (!node || !isContainerNodeType(node.nodeType)) return false;
+
+    const parentId = node.parentId;
+    const allNodes = this.allNodesMap;
+    for (const childId of [...node.childIds]) {
+      reparent(childId, parentId, allNodes);
+      const child = allNodes.get(childId);
+      if (child) {
+        this.syncNodePresentation(childId);
+        this.syncToMap(child);
+      }
+    }
+
+    if (parentId !== null) {
+      const parent = this.get(parentId);
+      if (parent) {
+        parent.childIds = parent.childIds.filter((childId) => childId !== id);
+      }
+    }
+
+    node.childIds = [];
+    this.groups.delete(id);
+    this.nodes.delete(id);
+    this._groupOrder.delete(id);
+    this._compositionOrder.delete(id);
+    this._leafOrder.delete(id);
+    this.a11yTree.removeNode(id);
+    return true;
   }
 
   /**
@@ -470,21 +508,44 @@ export class NodeStore {
   visibleNodes(): NodeData[] {
     const result: NodeData[] = [];
     this.groups.forEach((node) => {
-      if (node.visible && node.nodeType === 'group') result.push(node);
+      if (node.visible && node.nodeType === 'group' && this.isEffectivelyVisible(node.id)) result.push(node);
     });
     this.groups.forEach((node) => {
-      if (node.visible && node.nodeType === 'composition') result.push(node);
+      if (node.visible && node.nodeType === 'subgraph' && this.isEffectivelyVisible(node.id)) result.push(node);
+    });
+    this.groups.forEach((node) => {
+      if (node.visible && node.nodeType === 'composition' && this.isEffectivelyVisible(node.id)) result.push(node);
     });
     this.nodes.forEach((node) => {
-      if (node.visible) result.push(node);
+      if (node.visible && this.isEffectivelyVisible(node.id)) result.push(node);
     });
     return result;
+  }
+
+  isEffectivelyVisible(nodeId: number): boolean {
+    const node = this.get(nodeId);
+    if (!node || !node.visible) return false;
+
+    let currentId = node.parentId;
+    while (currentId !== null) {
+      const parent = this.get(currentId);
+      if (!parent || !parent.visible) return false;
+      if (parent.nodeType === 'subgraph' && parent.isCollapsed) return false;
+      currentId = parent.parentId;
+    }
+
+    return true;
   }
 
   /** Re-calculates bounds of a container node based on its children. */
   updateContainerBounds(containerId: number, theme: ThemeName): void {
     const container = this.groups.get(containerId);
     if (!container || !isContainerNodeType(container.nodeType)) return;
+
+    if (container.nodeType === 'subgraph') {
+      this.updateSubgraphBounds(container);
+      return;
+    }
 
     const defaultSize = getDefaultNodeSize(container.nodeType);
     if (container.childIds.length === 0) {
@@ -629,6 +690,16 @@ export class NodeStore {
     nodeType: NodeType,
     existingHandles: NodeHandleData[] = []
   ): NodeHandleData[] {
+    if (nodeType === 'subgraph') {
+      return (['left', 'right'] as const).map((side) => ({
+        candidateId,
+        side,
+        isConnected:
+          existingHandles.find((handle) => handle.side === side)?.isConnected ?? false,
+        style: { ...this.handleStyle },
+      }));
+    }
+
     if (!isCandidateNodeType(nodeType, this.connectionMode)) return [];
 
     return (['left', 'right'] as const).map((side) => ({
@@ -654,6 +725,7 @@ export class NodeStore {
     isSelected?: boolean;
     isDropTarget?: boolean;
     isLocked?: boolean;
+    isCollapsed?: boolean;
   }): NodeData {
     const {
       id,
@@ -669,6 +741,7 @@ export class NodeStore {
       isSelected = false,
       isDropTarget = false,
       isLocked = false,
+      isCollapsed = false,
     } = params;
 
     const r = id & 0xff;
@@ -692,7 +765,8 @@ export class NodeStore {
       nodeType,
       compositionRefId: null,
       isDropTarget,
-      isLocked: false,
+      isLocked,
+      isCollapsed,
       handles,
       props: nodeType === 'node' ? this.createDefaultProps() : undefined,
     };
@@ -702,6 +776,59 @@ export class NodeStore {
     }
 
     return result;
+  }
+
+  private updateSubgraphBounds(subgraph: NodeData): void {
+    const collapsed = Boolean(subgraph.isCollapsed);
+    const defaultSize = getDefaultNodeSize('subgraph', collapsed);
+
+    if (collapsed || subgraph.childIds.length === 0) {
+      subgraph.width = defaultSize.width;
+      subgraph.height = defaultSize.height;
+      return;
+    }
+
+    const padding = 24;
+    const titleHeight = 42;
+    const children = subgraph.childIds
+      .map((id) => this.get(id))
+      .filter((node): node is NodeData => Boolean(node));
+
+    if (children.length === 0) {
+      subgraph.width = defaultSize.width;
+      subgraph.height = defaultSize.height;
+      return;
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const child of children) {
+      minX = Math.min(minX, child.localX);
+      minY = Math.min(minY, child.localY);
+      maxX = Math.max(maxX, child.localX + child.width);
+      maxY = Math.max(maxY, child.localY + child.height);
+    }
+
+    const shiftX = padding - minX;
+    const shiftY = titleHeight - minY;
+    if (shiftX !== 0 || shiftY !== 0) {
+      subgraph.localX -= shiftX;
+      subgraph.localY -= shiftY;
+      for (const child of children) {
+        child.localX += shiftX;
+        child.localY += shiftY;
+      }
+      minX += shiftX;
+      minY += shiftY;
+      maxX += shiftX;
+      maxY += shiftY;
+    }
+
+    subgraph.width = Math.max(defaultSize.width, maxX + padding);
+    subgraph.height = Math.max(defaultSize.height, maxY + padding);
   }
 
   private calculatePropHeight(props: NodePropType): number {

@@ -18,8 +18,11 @@
  7. Node buttons — the feature already tracked in features.txt. These are interactive click targets on node headers (max 3), which will be the pattern
 		 for future interactive node primitives like sliders.
 
- 8. subgraphs — a re-usable family of primitives that can be collapsed/viewed as ordinary nodes
- 9. type propagation — input and output types are inferred on connection to determine compatible types, validations rules are then inferred by the editor before runtime
+ 8. support for 1 -> N edge connections (keeping existing compatibility rules)
+ 9. subgraphs — a re-usable family of primitives that can be collapsed/viewed as ordinary nodes
+ 10. type propagation — input and output types are inferred on connection to determine compatible types, validations rules are then inferred by the editor before runtime
+ 11. import and export deliverables — this keeps the state of all primitives currently drawn on screen and exports it to a format that only the platform understands - perhaps a json (to avoid writing our own parser). the exported deliverable could then be imported and loaded to restore the states of all primitives and draw them on the screen
+ 12. plugin based system to accomodate the definitions and use of new primitives. 
 
 - EVENT ACTIONS (undoable/redoable):
 	* connection
@@ -29,7 +32,7 @@
 	* node prop change
 	* label update
 	* re-parenting
-	* exporting selections to sub-graphs
+	* exporting selections to sub-graphs and un-graphing subgraphs
 	* group node locking/unlocking
     * [others not yet mapped out]
 

@@ -48,7 +48,7 @@ export function reparent(childId, newParentId, nodes) {
         if (child.nodeType === 'group')
             return false;
         if (child.nodeType === 'composition') {
-            if (newParent.nodeType !== 'group')
+            if (newParent.nodeType !== 'group' && newParent.nodeType !== 'subgraph')
                 return false;
         }
         if (child.nodeType === 'composition-child') {
@@ -56,6 +56,10 @@ export function reparent(childId, newParentId, nodes) {
                 return false;
         }
         if (child.nodeType === 'node') {
+            if (newParent.nodeType === 'composition')
+                return false;
+        }
+        if (child.nodeType === 'subgraph') {
             if (newParent.nodeType === 'composition')
                 return false;
         }

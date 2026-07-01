@@ -279,6 +279,10 @@ const NODE_ID_TEXTURE_LOOKUP: Record<TextureLookupKeys, NodeTextureIds> = {
     body: "gg-node-body-default",
     head: "gg-composition-child-head-default",
   },
+  subgraph: {
+    body: "",
+    head: "",
+  },
   "composition-reference": {
     body: "gg-composition-reference-body",
     head: "gg-composition-reference-child-head",

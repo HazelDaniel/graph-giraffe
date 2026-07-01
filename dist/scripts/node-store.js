@@ -79,6 +79,7 @@ export class NodeStore {
         // Record per-type creation order for tiered z-ordering
         switch (nodeType) {
             case 'group':
+            case 'subgraph':
                 this._groupOrder.set(id, this._nextGroupOrder++);
                 break;
             case 'composition':
@@ -177,6 +178,7 @@ export class NodeStore {
         this.nodes.delete(id);
         switch (node.nodeType) {
             case 'group':
+            case 'subgraph':
                 this._groupOrder.delete(id);
                 break;
             case 'composition':
@@ -187,6 +189,39 @@ export class NodeStore {
                 break;
         }
         this.a11yTree.removeNode(id);
+    }
+    /**
+     * Removes a container while preserving its children in their current visual
+     * positions by promoting them to the removed container's parent.
+     */
+    removeContainerOnly(id) {
+        const node = this.get(id);
+        if (!node || !isContainerNodeType(node.nodeType))
+            return false;
+        const parentId = node.parentId;
+        const allNodes = this.allNodesMap;
+        for (const childId of [...node.childIds]) {
+            reparent(childId, parentId, allNodes);
+            const child = allNodes.get(childId);
+            if (child) {
+                this.syncNodePresentation(childId);
+                this.syncToMap(child);
+            }
+        }
+        if (parentId !== null) {
+            const parent = this.get(parentId);
+            if (parent) {
+                parent.childIds = parent.childIds.filter((childId) => childId !== id);
+            }
+        }
+        node.childIds = [];
+        this.groups.delete(id);
+        this.nodes.delete(id);
+        this._groupOrder.delete(id);
+        this._compositionOrder.delete(id);
+        this._leafOrder.delete(id);
+        this.a11yTree.removeNode(id);
+        return true;
     }
     /**
      * Compute the z-value for a node using tiered per-type creation order.
@@ -387,24 +422,47 @@ export class NodeStore {
     visibleNodes() {
         const result = [];
         this.groups.forEach((node) => {
-            if (node.visible && node.nodeType === 'group')
+            if (node.visible && node.nodeType === 'group' && this.isEffectivelyVisible(node.id))
                 result.push(node);
         });
         this.groups.forEach((node) => {
-            if (node.visible && node.nodeType === 'composition')
+            if (node.visible && node.nodeType === 'subgraph' && this.isEffectivelyVisible(node.id))
+                result.push(node);
+        });
+        this.groups.forEach((node) => {
+            if (node.visible && node.nodeType === 'composition' && this.isEffectivelyVisible(node.id))
                 result.push(node);
         });
         this.nodes.forEach((node) => {
-            if (node.visible)
+            if (node.visible && this.isEffectivelyVisible(node.id))
                 result.push(node);
         });
         return result;
+    }
+    isEffectivelyVisible(nodeId) {
+        const node = this.get(nodeId);
+        if (!node || !node.visible)
+            return false;
+        let currentId = node.parentId;
+        while (currentId !== null) {
+            const parent = this.get(currentId);
+            if (!parent || !parent.visible)
+                return false;
+            if (parent.nodeType === 'subgraph' && parent.isCollapsed)
+                return false;
+            currentId = parent.parentId;
+        }
+        return true;
     }
     /** Re-calculates bounds of a container node based on its children. */
     updateContainerBounds(containerId, theme) {
         const container = this.groups.get(containerId);
         if (!container || !isContainerNodeType(container.nodeType))
             return;
+        if (container.nodeType === 'subgraph') {
+            this.updateSubgraphBounds(container);
+            return;
+        }
         const defaultSize = getDefaultNodeSize(container.nodeType);
         if (container.childIds.length === 0) {
             container.width = defaultSize.width;
@@ -515,6 +573,14 @@ export class NodeStore {
         }));
     }
     createHandleState(candidateId, nodeType, existingHandles = []) {
+        if (nodeType === 'subgraph') {
+            return ['left', 'right'].map((side) => ({
+                candidateId,
+                side,
+                isConnected: existingHandles.find((handle) => handle.side === side)?.isConnected ?? false,
+                style: { ...this.handleStyle },
+            }));
+        }
         if (!isCandidateNodeType(nodeType, this.connectionMode))
             return [];
         return ['left', 'right'].map((side) => ({
@@ -525,7 +591,7 @@ export class NodeStore {
         }));
     }
     createNodeRecord(params) {
-        const { id, localX, localY, width, height, text, theme, nodeType, parentId, visible = true, isSelected = false, isDropTarget = false, isLocked = false, } = params;
+        const { id, localX, localY, width, height, text, theme, nodeType, parentId, visible = true, isSelected = false, isDropTarget = false, isLocked = false, isCollapsed = false, } = params;
         const r = id & 0xff;
         const g = (id >> 8) & 0xff;
         const b = (id >> 16) & 0xff;
@@ -546,7 +612,8 @@ export class NodeStore {
             nodeType,
             compositionRefId: null,
             isDropTarget,
-            isLocked: false,
+            isLocked,
+            isCollapsed,
             handles,
             props: nodeType === 'node' ? this.createDefaultProps() : undefined,
         };
@@ -554,6 +621,51 @@ export class NodeStore {
             result.height = this.calculatePropHeight(result.props);
         }
         return result;
+    }
+    updateSubgraphBounds(subgraph) {
+        const collapsed = Boolean(subgraph.isCollapsed);
+        const defaultSize = getDefaultNodeSize('subgraph', collapsed);
+        if (collapsed || subgraph.childIds.length === 0) {
+            subgraph.width = defaultSize.width;
+            subgraph.height = defaultSize.height;
+            return;
+        }
+        const padding = 24;
+        const titleHeight = 42;
+        const children = subgraph.childIds
+            .map((id) => this.get(id))
+            .filter((node) => Boolean(node));
+        if (children.length === 0) {
+            subgraph.width = defaultSize.width;
+            subgraph.height = defaultSize.height;
+            return;
+        }
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const child of children) {
+            minX = Math.min(minX, child.localX);
+            minY = Math.min(minY, child.localY);
+            maxX = Math.max(maxX, child.localX + child.width);
+            maxY = Math.max(maxY, child.localY + child.height);
+        }
+        const shiftX = padding - minX;
+        const shiftY = titleHeight - minY;
+        if (shiftX !== 0 || shiftY !== 0) {
+            subgraph.localX -= shiftX;
+            subgraph.localY -= shiftY;
+            for (const child of children) {
+                child.localX += shiftX;
+                child.localY += shiftY;
+            }
+            minX += shiftX;
+            minY += shiftY;
+            maxX += shiftX;
+            maxY += shiftY;
+        }
+        subgraph.width = Math.max(defaultSize.width, maxX + padding);
+        subgraph.height = Math.max(defaultSize.height, maxY + padding);
     }
     calculatePropHeight(props) {
         let lineCount = 0;

@@ -321,6 +321,12 @@ export class Renderer {
       const sourceNode = this.store.get(edge.sourceNodeId);
       const targetNode = this.store.get(edge.targetNodeId);
       if (!sourceNode || !targetNode) continue;
+      if (
+        !this.store.isEffectivelyVisible(sourceNode.id) ||
+        !this.store.isEffectivelyVisible(targetNode.id)
+      ) {
+        continue;
+      }
 
       // Compute edge z as average of source and target z
       const sourceZ = this.store.getZForNode(sourceNode.id, selectedIds);
@@ -396,6 +402,7 @@ export class Renderer {
     );
     gl.uniform1i(this.locations.u_UseTexture, 0);
     gl.uniform1i(this.locations.u_Use9Slice, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 0);
 
     gl.uniform4f(this.locations.u_Color, 0.38, 0.38, 0.39, 0.72);
     let vertexOffset = 0;
@@ -414,6 +421,7 @@ export class Renderer {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.edgeHeadTextures.texture);
       gl.uniform1i(this.locations.u_UseTexture, 1);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
       gl.uniform1i(this.locations.u_Sampler, 0);
       gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
       let headOffset = 0;
@@ -473,6 +481,7 @@ export class Renderer {
       this.modelMatrix.elements
     );
     gl.uniform1i(this.locations.u_UseTexture, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 0);
     gl.uniform4f(this.locations.u_Color, ...this.parseColor(strokeColor));
     gl.drawArrays(gl.LINE_STRIP, 0, geometry.worldPoints.length);
 
@@ -484,6 +493,7 @@ export class Renderer {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.edgeHeadTextures.texture);
       gl.uniform1i(this.locations.u_UseTexture, 1);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
       gl.uniform1i(this.locations.u_Sampler, 0);
       gl.uniform4f(this.locations.u_Color, ...this.parseColor(headColor));
       gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -735,6 +745,7 @@ export class Renderer {
       // Flat color silhouette — the RGB encodes the node id
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
       gl.uniform4f(
         this.locations.u_Color,
         node.pickColor[0],
@@ -748,6 +759,11 @@ export class Renderer {
       return;
     }
 
+    if (node.nodeType === "subgraph") {
+      this.drawSubgraphNode(node, worldX, worldY, z);
+      return;
+    }
+
     if (node.isDropTarget) {
       this.setModelMatrix(
         worldX - 6,
@@ -758,6 +774,7 @@ export class Renderer {
       );
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
       gl.uniform4f(this.locations.u_Color, 0.13, 0.86, 0.39, 0.8); // Green glow
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     } else if (node.isSelected) {
@@ -771,6 +788,7 @@ export class Renderer {
       );
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
       gl.uniform4f(this.locations.u_Color, 0.23, 0.23, 0.86, 1.0);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
@@ -783,6 +801,7 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
       gl.uniform1i(this.locations.u_UseTexture, 1);
       gl.uniform1i(this.locations.u_Use9Slice, 1);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
       gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
       gl.uniform2f(
         this.locations.u_TextureSize,
@@ -809,6 +828,7 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
       gl.uniform1i(this.locations.u_UseTexture, 1);
       gl.uniform1i(this.locations.u_Use9Slice, 1);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
       gl.uniform2f(this.locations.u_Dimensions, node.width, headHeight);
       gl.uniform2f(
         this.locations.u_TextureSize,
@@ -1456,6 +1476,104 @@ export class Renderer {
           }
         }
       }
+    }
+  }
+
+  private drawSubgraphNode(
+    node: NodeData,
+    worldX: number,
+    worldY: number,
+    z: number
+  ): void {
+    const gl = this.gl;
+    const [r, g, b, _] = this.getFontColor();
+    const collapsed = Boolean(node.isCollapsed);
+
+    if (node.isDropTarget || node.isSelected) {
+      this.setModelMatrix(
+        worldX - 3,
+        worldY - 3,
+        node.width + 6,
+        node.height + 6,
+        z
+      );
+      gl.uniform1i(this.locations.u_UseTexture, 0);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 1);
+      gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
+      gl.uniform4f(
+        this.locations.u_Color,
+        node.isDropTarget ? 0.08 : 0.12,
+        node.isDropTarget ? 0.42 : 0.18,
+        node.isDropTarget ? 0.2 : 0.72,
+        0.28
+      );
+      gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1.0, 0.95);
+      gl.uniform1f(this.locations.u_BorderWidth, 2.0);
+      gl.uniform1f(this.locations.u_Radius, collapsed ? 8.0 : 12.0);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    }
+
+    this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+    gl.uniform1i(this.locations.u_UseTexture, 0);
+    gl.uniform1i(this.locations.u_Use9Slice, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 1);
+    gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+    gl.uniform4f(this.locations.u_Color, 0.08, 0.09, 0.1, collapsed ? 0.9 : 0.22);
+    gl.uniform4f(this.locations.u_BorderColor, 1.0, 1.0, 1.0, 0.9);
+    gl.uniform1f(this.locations.u_BorderWidth, collapsed ? 1.5 : 2.0);
+    gl.uniform1f(this.locations.u_Radius, collapsed ? 8.0 : 12.0);
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 0);
+
+    const titleY = collapsed ? node.height / 2 : 20;
+    this.textRenderer.addText(
+      node.text,
+      worldX + NODE_LAYOUT.padding,
+      worldY + titleY,
+      14,
+      r,
+      g,
+      b,
+      1.0,
+      "left",
+      "middle"
+    );
+
+    const buttons = collapsed
+      ? ["+", "x", "c", "e"]
+      : ["-", "u", "x", "c", "e"];
+    let xPos = node.width - NODE_LAYOUT.subgraphBtnPaddingRight;
+    for (const label of buttons) {
+      this.iconBackgroundRenderer.addQuad(
+        worldX + xPos,
+        worldY + titleY,
+        r,
+        g,
+        b,
+        0.08,
+        dumbGlyphWidth,
+        dumbGlyphHeight,
+        this.iconAtlas.common?.base || 0,
+        this.iconAtlas.common?.lineHeight || 0,
+        15,
+        "center",
+        undefined,
+        "rounded-square"
+      );
+      this.textRenderer.addText(
+        label,
+        worldX + xPos,
+        worldY + titleY,
+        12,
+        r,
+        g,
+        b,
+        1.0,
+        "center",
+        "middle"
+      );
+      xPos -= NODE_LAYOUT.subgraphBtnSpacing;
     }
   }
 

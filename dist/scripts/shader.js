@@ -60,6 +60,10 @@ export function getShaderLocations(gl, program) {
         u_Dimensions: gl.getUniformLocation(program, "u_Dimensions"),
         u_TextureSize: gl.getUniformLocation(program, "u_TextureSize"),
         u_SliceMargins: gl.getUniformLocation(program, "u_SliceMargins"),
+        u_RenderMode: gl.getUniformLocation(program, "u_RenderMode"),
+        u_BorderColor: gl.getUniformLocation(program, "u_BorderColor"),
+        u_BorderWidth: gl.getUniformLocation(program, "u_BorderWidth"),
+        u_Radius: gl.getUniformLocation(program, "u_Radius"),
     };
     validateShaderLocations(locations);
     return locations;

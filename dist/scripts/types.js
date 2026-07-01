@@ -12,6 +12,9 @@ export const NODE_LAYOUT = {
     spotlightBtnClickRadius: 12,
     lockBtnTopY: 20, // matches group header titleY
     lockBtnClickRadius: 12,
+    subgraphBtnPaddingRight: 18,
+    subgraphBtnSpacing: 24,
+    subgraphBtnClickRadius: 12,
 };
 export const HANDLE_LAYOUT = {
     sideInset: 8,
@@ -31,9 +34,11 @@ export const NODE_SIZE = {
     group: { width: 220, height: 200 },
     composition: { width: 140, height: 200 },
     compositionChild: { width: 160, height: NODE_LAYOUT.headerHeight },
+    subgraph: { width: 220, height: 160 },
+    subgraphCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
 };
 export function isContainerNodeType(nodeType) {
-    return nodeType === "group" || nodeType === "composition";
+    return nodeType === "group" || nodeType === "composition" || nodeType === "subgraph";
 }
 export function isLeafNodeType(nodeType) {
     return nodeType === "node" || nodeType === "composition-child";
@@ -42,13 +47,15 @@ export function isCandidateNodeType(nodeType, connectionMode) {
     if (connectionMode === "group") {
         return nodeType === "group";
     }
-    return nodeType === "node" || nodeType === "composition";
+    return nodeType === "node" || nodeType === "composition" || nodeType === "subgraph";
 }
 export function getDefaultNodeSize(nodeType, isCollapsed = false) {
     switch (nodeType) {
         case "group":
         case "composition":
             return NODE_SIZE.group;
+        case "subgraph":
+            return isCollapsed ? NODE_SIZE.subgraphCollapsed : NODE_SIZE.subgraph;
         case "composition-child":
             return NODE_SIZE.compositionChild;
         case "node":

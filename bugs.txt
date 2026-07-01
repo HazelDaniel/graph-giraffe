@@ -2,3 +2,4 @@
 - on history traversal, the texture color of the headers of nodes in a group changed back to the color they had when the node was detached from a group
 - on 2x full history bi-directional traversal, a composition node that was a part of a multi-selection has just its children displayed and totally orphaned, as well as being the only visible primitives (composition-child) on the screen when i navigate to the last entry on the undo stack (the supposed initial state before any creation)
 
+- The remaining open piece is clone depth. The current button is wired, but it clones the subgraph container shell rather than a full deep subtree copy
