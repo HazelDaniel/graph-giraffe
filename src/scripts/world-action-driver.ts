@@ -26,7 +26,10 @@ import {
   UpdatePropCommand,
 } from "./commands.js";
 import { NodeStore } from "./node-store.js";
-import { getWorldPosition } from "./scene-graph.js";
+import {
+  getParentFrameWorldPosition,
+  getWorldPosition,
+} from "./scene-graph.js";
 import {
   DEFAULT_HANDLE_STYLE,
   EdgeData,
@@ -221,10 +224,60 @@ export class WorldActionDriver {
     if (roots.length === 0) return;
 
     const selectionBefore = this.captureSelectionSnapshot();
+    const collapsedSubgraphRoot =
+      roots.length === 1 &&
+      roots[0]!.nodeType === "subgraph" &&
+      roots[0]!.isCollapsed
+        ? roots[0]!
+        : null;
+
+    if (collapsedSubgraphRoot) {
+      const beforeSnapshots = this.captureSubtreeSnapshots(collapsedSubgraphRoot.id);
+      const beforePlacement = this.captureNodePlacement(collapsedSubgraphRoot);
+      const world = getWorldPosition(collapsedSubgraphRoot.id, this.store.allNodesMap);
+      const targetX = world.x + deltaX;
+      const targetY = world.y + deltaY;
+      if (collapsedSubgraphRoot.parentId === null) {
+        collapsedSubgraphRoot.localX = targetX;
+        collapsedSubgraphRoot.localY = targetY;
+      } else {
+        const parentWorld = getParentFrameWorldPosition(
+          collapsedSubgraphRoot.parentId,
+          this.store.allNodesMap
+        );
+        collapsedSubgraphRoot.localX = targetX - parentWorld.x;
+        collapsedSubgraphRoot.localY = targetY - parentWorld.y;
+      }
+
+      const appliedDeltaX = collapsedSubgraphRoot.localX - beforePlacement.localX;
+      const appliedDeltaY = collapsedSubgraphRoot.localY - beforePlacement.localY;
+      this.store.translateDescendants(
+        collapsedSubgraphRoot.id,
+        appliedDeltaX,
+        appliedDeltaY
+      );
+
+      const refreshIds = new Set<number | null>([
+        ...affectedParentIds,
+        collapsedSubgraphRoot.id,
+        collapsedSubgraphRoot.parentId,
+      ]);
+      this.refreshContainerChains(refreshIds);
+      const afterSnapshots = this.captureSubtreeSnapshots(collapsedSubgraphRoot.id);
+
+      this.pushCommand(new MoveSelectionCommand({
+        beforeSnapshots,
+        afterSnapshots,
+        cloneSnapshots: [],
+        removedReferenceEdgeSnapshots: [],
+        selectionBefore,
+        affectedParentIds: [...refreshIds],
+      }));
+      return;
+    }
+
     const beforeSnapshots = this.captureNodeSnapshots(nodeIds);
-    const beforePlacements = new Map<number, NodePlacementSnapshot>();
     for (const node of roots) {
-      beforePlacements.set(node.id, this.captureNodePlacement(node));
       const world = getWorldPosition(node.id, this.store.allNodesMap);
       const targetX = world.x + deltaX;
       const targetY = world.y + deltaY;
@@ -232,7 +285,10 @@ export class WorldActionDriver {
         node.localX = targetX;
         node.localY = targetY;
       } else {
-        const parentWorld = getWorldPosition(node.parentId, this.store.allNodesMap);
+        const parentWorld = getParentFrameWorldPosition(
+          node.parentId,
+          this.store.allNodesMap
+        );
         node.localX = targetX - parentWorld.x;
         node.localY = targetY - parentWorld.y;
       }
@@ -305,8 +361,7 @@ export class WorldActionDriver {
   createSubgraph(nodeIds: number[]): NodeData | null {
     const roots = nodeIds
       .map((id) => this.store.get(id))
-      .filter((node): node is NodeData => Boolean(node))
-      .filter((node) => node.nodeType !== "group");
+      .filter((node): node is NodeData => Boolean(node));
     if (roots.length === 0) return null;
 
     const selectionBefore = this.captureSelectionSnapshot();
@@ -654,6 +709,23 @@ export class WorldActionDriver {
     return snapshots;
   }
 
+  private captureSubtreeSnapshots(rootId: number): NodeHistorySnapshot[] {
+    const root = this.store.get(rootId);
+    if (!root) return [];
+
+    const snapshots: NodeHistorySnapshot[] = [];
+    const visit = (node: NodeData): void => {
+      snapshots.push(this.captureNodeSnapshot(node));
+      for (const childId of node.childIds) {
+        const child = this.store.get(childId);
+        if (child) visit(child);
+      }
+    };
+
+    visit(root);
+    return snapshots;
+  }
+
   private captureEdgeSnapshotsForSelection(
     nodeIds: Iterable<number>,
     edgeIds: Iterable<number>
@@ -752,6 +824,13 @@ export class WorldActionDriver {
     if (sourceHandleSide === targetHandleSide) return false;
     if (sourceNode.nodeType === "subgraph" && sourceHandleSide !== "right") return false;
     if (targetNode.nodeType === "subgraph" && targetHandleSide !== "left") return false;
+
+    const sourceOwningSubgraphId =
+      sourceNode.nodeType === "subgraph" ? null : this.getOwningSubgraphId(sourceNodeId);
+    const targetOwningSubgraphId =
+      targetNode.nodeType === "subgraph" ? null : this.getOwningSubgraphId(targetNodeId);
+    if (sourceOwningSubgraphId !== targetOwningSubgraphId) return false;
+
     if (
       sourceNode.nodeType === "node" &&
       targetNode.nodeType === "composition" &&
@@ -790,6 +869,21 @@ export class WorldActionDriver {
       source.compositionRefId === null ||
       source.compositionRefId === targetCompositionId
     );
+  }
+
+  private getOwningSubgraphId(nodeId: number): number | null {
+    const node = this.store.get(nodeId);
+    if (!node) return null;
+
+    let currentId: number | null = node.parentId;
+    while (currentId !== null) {
+      const ancestor = this.store.get(currentId);
+      if (!ancestor) break;
+      if (ancestor.nodeType === "subgraph") return ancestor.id;
+      currentId = ancestor.parentId;
+    }
+
+    return null;
   }
 
   private applyCompositionReferenceForEdge(edge: EdgeData | EdgeHistorySnapshot): void {

@@ -15,7 +15,11 @@ import {
   CompositionReferencePreviewChild,
 } from './texture.js';
 import { getDefaultTextureIds, getCompositionReferenceTextureIds } from './texture-registry.js';
-import { getWorldPosition, reparent } from './scene-graph.js';
+import {
+  getParentFrameWorldPosition,
+  getWorldPosition,
+  reparent,
+} from './scene-graph.js';
 import { AccessibilityTree } from './accessibility.js';
 
 /**
@@ -293,6 +297,9 @@ export class NodeStore {
 
     let baseZ: number;
     switch (node.nodeType) {
+      case 'subgraph':
+        baseZ = -0.05 + (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
+        break;
       case 'group':
         baseZ = (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
         break;
@@ -502,16 +509,45 @@ export class NodeStore {
   }
 
   /**
+   * Translates every descendant of `rootId` by the same world delta.
+   *
+   * Collapsed subgraphs use this so the shell and enclosed primitives stay
+   * aligned while the family moves as one unit.
+   */
+  translateDescendants(
+    rootId: number,
+    deltaX: number,
+    deltaY: number
+  ): void {
+    if (deltaX === 0 && deltaY === 0) return;
+
+    const root = this.get(rootId);
+    if (!root) return;
+
+    const visit = (node: NodeData): void => {
+      for (const childId of node.childIds) {
+        const child = this.get(childId);
+        if (!child) continue;
+        child.localX += deltaX;
+        child.localY += deltaY;
+        visit(child);
+      }
+    };
+
+    visit(root);
+  }
+
+  /**
    * All visible nodes in render order:
-   * groups first, compositions second, leaves last.
+   * subgraphs first, then groups, compositions, and leaves.
    */
   visibleNodes(): NodeData[] {
     const result: NodeData[] = [];
     this.groups.forEach((node) => {
-      if (node.visible && node.nodeType === 'group' && this.isEffectivelyVisible(node.id)) result.push(node);
+      if (node.visible && node.nodeType === 'subgraph' && this.isEffectivelyVisible(node.id)) result.push(node);
     });
     this.groups.forEach((node) => {
-      if (node.visible && node.nodeType === 'subgraph' && this.isEffectivelyVisible(node.id)) result.push(node);
+      if (node.visible && node.nodeType === 'group' && this.isEffectivelyVisible(node.id)) result.push(node);
     });
     this.groups.forEach((node) => {
       if (node.visible && node.nodeType === 'composition' && this.isEffectivelyVisible(node.id)) result.push(node);
@@ -790,6 +826,10 @@ export class NodeStore {
 
     const padding = 24;
     const titleHeight = 42;
+    const parentWorld = getParentFrameWorldPosition(
+      subgraph.parentId,
+      this.allNodesMap
+    );
     const children = subgraph.childIds
       .map((id) => this.get(id))
       .filter((node): node is NodeData => Boolean(node));
@@ -806,29 +846,19 @@ export class NodeStore {
     let maxY = -Infinity;
 
     for (const child of children) {
-      minX = Math.min(minX, child.localX);
-      minY = Math.min(minY, child.localY);
-      maxX = Math.max(maxX, child.localX + child.width);
-      maxY = Math.max(maxY, child.localY + child.height);
+      const childWorld = getWorldPosition(child.id, this.allNodesMap);
+      const childX = childWorld.x - parentWorld.x;
+      const childY = childWorld.y - parentWorld.y;
+      minX = Math.min(minX, childX);
+      minY = Math.min(minY, childY);
+      maxX = Math.max(maxX, childX + child.width);
+      maxY = Math.max(maxY, childY + child.height);
     }
 
-    const shiftX = padding - minX;
-    const shiftY = titleHeight - minY;
-    if (shiftX !== 0 || shiftY !== 0) {
-      subgraph.localX -= shiftX;
-      subgraph.localY -= shiftY;
-      for (const child of children) {
-        child.localX += shiftX;
-        child.localY += shiftY;
-      }
-      minX += shiftX;
-      minY += shiftY;
-      maxX += shiftX;
-      maxY += shiftY;
-    }
-
-    subgraph.width = Math.max(defaultSize.width, maxX + padding);
-    subgraph.height = Math.max(defaultSize.height, maxY + padding);
+    subgraph.localX = minX - padding - parentWorld.x;
+    subgraph.localY = minY - titleHeight - parentWorld.y;
+    subgraph.width = (maxX - minX) + padding * 2;
+    subgraph.height = (maxY - minY) + titleHeight + padding;
   }
 
   private calculatePropHeight(props: NodePropType): number {

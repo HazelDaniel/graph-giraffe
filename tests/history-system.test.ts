@@ -9,6 +9,7 @@ import {
   WorldActionSideEffects,
 } from "../src/scripts/world-action-driver.js";
 import { NodeData } from "../src/scripts/types.js";
+import { getWorldPosition } from "../src/scripts/scene-graph.js";
 
 function createEffects(): WorldActionSideEffects & {
   shownNodes: NodeData[];
@@ -197,6 +198,31 @@ describe("world action history", () => {
     expect(driver.history.undoDepth).toBe(depthBefore);
   });
 
+  it("rejects connections that cross subgraph boundaries", () => {
+    const { driver } = createDriver();
+    const outside = driver.createNode("node", 0, 0)!;
+    const insideA = driver.createNode("node", 120, 0)!;
+    const insideB = driver.createNode("node", 240, 0)!;
+    const otherInside = driver.createNode("node", 360, 0)!;
+    driver.createSubgraph([insideA.id, insideB.id])!;
+    driver.createSubgraph([otherInside.id])!;
+
+    expect(driver.connect(outside.id, "right", insideA.id, "left")).toBeNull();
+    expect(driver.connect(insideA.id, "right", otherInside.id, "left")).toBeNull();
+    expectGraphIntegrity(driver);
+  });
+
+  it("allows connections within the same subgraph", () => {
+    const { driver } = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const b = driver.createNode("node", 240, 0)!;
+    const subgraph = driver.createSubgraph([a.id, b.id])!;
+
+    expect(driver.connect(a.id, "right", b.id, "left")).toBeTruthy();
+    expect(driver.store.get(a.id)?.parentId).toBe(subgraph.id);
+    expectGraphIntegrity(driver);
+  });
+
   it("restores deleted subtrees and incident edges", () => {
     const { driver, effects } = createDriver();
     const group = driver.createNode("group", 0, 0)!;
@@ -268,6 +294,84 @@ describe("world action history", () => {
 
     expect(driver.store.get(child.id)?.localY).toBe(50);
     expect(effects.refreshed).toContain(group.id);
+    expectGraphIntegrity(driver);
+  });
+
+  it("shrinks a subgraph when its boundary children move closer together", () => {
+    const { driver } = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const b = driver.createNode("node", 140, 20)!;
+    const subgraph = driver.createSubgraph([a.id, b.id])!;
+    const beforeWidth = driver.store.get(subgraph.id)?.width ?? 0;
+    const beforeWorld = getWorldPosition(a.id, driver.store.allNodesMap);
+
+    driver.moveNodes([a.id], 100, 0, [subgraph.id]);
+
+    expect(driver.store.get(a.id)?.parentId).toBe(subgraph.id);
+    const movedWorld = getWorldPosition(a.id, driver.store.allNodesMap);
+    const subgraphWorld = getWorldPosition(subgraph.id, driver.store.allNodesMap);
+    const subgraphNode = driver.store.get(subgraph.id)!;
+    expect(movedWorld.x).toBe(beforeWorld.x + 100);
+    expect(movedWorld.x).toBeGreaterThanOrEqual(subgraphWorld.x + 24);
+    expect(movedWorld.x + a.width).toBeLessThanOrEqual(
+      subgraphWorld.x + subgraphNode.width
+    );
+    expect(subgraphNode.width).toBeLessThan(beforeWidth);
+    expectGraphIntegrity(driver);
+  });
+
+  it("moves collapsed subgraph children with the frame and preserves the final layout on expand", () => {
+    const { driver } = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const b = driver.createNode("node", 140, 20)!;
+    const subgraph = driver.createSubgraph([a.id, b.id])!;
+    const beforeAWorld = getWorldPosition(a.id, driver.store.allNodesMap);
+    const beforeBWorld = getWorldPosition(b.id, driver.store.allNodesMap);
+
+    driver.toggleSubgraphCollapse(subgraph.id);
+    driver.moveNodes([subgraph.id], 90, 60, [subgraph.parentId]);
+
+    const movedAWorld = getWorldPosition(a.id, driver.store.allNodesMap);
+    const movedBWorld = getWorldPosition(b.id, driver.store.allNodesMap);
+    expect(movedAWorld).toEqual({
+      x: beforeAWorld.x + 90,
+      y: beforeAWorld.y + 60,
+    });
+    expect(movedBWorld).toEqual({
+      x: beforeBWorld.x + 90,
+      y: beforeBWorld.y + 60,
+    });
+
+    driver.undo();
+    expect(getWorldPosition(a.id, driver.store.allNodesMap)).toEqual(beforeAWorld);
+    expect(getWorldPosition(b.id, driver.store.allNodesMap)).toEqual(beforeBWorld);
+
+    driver.redo();
+    expect(getWorldPosition(a.id, driver.store.allNodesMap)).toEqual(movedAWorld);
+    expect(getWorldPosition(b.id, driver.store.allNodesMap)).toEqual(movedBWorld);
+
+    driver.toggleSubgraphCollapse(subgraph.id);
+    const expandedSubgraph = driver.store.get(subgraph.id)!;
+    const expandedWorld = getWorldPosition(subgraph.id, driver.store.allNodesMap);
+    expect(expandedWorld.x).toBeLessThanOrEqual(movedAWorld.x - 24);
+    expect(expandedWorld.y).toBeLessThanOrEqual(movedAWorld.y - 42);
+    expect(movedBWorld.x + b.width).toBeLessThanOrEqual(
+      expandedWorld.x + expandedSubgraph.width
+    );
+    expect(movedBWorld.y + b.height).toBeLessThanOrEqual(
+      expandedWorld.y + expandedSubgraph.height
+    );
+    expectGraphIntegrity(driver);
+  });
+
+  it("allows groups to become children of a subgraph", () => {
+    const { driver } = createDriver();
+    const group = driver.createNode("group", 0, 0)!;
+    const node = driver.createNode("node", 80, 40)!;
+    const subgraph = driver.createSubgraph([group.id, node.id])!;
+
+    expect(driver.store.get(group.id)?.parentId).toBe(subgraph.id);
+    expect(driver.store.get(subgraph.id)?.childIds).toContain(group.id);
     expectGraphIntegrity(driver);
   });
 

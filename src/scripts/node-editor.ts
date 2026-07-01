@@ -68,7 +68,7 @@ import {
   getHandleScreenGeometry,
   isPointInsideHandle,
 } from "./handle-geometry.js";
-import { getWorldPosition } from "./scene-graph.js";
+import { getParentFrameWorldPosition, getWorldPosition } from "./scene-graph.js";
 import { TextureRegistry } from "./texture-registry.js";
 import { LoadingScreen } from "../components/loading-screen.js";
 import { WAIT } from "./globals.js";
@@ -77,6 +77,7 @@ interface DragSnapshot {
   localX: number;
   localY: number;
   parentId: number | null;
+  subtreeSnapshots?: NodeHistorySnapshot[];
 }
 
 interface ConnectionDragState {
@@ -749,12 +750,23 @@ export class NodeEditor {
         continue;
       }
 
-      const parentWorld = getWorldPosition(
+      const parentWorld = getParentFrameWorldPosition(
         entry.beforePlacement.parentId,
         this.store.allNodesMap
       );
       node.localX = targetX - parentWorld.x;
       node.localY = targetY - parentWorld.y;
+    }
+
+    const owningSubgraphIds = new Set<number>();
+    for (const entry of selectionDrag.entries) {
+      const owningSubgraphId = this.getOwningSubgraphId(entry.nodeId);
+      if (owningSubgraphId !== null) {
+        owningSubgraphIds.add(owningSubgraphId);
+      }
+    }
+    if (owningSubgraphIds.size > 0) {
+      this.refreshContainerChains(owningSubgraphIds);
     }
 
     this.store.clearDropTargets();
@@ -846,23 +858,36 @@ export class NodeEditor {
       }
     } else if (hoveredContainer?.nodeType === "subgraph") {
       if (this.selectionRep && this.selectionRep.nodeType !== "group") {
+        let movedIntoSubgraph = false;
         for (const entry of selectionDrag.entries) {
           const node = this.store.get(entry.nodeId);
           if (!node) continue;
 
+          const owningSubgraphId = this.getOwningSubgraphId(node.id);
+          if (
+            owningSubgraphId !== null &&
+            owningSubgraphId !== hoveredContainer.id
+          ) {
+            continue;
+          }
+
           const oldParentId = node.parentId;
-          if (!this.store.setParent(node.id, hoveredContainer.id)) continue;
+          const parentChanged = oldParentId !== hoveredContainer.id;
+          if (parentChanged && !this.store.setParent(node.id, hoveredContainer.id)) continue;
 
           if (oldParentId !== null) {
             affectedParents.add(oldParentId);
           }
           affectedParents.add(hoveredContainer.id);
           didChange = true;
+          movedIntoSubgraph = movedIntoSubgraph || parentChanged;
         }
 
-        removedReferenceEdgeSnapshots.push(
-          ...this.removeBoundaryEdgesForRoots(rootIds)
-        );
+        if (movedIntoSubgraph) {
+          removedReferenceEdgeSnapshots.push(
+            ...this.removeBoundaryEdgesForRoots(rootIds)
+          );
+        }
       }
     } else if (hoveredContainer?.nodeType === "group") {
       if (this.selectionRep && this.selectionRep.nodeType !== "group") {
@@ -870,8 +895,14 @@ export class NodeEditor {
           const node = this.store.get(entry.nodeId);
           if (!node) continue;
 
+          const owningSubgraphId = this.getOwningSubgraphId(node.id);
+          if (owningSubgraphId !== null && owningSubgraphId !== hoveredContainer.id) {
+            continue;
+          }
+
           const oldParentId = node.parentId;
-          if (!this.store.setParent(node.id, hoveredContainer.id)) continue;
+          const parentChanged = oldParentId !== hoveredContainer.id;
+          if (parentChanged && !this.store.setParent(node.id, hoveredContainer.id)) continue;
 
           if (oldParentId !== null) {
             affectedParents.add(oldParentId);
@@ -888,6 +919,7 @@ export class NodeEditor {
 
         const parent = this.store.get(node.parentId);
         if (!parent || !isContainerNodeType(parent.nodeType)) continue;
+        if (this.getOwningSubgraphId(node.id) !== null) continue;
 
         const oldParentId = node.parentId;
 
@@ -918,6 +950,21 @@ export class NodeEditor {
       const clone = this.store.get(cloneId);
       if (!clone) continue;
       cloneSnapshots.push(this.captureNodeSnapshot(clone));
+    }
+
+    if (
+      beforeSnapshots.length !== afterSnapshots.length ||
+      beforeSnapshots.some((before, index) => {
+        const after = afterSnapshots[index];
+        return (
+          !after ||
+          before.localX !== after.localX ||
+          before.localY !== after.localY ||
+          before.parentId !== after.parentId
+        );
+      })
+    ) {
+      didChange = true;
     }
 
     return {
@@ -1434,6 +1481,22 @@ export class NodeEditor {
     return false;
   }
 
+  /** Returns the nearest subgraph ancestor that owns this node, if any. */
+  private getOwningSubgraphId(nodeId: number): number | null {
+    const node = this.store.get(nodeId);
+    if (!node) return null;
+
+    let currentId: number | null = node.parentId;
+    while (currentId !== null) {
+      const ancestor = this.store.get(currentId);
+      if (!ancestor) break;
+      if (ancestor.nodeType === "subgraph") return ancestor.id;
+      currentId = ancestor.parentId;
+    }
+
+    return null;
+  }
+
   private deleteNodeTreeWithHistory(nodeId: number): void {
     const node = this.store.get(nodeId);
     if (!node) return;
@@ -1612,15 +1675,10 @@ export class NodeEditor {
   }
 
   private createSubgraphFromSelection(): void {
-    const roots = this.getSelectionDragRoots().filter((root) => root.nodeType !== "group");
+    const roots = this.getSelectionDragRoots();
     if (roots.length === 0) return;
 
     const selectionBefore = this.captureSelectionSnapshot();
-    const parentIds = new Set<number | null>();
-    for (const root of roots) {
-      parentIds.add(root.parentId);
-    }
-
     const anchor = roots[0]!;
     const anchorWorld = getWorldPosition(anchor.id, this.store.allNodesMap);
     const subgraph = this.store.add(
@@ -2112,7 +2170,8 @@ export class NodeEditor {
       this.selectionKind === "node" &&
       this.selectedNodeIds.size > 1 &&
       this.selectedNodeIds.has(node.id) &&
-      !this.isInLockedGroup(node.id);
+      !this.isInLockedGroup(node.id) &&
+      !(node.nodeType === "subgraph" && !node.isCollapsed);
 
     if (canDragSelection) {
       this.controls.hideProperties();
@@ -2135,11 +2194,22 @@ export class NodeEditor {
       return;
     }
 
+    if (node.nodeType === "subgraph" && !node.isCollapsed) {
+      this.draggingNode = null;
+      this.dragSnapshot = null;
+      this.syncToolbarState();
+      return;
+    }
+
     this.draggingNode = node;
     this.dragSnapshot = {
       localX: node.localX,
       localY: node.localY,
       parentId: node.parentId,
+      subtreeSnapshots:
+        node.nodeType === "subgraph" && node.isCollapsed
+          ? this.captureSubtreeSnapshots(node.id)
+          : undefined,
     };
     this.dragOffsetX = worldX - nodeWorld.x;
     this.dragOffsetY = worldY - nodeWorld.y;
@@ -2229,17 +2299,36 @@ export class NodeEditor {
 
     const targetX = worldX - this.dragOffsetX;
     const targetY = worldY - this.dragOffsetY;
+    const previousLocalX = this.draggingNode.localX;
+    const previousLocalY = this.draggingNode.localY;
 
     if (this.draggingNode.parentId === null) {
       this.draggingNode.localX = targetX;
       this.draggingNode.localY = targetY;
     } else {
-      const parentWorld = getWorldPosition(
+      const parentWorld = getParentFrameWorldPosition(
         this.draggingNode.parentId,
         this.store.allNodesMap
       );
       this.draggingNode.localX = targetX - parentWorld.x;
       this.draggingNode.localY = targetY - parentWorld.y;
+    }
+
+    if (
+      this.draggingNode.nodeType === "subgraph" &&
+      this.draggingNode.isCollapsed
+    ) {
+      const deltaX = this.draggingNode.localX - previousLocalX;
+      const deltaY = this.draggingNode.localY - previousLocalY;
+      this.store.translateDescendants(this.draggingNode.id, deltaX, deltaY);
+    }
+
+    const refreshContainerId =
+      this.draggingNode.nodeType === "subgraph"
+        ? this.draggingNode.id
+        : this.getOwningSubgraphId(this.draggingNode.id);
+    if (refreshContainerId !== null) {
+      this.refreshContainerChain(refreshContainerId);
     }
 
     this.store.clearDropTargets();
@@ -2396,6 +2485,14 @@ export class NodeEditor {
           screenY,
           source
         );
+        const beforePlacement: NodePlacementSnapshot = {
+          localX: snapshot.localX,
+          localY: snapshot.localY,
+          parentId: snapshot.parentId,
+        };
+        const owningSubgraphId = this.getOwningSubgraphId(source.id);
+        let removedReferenceEdgeSnapshots: EdgeHistorySnapshot[] = [];
+
         if (hoveredContainer?.nodeType === "composition") {
           const clone = this.store.duplicateIntoComposition(
             source.id,
@@ -2429,88 +2526,133 @@ export class NodeEditor {
           hoveredContainer?.nodeType === "group" ||
           hoveredContainer?.nodeType === "subgraph"
         ) {
-          const beforePlacement: NodePlacementSnapshot = {
-            localX: snapshot.localX,
-            localY: snapshot.localY,
-            parentId: snapshot.parentId,
-          };
-          if (this.store.setParent(source.id, hoveredContainer.id)) {
-            const removedReferenceEdgeSnapshots =
-              hoveredContainer.nodeType === "subgraph"
-                ? this.removeBoundaryEdgesForRoots([source.id])
-                : [];
-            const afterPlacement: NodePlacementSnapshot = {
-              localX: source.localX,
-              localY: source.localY,
-              parentId: source.parentId,
-            };
-            this.refreshContainerChain(hoveredContainer.id);
-            const oldParentId = beforePlacement.parentId;
-            if (oldParentId !== null && oldParentId !== hoveredContainer.id) {
-              this.refreshContainerChain(oldParentId);
+          const canLeaveOwningSubgraph =
+            owningSubgraphId === null ||
+            owningSubgraphId === hoveredContainer.id;
+
+          if (canLeaveOwningSubgraph) {
+            const parentChanged = source.parentId !== hoveredContainer.id;
+            if (!parentChanged || this.store.setParent(source.id, hoveredContainer.id)) {
+              removedReferenceEdgeSnapshots =
+                hoveredContainer.nodeType === "subgraph" && parentChanged
+                  ? this.removeBoundaryEdgesForRoots([source.id])
+                  : [];
+              const afterPlacement: NodePlacementSnapshot = {
+                localX: source.localX,
+                localY: source.localY,
+                parentId: source.parentId,
+              };
+              this.refreshContainerChain(hoveredContainer.id);
+              const oldParentId = beforePlacement.parentId;
+              if (oldParentId !== null && oldParentId !== hoveredContainer.id) {
+                this.refreshContainerChain(oldParentId);
+              }
+              if (
+                beforePlacement.localX !== afterPlacement.localX ||
+                beforePlacement.localY !== afterPlacement.localY ||
+                beforePlacement.parentId !== afterPlacement.parentId
+              ) {
+                command = new ReparentCommand({
+                  nodeId: sourceId,
+                  beforePlacement,
+                  afterPlacement,
+                  selectionBefore,
+                  removedReferenceEdgeSnapshots,
+                  extraRefreshIds: [],
+                });
+              }
+            } else {
+              this.store.restoreNodePlacement(
+                source.id,
+                snapshot.localX,
+                snapshot.localY,
+                snapshot.parentId
+              );
             }
-            if (
-              beforePlacement.localX !== afterPlacement.localX ||
-              beforePlacement.localY !== afterPlacement.localY ||
-              beforePlacement.parentId !== afterPlacement.parentId
-            ) {
-              command = new ReparentCommand({
-                nodeId: sourceId,
-                beforePlacement,
-                afterPlacement,
-                selectionBefore,
-                removedReferenceEdgeSnapshots,
-                extraRefreshIds: [],
-              });
-            }
-          } else {
-            this.store.restoreNodePlacement(
-              source.id,
-              snapshot.localX,
-              snapshot.localY,
-              snapshot.parentId
-            );
           }
         } else {
-          const beforePlacement: NodePlacementSnapshot = {
-            localX: snapshot.localX,
-            localY: snapshot.localY,
-            parentId: snapshot.parentId,
-          };
-          if (this.store.setParent(source.id, null)) {
-            const removedReferenceEdgeSnapshots =
-              this.removeCompositionReferenceEdgesForNode(source.id);
-            const afterPlacement: NodePlacementSnapshot = {
+          if (owningSubgraphId === null) {
+            if (this.store.setParent(source.id, null)) {
+              removedReferenceEdgeSnapshots =
+                this.removeCompositionReferenceEdgesForNode(source.id);
+              const afterPlacement: NodePlacementSnapshot = {
+                localX: source.localX,
+                localY: source.localY,
+                parentId: source.parentId,
+              };
+              const oldParentId = beforePlacement.parentId;
+              if (oldParentId !== null) {
+                this.refreshContainerChain(oldParentId);
+              }
+              if (
+                beforePlacement.localX !== afterPlacement.localX ||
+                beforePlacement.localY !== afterPlacement.localY ||
+                beforePlacement.parentId !== afterPlacement.parentId
+              ) {
+                command = new ReparentCommand({
+                  nodeId: sourceId,
+                  beforePlacement,
+                  afterPlacement,
+                  selectionBefore,
+                  removedReferenceEdgeSnapshots,
+                  extraRefreshIds: [],
+                });
+              }
+            } else {
+              this.store.restoreNodePlacement(
+                source.id,
+                snapshot.localX,
+                snapshot.localY,
+                snapshot.parentId
+              );
+            }
+          }
+        }
+
+        if (
+          command === null &&
+          (beforePlacement.localX !== source.localX ||
+            beforePlacement.localY !== source.localY ||
+            beforePlacement.parentId !== source.parentId)
+        ) {
+          command = new ReparentCommand({
+            nodeId: sourceId,
+            beforePlacement,
+            afterPlacement: {
               localX: source.localX,
               localY: source.localY,
               parentId: source.parentId,
-            };
-            const oldParentId = beforePlacement.parentId;
-            if (oldParentId !== null) {
-              this.refreshContainerChain(oldParentId);
-            }
-            if (
-              beforePlacement.localX !== afterPlacement.localX ||
-              beforePlacement.localY !== afterPlacement.localY ||
-              beforePlacement.parentId !== afterPlacement.parentId
-            ) {
-              command = new ReparentCommand({
-                nodeId: sourceId,
-                beforePlacement,
-                afterPlacement,
-                selectionBefore,
-                removedReferenceEdgeSnapshots,
-                extraRefreshIds: [],
-              });
-            }
-          } else {
-            this.store.restoreNodePlacement(
-              source.id,
-              snapshot.localX,
-              snapshot.localY,
-              snapshot.parentId
-            );
-          }
+            },
+            selectionBefore,
+            removedReferenceEdgeSnapshots: [],
+            extraRefreshIds: [],
+          });
+        }
+      } else if (source.nodeType === "subgraph" && source.isCollapsed) {
+        const beforePlacement: NodePlacementSnapshot = {
+          localX: snapshot.localX,
+          localY: snapshot.localY,
+          parentId: snapshot.parentId,
+        };
+        const afterPlacement: NodePlacementSnapshot = {
+          localX: source.localX,
+          localY: source.localY,
+          parentId: source.parentId,
+        };
+
+        if (
+          beforePlacement.localX !== afterPlacement.localX ||
+          beforePlacement.localY !== afterPlacement.localY
+        ) {
+          command = new MoveSelectionCommand({
+            beforeSnapshots:
+              snapshot.subtreeSnapshots ?? this.captureSubtreeSnapshots(source.id),
+            afterSnapshots: this.captureSubtreeSnapshots(source.id),
+            cloneSnapshots: [],
+            removedReferenceEdgeSnapshots: [],
+            selectionBefore,
+            affectedParentIds: [source.id, source.parentId],
+          });
         }
       } else if (source.nodeType === "composition") {
         const hoveredContainer = this.getHoveredContainer(
@@ -2580,21 +2722,66 @@ export class NodeEditor {
           localY: snapshot.localY,
           parentId: snapshot.parentId,
         };
-        const afterPlacement: NodePlacementSnapshot = {
-          localX: source.localX,
-          localY: source.localY,
-          parentId: source.parentId,
-        };
-        if (
-          beforePlacement.localX !== afterPlacement.localX ||
-          beforePlacement.localY !== afterPlacement.localY
-        ) {
-          command = new MoveNodeCommand({
-            nodeId: sourceId,
-            beforePlacement,
-            afterPlacement,
-            selectionBefore,
-          });
+        const hoveredContainer = this.getHoveredContainer(
+          screenX,
+          screenY,
+          source
+        );
+        const owningSubgraphId = this.getOwningSubgraphId(source.id);
+
+        if (hoveredContainer?.nodeType === "subgraph") {
+          if (owningSubgraphId === null || owningSubgraphId === hoveredContainer.id) {
+            if (this.store.setParent(source.id, hoveredContainer.id)) {
+              const afterPlacement: NodePlacementSnapshot = {
+                localX: source.localX,
+                localY: source.localY,
+                parentId: source.parentId,
+              };
+              this.refreshContainerChain(hoveredContainer.id);
+              const oldParentId = beforePlacement.parentId;
+              if (oldParentId !== null && oldParentId !== hoveredContainer.id) {
+                this.refreshContainerChain(oldParentId);
+              }
+              if (
+                beforePlacement.localX !== afterPlacement.localX ||
+                beforePlacement.localY !== afterPlacement.localY ||
+                beforePlacement.parentId !== afterPlacement.parentId
+              ) {
+                command = new ReparentCommand({
+                  nodeId: sourceId,
+                  beforePlacement,
+                  afterPlacement,
+                  selectionBefore,
+                  removedReferenceEdgeSnapshots: [],
+                  extraRefreshIds: [],
+                });
+              }
+            } else {
+              this.store.restoreNodePlacement(
+                source.id,
+                snapshot.localX,
+                snapshot.localY,
+                snapshot.parentId
+              );
+            }
+          }
+        } else {
+          const afterPlacement: NodePlacementSnapshot = {
+            localX: source.localX,
+            localY: source.localY,
+            parentId: source.parentId,
+          };
+          if (
+            beforePlacement.localX !== afterPlacement.localX ||
+            beforePlacement.localY !== afterPlacement.localY
+          ) {
+            command = new MoveNodeCommand({
+              nodeId: sourceId,
+              beforePlacement,
+              afterPlacement,
+              selectionBefore,
+            });
+          }
         }
       }
 
@@ -2625,6 +2812,14 @@ export class NodeEditor {
       return false;
     }
     if (targetNode.nodeType === "subgraph" && targetHandleSide !== "left") {
+      return false;
+    }
+
+    const sourceOwningSubgraphId =
+      sourceNode.nodeType === "subgraph" ? null : this.getOwningSubgraphId(sourceNodeId);
+    const targetOwningSubgraphId =
+      targetNode.nodeType === "subgraph" ? null : this.getOwningSubgraphId(targetNodeId);
+    if (sourceOwningSubgraphId !== targetOwningSubgraphId) {
       return false;
     }
 

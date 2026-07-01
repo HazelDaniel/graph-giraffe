@@ -15,17 +15,39 @@ export function getWorldPosition(
   const node = nodes.get(nodeId);
   if (!node) return { x: 0, y: 0 };
 
-  // Base case: root node — local coords are world coords
-  if (node.parentId === null) {
-    return { x: node.localX, y: node.localY };
+  let x = node.localX;
+  let y = node.localY;
+  let currentParentId = node.parentId;
+
+  while (currentParentId !== null) {
+    const parent = nodes.get(currentParentId);
+    if (!parent) break;
+
+    if (parent.nodeType !== 'subgraph') {
+      x += parent.localX;
+      y += parent.localY;
+    }
+
+    currentParentId = parent.parentId;
   }
 
-  // Recursive case: add this node's local offset onto the parent's world position
-  const parentWorld = getWorldPosition(node.parentId, nodes);
-  return {
-    x: parentWorld.x + node.localX,
-    y: parentWorld.y + node.localY,
-  };
+  return { x, y };
+}
+
+export function getParentFrameWorldPosition(
+  parentId: number | null,
+  nodes: Map<number, NodeData>
+): { x: number; y: number } {
+  if (parentId === null) return { x: 0, y: 0 };
+
+  const parent = nodes.get(parentId);
+  if (!parent) return { x: 0, y: 0 };
+
+  if (parent.nodeType === 'subgraph') {
+    return getParentFrameWorldPosition(parent.parentId, nodes);
+  }
+
+  return getWorldPosition(parentId, nodes);
 }
 
 /**
@@ -44,6 +66,10 @@ export function reparent(
   const child = nodes.get(childId);
   if (!child) return false;
 
+  if (child.parentId === newParentId) {
+    return true;
+  }
+
   if (newParentId === null) {
     if (child.nodeType === 'composition' || child.nodeType === 'composition-child') {
       return false;
@@ -53,7 +79,9 @@ export function reparent(
     if (!newParent) return false;
     if (!isContainerNodeType(newParent.nodeType)) return false;
 
-    if (child.nodeType === 'group') return false;
+    if (child.nodeType === 'group') {
+      if (newParent.nodeType !== 'subgraph') return false;
+    }
 
     if (child.nodeType === 'composition') {
       if (newParent.nodeType !== 'group' && newParent.nodeType !== 'subgraph') return false;
@@ -88,11 +116,12 @@ export function reparent(
 
   // Compute and assign the new local offset
   if (newParentId !== null) {
-    const newParentWorld = getWorldPosition(newParentId, nodes);
+    const newParent = nodes.get(newParentId);
+    if (!newParent) return false;
+    const newParentWorld = getParentFrameWorldPosition(newParentId, nodes);
     child.localX = childWorld.x - newParentWorld.x;
     child.localY = childWorld.y - newParentWorld.y;
 
-    const newParent = nodes.get(newParentId);
     if (newParent && !newParent.childIds.includes(childId)) {
       newParent.childIds.push(childId);
     }
