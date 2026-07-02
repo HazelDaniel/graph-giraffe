@@ -841,9 +841,12 @@ export class NodeEditor {
 
     if (hoveredContainer?.nodeType === "composition") {
       if (this.selectionRep && this.selectionRep.nodeType !== "group") {
+        const targetOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
         for (const entry of selectionDrag.entries) {
           const node = this.store.get(entry.nodeId);
           if (!node || node.nodeType !== "node") continue;
+          const sourceOwningSubgraphId = this.getOwningSubgraphId(node.id);
+          if (sourceOwningSubgraphId !== targetOwningSubgraphId) continue;
 
           const clone = this.store.duplicateIntoComposition(
             node.id,
@@ -858,48 +861,15 @@ export class NodeEditor {
         }
       }
     } else if (hoveredContainer?.nodeType === "subgraph") {
-      if (this.selectionRep && this.selectionRep.nodeType !== "group") {
-        let movedIntoSubgraph = false;
-        for (const entry of selectionDrag.entries) {
-          const node = this.store.get(entry.nodeId);
-          if (!node) continue;
-
-          const owningSubgraphId = this.getOwningSubgraphId(node.id);
-          if (
-            owningSubgraphId !== null &&
-            owningSubgraphId !== hoveredContainer.id
-          ) {
-            continue;
-          }
-
-          const oldParentId = node.parentId;
-          const parentChanged = oldParentId !== hoveredContainer.id;
-          if (parentChanged && !this.store.setParent(node.id, hoveredContainer.id)) continue;
-
-          if (oldParentId !== null) {
-            affectedParents.add(oldParentId);
-          }
-          affectedParents.add(hoveredContainer.id);
-          didChange = true;
-          movedIntoSubgraph = movedIntoSubgraph || parentChanged;
-        }
-
-        if (movedIntoSubgraph) {
-          removedReferenceEdgeSnapshots.push(
-            ...this.removeBoundaryEdgesForRoots(rootIds)
-          );
-        }
-      }
+      // Dropping primitives onto a subgraph shell does not reparent them.
     } else if (hoveredContainer?.nodeType === "group") {
       if (this.selectionRep && this.selectionRep.nodeType !== "group") {
+        const targetOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
         for (const entry of selectionDrag.entries) {
           const node = this.store.get(entry.nodeId);
           if (!node) continue;
-
-          const owningSubgraphId = this.getOwningSubgraphId(node.id);
-          if (owningSubgraphId !== null && owningSubgraphId !== hoveredContainer.id) {
-            continue;
-          }
+          const sourceOwningSubgraphId = this.getOwningSubgraphId(node.id);
+          if (sourceOwningSubgraphId !== targetOwningSubgraphId) continue;
 
           const oldParentId = node.parentId;
           const parentChanged = oldParentId !== hoveredContainer.id;
@@ -1496,6 +1466,21 @@ export class NodeEditor {
     }
 
     return null;
+  }
+
+  private canEnterContainer(
+    sourceOwningSubgraphId: number | null,
+    hoveredContainer: NodeData
+  ): boolean {
+    if (hoveredContainer.nodeType === "subgraph") {
+      const hoveredOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
+      return (
+        sourceOwningSubgraphId === hoveredContainer.id ||
+        sourceOwningSubgraphId === hoveredOwningSubgraphId
+      );
+    }
+
+    return sourceOwningSubgraphId === this.getOwningSubgraphId(hoveredContainer.id);
   }
 
   private deleteNodeTreeWithHistory(nodeId: number): void {
@@ -2479,6 +2464,7 @@ export class NodeEditor {
       const selectionBefore = this.captureSelectionSnapshot();
       const sourceId = source.id;  // capture as primitive, not mutable ref
       let command: Command | null = null;
+      const sourceOwningSubgraphId = this.getOwningSubgraphId(source.id);
 
       if (source.nodeType === "node") {
         const hoveredContainer = this.getHoveredContainer(
@@ -2491,10 +2477,15 @@ export class NodeEditor {
           localY: snapshot.localY,
           parentId: snapshot.parentId,
         };
-        const owningSubgraphId = this.getOwningSubgraphId(source.id);
         let removedReferenceEdgeSnapshots: EdgeHistorySnapshot[] = [];
+        const canEnterHoveredContainer =
+          hoveredContainer !== null &&
+          this.canEnterContainer(sourceOwningSubgraphId, hoveredContainer);
 
-        if (hoveredContainer?.nodeType === "composition") {
+        if (
+          hoveredContainer?.nodeType === "composition" &&
+          canEnterHoveredContainer
+        ) {
           const clone = this.store.duplicateIntoComposition(
             source.id,
             hoveredContainer.id,
@@ -2524,55 +2515,38 @@ export class NodeEditor {
             });
           }
         } else if (
-          hoveredContainer?.nodeType === "group" ||
-          hoveredContainer?.nodeType === "subgraph"
+          hoveredContainer?.nodeType === "group" &&
+          canEnterHoveredContainer
         ) {
-          const canLeaveOwningSubgraph =
-            owningSubgraphId === null ||
-            owningSubgraphId === hoveredContainer.id;
-
-          if (canLeaveOwningSubgraph) {
-            const parentChanged = source.parentId !== hoveredContainer.id;
-            if (!parentChanged || this.store.setParent(source.id, hoveredContainer.id)) {
-              removedReferenceEdgeSnapshots =
-                hoveredContainer.nodeType === "subgraph" && parentChanged
-                  ? this.removeBoundaryEdgesForRoots([source.id])
-                  : [];
-              const afterPlacement: NodePlacementSnapshot = {
-                localX: source.localX,
-                localY: source.localY,
-                parentId: source.parentId,
-              };
-              this.refreshContainerChain(hoveredContainer.id);
-              const oldParentId = beforePlacement.parentId;
-              if (oldParentId !== null && oldParentId !== hoveredContainer.id) {
-                this.refreshContainerChain(oldParentId);
-              }
-              if (
-                beforePlacement.localX !== afterPlacement.localX ||
-                beforePlacement.localY !== afterPlacement.localY ||
-                beforePlacement.parentId !== afterPlacement.parentId
-              ) {
-                command = new ReparentCommand({
-                  nodeId: sourceId,
-                  beforePlacement,
-                  afterPlacement,
-                  selectionBefore,
-                  removedReferenceEdgeSnapshots,
-                  extraRefreshIds: [],
-                });
-              }
-            } else {
-              this.store.restoreNodePlacement(
-                source.id,
-                snapshot.localX,
-                snapshot.localY,
-                snapshot.parentId
-              );
+          const parentChanged = source.parentId !== hoveredContainer.id;
+          if (!parentChanged || this.store.setParent(source.id, hoveredContainer.id)) {
+            const afterPlacement: NodePlacementSnapshot = {
+              localX: source.localX,
+              localY: source.localY,
+              parentId: source.parentId,
+            };
+            this.refreshContainerChain(hoveredContainer.id);
+            const oldParentId = beforePlacement.parentId;
+            if (oldParentId !== null && oldParentId !== hoveredContainer.id) {
+              this.refreshContainerChain(oldParentId);
+            }
+            if (
+              beforePlacement.localX !== afterPlacement.localX ||
+              beforePlacement.localY !== afterPlacement.localY ||
+              beforePlacement.parentId !== afterPlacement.parentId
+            ) {
+              command = new ReparentCommand({
+                nodeId: sourceId,
+                beforePlacement,
+                afterPlacement,
+                selectionBefore,
+                removedReferenceEdgeSnapshots,
+                extraRefreshIds: [],
+              });
             }
           }
         } else {
-          if (owningSubgraphId === null) {
+          if (sourceOwningSubgraphId === null) {
             if (this.store.setParent(source.id, null)) {
               removedReferenceEdgeSnapshots =
                 this.removeCompositionReferenceEdgesForNode(source.id);
@@ -2661,9 +2635,13 @@ export class NodeEditor {
           screenY,
           source
         );
+        const canEnterHoveredContainer =
+          hoveredContainer !== null &&
+          this.canEnterContainer(sourceOwningSubgraphId, hoveredContainer);
         if (
-          hoveredContainer?.nodeType === "group" ||
-          hoveredContainer?.nodeType === "subgraph"
+          (hoveredContainer?.nodeType === "group" ||
+            hoveredContainer?.nodeType === "subgraph") &&
+          canEnterHoveredContainer
         ) {
           const beforePlacement: NodePlacementSnapshot = {
             localX: snapshot.localX,
@@ -2728,10 +2706,12 @@ export class NodeEditor {
           screenY,
           source
         );
-        const owningSubgraphId = this.getOwningSubgraphId(source.id);
+        const canEnterHoveredContainer =
+          hoveredContainer !== null &&
+          this.canEnterContainer(sourceOwningSubgraphId, hoveredContainer);
 
         if (hoveredContainer?.nodeType === "subgraph") {
-          if (owningSubgraphId === null || owningSubgraphId === hoveredContainer.id) {
+          if (canEnterHoveredContainer) {
             if (this.store.setParent(source.id, hoveredContainer.id)) {
               const afterPlacement: NodePlacementSnapshot = {
                 localX: source.localX,

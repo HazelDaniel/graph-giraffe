@@ -1,5 +1,13 @@
-- placing a multi-selection (whose selectionRep isn't a group node) doesn't highlight the group node as a drop target for placement - same with when moving a selectionRep out of a group node
-- on history traversal, the texture color of the headers of nodes in a group changed back to the color they had when the node was detached from a group
-- on 2x full history bi-directional traversal, a composition node that was a part of a multi-selection has just its children displayed and totally orphaned, as well as being the only visible primitives (composition-child) on the screen when i navigate to the last entry on the undo stack (the supposed initial state before any creation)
+- for subgraphs within a subgraph, the input port seems to reject connections when primitives within the same subgraph tries to connect and edge
+- the issue of world-space translation of a subgraph leaking into non-direct descendants of a subgraph hasn't been fixed in the context of a nested subgraph
+	the original solution should work regardless of the level of subgraph nesting (assume that subgraphs can be nested).
+	again, world-space translation of subgraphs should only apply to their direct descendants, since direct descendants already control the worls-space positionining of their descendants in the scene graph
+
+
+- when i drag around a collapsed subgraph that contains group nodes and expand it, i notice that the child nodes of the group nodes had flown out of their parents' bounds while being collapsed
+	this must mean that the world-space translation of a subgraph is also registering on its non-direct descendants. make sure to apply a fix that can also handle the introduction of new primitives
+- i also notice that you can drag a primitive in a subgraph. that doesn't make sense since we can't drag anything outside of it, we shouldn't  be able to drag anything in it
 
 - The remaining open piece is clone depth. The current button is wired, but it clones the subgraph container shell rather than a full deep subtree copy
+- on history traversal, the texture color of the headers of nodes in a group changed back to the color they had when the node was detached from a group 
+- on 2x full history bi-directional traversal, a composition node that was a part of a multi-selection has just its children displayed and totally orphaned, as well as being the only visible primitives (composition-child) on the screen when i navigate to the last entry on the undo stack (the supposed initial state before any creation)

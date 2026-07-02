@@ -17,6 +17,7 @@ import {
 import { getDefaultTextureIds, getCompositionReferenceTextureIds } from './texture-registry.js';
 import {
   getParentFrameWorldPosition,
+  getOwningSubgraphId,
   getWorldPosition,
   reparent,
 } from './scene-graph.js';
@@ -509,10 +510,11 @@ export class NodeStore {
   }
 
   /**
-   * Translates every descendant of `rootId` by the same world delta.
+   * Translates the direct children of `rootId` by the same world delta.
    *
-   * Collapsed subgraphs use this so the shell and enclosed primitives stay
-   * aligned while the family moves as one unit.
+   * Collapsed subgraphs use this so the shell and direct children stay
+   * aligned while nested descendants keep their relative offsets through
+   * the normal parent chain.
    */
   translateDescendants(
     rootId: number,
@@ -530,7 +532,6 @@ export class NodeStore {
         if (!child) continue;
         child.localX += deltaX;
         child.localY += deltaY;
-        visit(child);
       }
     };
 

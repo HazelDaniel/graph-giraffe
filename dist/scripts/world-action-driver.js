@@ -196,6 +196,18 @@ export class WorldActionDriver {
         const node = this.store.get(nodeId);
         if (!node)
             return false;
+        const sourceOwningSubgraphId = this.getOwningSubgraphId(nodeId);
+        if (parentId === null) {
+            if (sourceOwningSubgraphId !== null)
+                return false;
+        }
+        else {
+            const target = this.store.get(parentId);
+            if (!target || !isContainerNodeType(target.nodeType))
+                return false;
+            if (!this.canReparentIntoContainer(sourceOwningSubgraphId, target))
+                return false;
+        }
         const selectionBefore = this.captureSelectionSnapshot();
         const beforeSnapshot = this.captureNodeSnapshot(node);
         const oldParentId = node.parentId;
@@ -215,6 +227,10 @@ export class WorldActionDriver {
         return true;
     }
     duplicateIntoComposition(sourceId, compositionId) {
+        const sourceOwningSubgraphId = this.getOwningSubgraphId(sourceId);
+        const targetOwningSubgraphId = this.getOwningSubgraphId(compositionId);
+        if (sourceOwningSubgraphId !== targetOwningSubgraphId)
+            return null;
         const selectionBefore = this.captureSelectionSnapshot();
         const clone = this.store.duplicateIntoComposition(sourceId, compositionId, this.theme);
         if (!clone)
@@ -689,6 +705,14 @@ export class WorldActionDriver {
             currentId = ancestor.parentId;
         }
         return null;
+    }
+    canReparentIntoContainer(sourceOwningSubgraphId, target) {
+        if (target.nodeType === "subgraph") {
+            const targetOwningSubgraphId = this.getOwningSubgraphId(target.id);
+            return (sourceOwningSubgraphId === target.id ||
+                sourceOwningSubgraphId === targetOwningSubgraphId);
+        }
+        return sourceOwningSubgraphId === this.getOwningSubgraphId(target.id);
     }
     applyCompositionReferenceForEdge(edge) {
         if (!this.isCompositionReferenceEdge(edge))

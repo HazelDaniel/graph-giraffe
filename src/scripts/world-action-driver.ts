@@ -313,6 +313,14 @@ export class WorldActionDriver {
   reparentNode(nodeId: number, parentId: number | null): boolean {
     const node = this.store.get(nodeId);
     if (!node) return false;
+    const sourceOwningSubgraphId = this.getOwningSubgraphId(nodeId);
+    if (parentId === null) {
+      if (sourceOwningSubgraphId !== null) return false;
+    } else {
+      const target = this.store.get(parentId);
+      if (!target || !isContainerNodeType(target.nodeType)) return false;
+      if (!this.canReparentIntoContainer(sourceOwningSubgraphId, target)) return false;
+    }
 
     const selectionBefore = this.captureSelectionSnapshot();
     const beforeSnapshot = this.captureNodeSnapshot(node);
@@ -335,6 +343,10 @@ export class WorldActionDriver {
   }
 
   duplicateIntoComposition(sourceId: number, compositionId: number): NodeData | null {
+    const sourceOwningSubgraphId = this.getOwningSubgraphId(sourceId);
+    const targetOwningSubgraphId = this.getOwningSubgraphId(compositionId);
+    if (sourceOwningSubgraphId !== targetOwningSubgraphId) return null;
+
     const selectionBefore = this.captureSelectionSnapshot();
     const clone = this.store.duplicateIntoComposition(sourceId, compositionId, this.theme);
     if (!clone) return null;
@@ -884,6 +896,21 @@ export class WorldActionDriver {
     }
 
     return null;
+  }
+
+  private canReparentIntoContainer(
+    sourceOwningSubgraphId: number | null,
+    target: NodeData
+  ): boolean {
+    if (target.nodeType === "subgraph") {
+      const targetOwningSubgraphId = this.getOwningSubgraphId(target.id);
+      return (
+        sourceOwningSubgraphId === target.id ||
+        sourceOwningSubgraphId === targetOwningSubgraphId
+      );
+    }
+
+    return sourceOwningSubgraphId === this.getOwningSubgraphId(target.id);
   }
 
   private applyCompositionReferenceForEdge(edge: EdgeData | EdgeHistorySnapshot): void {

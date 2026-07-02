@@ -297,10 +297,10 @@ describe("world action history", () => {
     expectGraphIntegrity(driver);
   });
 
-  it("shrinks a subgraph when its boundary children move closer together", () => {
+  it("shrinks a subgraph when its boundary groups move closer together", () => {
     const { driver } = createDriver();
-    const a = driver.createNode("node", 0, 0)!;
-    const b = driver.createNode("node", 140, 20)!;
+    const a = driver.createNode("group", 0, 0)!;
+    const b = driver.createNode("group", 140, 20)!;
     const subgraph = driver.createSubgraph([a.id, b.id])!;
     const beforeWidth = driver.store.get(subgraph.id)?.width ?? 0;
     const beforeWorld = getWorldPosition(a.id, driver.store.allNodesMap);
@@ -364,6 +364,67 @@ describe("world action history", () => {
     expectGraphIntegrity(driver);
   });
 
+  it("moves collapsed subgraph descendants without changing their internal parent offsets", () => {
+    const { driver } = createDriver();
+    const group = driver.createNode("group", 0, 0)!;
+    const child = driver.createNode("node", 24, 18, group.id)!;
+    const subgraph = driver.createSubgraph([group.id])!;
+    const groupLocalBefore = { x: group.localX, y: group.localY };
+    const childLocalBefore = { x: child.localX, y: child.localY };
+    const childWorldBefore = getWorldPosition(child.id, driver.store.allNodesMap);
+
+    driver.toggleSubgraphCollapse(subgraph.id);
+    driver.moveNodes([subgraph.id], 80, 50, [subgraph.parentId]);
+
+    expect(group.localX).toBe(groupLocalBefore.x + 80);
+    expect(group.localY).toBe(groupLocalBefore.y + 50);
+    expect(child.localX).toBe(childLocalBefore.x);
+    expect(child.localY).toBe(childLocalBefore.y);
+    expect(getWorldPosition(child.id, driver.store.allNodesMap)).toEqual({
+      x: childWorldBefore.x + 80,
+      y: childWorldBefore.y + 50,
+    });
+    expectGraphIntegrity(driver);
+  });
+
+  it("rejects reparenting into a group nested inside a subgraph", () => {
+    const { driver } = createDriver();
+    const source = driver.createNode("node", 0, 0)!;
+    const targetGroup = driver.createNode("group", 200, 0)!;
+    driver.createSubgraph([targetGroup.id])!;
+
+    expect(driver.reparentNode(source.id, targetGroup.id)).toBe(false);
+    expect(driver.store.get(source.id)?.parentId).toBeNull();
+    expectGraphIntegrity(driver);
+  });
+
+  it("rejects cloning into a composition nested inside a subgraph", () => {
+    const { driver } = createDriver();
+    const source = driver.createNode("node", 0, 0)!;
+    const composition = driver.createNode("composition", 200, 0)!;
+    driver.createSubgraph([composition.id])!;
+
+    expect(driver.duplicateIntoComposition(source.id, composition.id)).toBeNull();
+    expect(driver.store.get(source.id)?.compositionRefId).toBeNull();
+    expectGraphIntegrity(driver);
+  });
+
+  it("allows leaf nodes that are direct children of a subgraph to move", () => {
+    const { driver } = createDriver();
+    const child = driver.createNode("node", 20, 20)!;
+    const subgraph = driver.createSubgraph([child.id])!;
+    const beforeWorld = getWorldPosition(child.id, driver.store.allNodesMap);
+
+    driver.moveNodes([child.id], 120, 0, [subgraph.id]);
+
+    expect(getWorldPosition(child.id, driver.store.allNodesMap)).toEqual({
+      x: beforeWorld.x + 120,
+      y: beforeWorld.y,
+    });
+    expect(driver.store.get(child.id)?.parentId).toBe(subgraph.id);
+    expectGraphIntegrity(driver);
+  });
+
   it("allows groups to become children of a subgraph", () => {
     const { driver } = createDriver();
     const group = driver.createNode("group", 0, 0)!;
@@ -372,6 +433,32 @@ describe("world action history", () => {
 
     expect(driver.store.get(group.id)?.parentId).toBe(subgraph.id);
     expect(driver.store.get(subgraph.id)?.childIds).toContain(group.id);
+    expectGraphIntegrity(driver);
+  });
+
+  it("allows reparenting within the same subgraph", () => {
+    const { driver } = createDriver();
+    const sourceGroup = driver.createNode("group", 0, 0)!;
+    const targetGroup = driver.createNode("group", 220, 0)!;
+    const node = driver.createNode("node", 20, 20, sourceGroup.id)!;
+    driver.createSubgraph([sourceGroup.id, targetGroup.id])!;
+
+    expect(driver.reparentNode(node.id, targetGroup.id)).toBe(true);
+    expect(driver.store.get(node.id)?.parentId).toBe(targetGroup.id);
+    expectGraphIntegrity(driver);
+  });
+
+  it("allows cloning into a composition within the same subgraph", () => {
+    const { driver } = createDriver();
+    const sourceGroup = driver.createNode("group", 0, 0)!;
+    const targetGroup = driver.createNode("group", 220, 0)!;
+    const node = driver.createNode("node", 20, 20, sourceGroup.id)!;
+    const composition = driver.createNode("composition", 40, 40, targetGroup.id)!;
+    driver.createSubgraph([sourceGroup.id, targetGroup.id, composition.id])!;
+
+    const clone = driver.duplicateIntoComposition(node.id, composition.id)!;
+    expect(clone.nodeType).toBe("composition-child");
+    expect(driver.store.get(composition.id)?.childIds).toContain(clone.id);
     expectGraphIntegrity(driver);
   });
 

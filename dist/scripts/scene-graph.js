@@ -37,6 +37,21 @@ export function getParentFrameWorldPosition(parentId, nodes) {
     }
     return getWorldPosition(parentId, nodes);
 }
+export function getOwningSubgraphId(nodeId, nodes) {
+    const node = nodes.get(nodeId);
+    if (!node)
+        return null;
+    let currentId = node.parentId;
+    while (currentId !== null) {
+        const ancestor = nodes.get(currentId);
+        if (!ancestor)
+            break;
+        if (ancestor.nodeType === 'subgraph')
+            return ancestor.id;
+        currentId = ancestor.parentId;
+    }
+    return null;
+}
 /**
  * Re-parents a node to a new parent (or to the root if newParentId is null).
  *
