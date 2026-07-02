@@ -285,20 +285,14 @@ export class ActionPane extends HTMLElement {
 
 
         <button id="btn-create-subgraph">
-          <svg
-            viewBox="0 0 16 16"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-          >
-            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-            <g
-              id="SVGRepo_tracerCarrier"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></g>
-            <g id="SVGRepo_iconCarrier">
-            </g>
-          </svg>
+        <svg width="100%" height="60%" viewBox="0 0 18 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4.11429 7.89474C4.11429 9.05744 3.19327 10 2.05714 10C0.921014 10 0 9.05744 0 7.89474C0 6.73203 0.921014 5.78947 2.05714 5.78947C3.19327 5.78947 4.11429 6.73203 4.11429 7.89474Z" fill="#D9D9D9"/>
+          <path d="M18 4.73684C18 5.89955 17.079 6.84211 15.9429 6.84211C14.8067 6.84211 13.8857 5.89955 13.8857 4.73684C13.8857 3.57414 14.8067 2.63158 15.9429 2.63158C17.079 2.63158 18 3.57414 18 4.73684Z" fill="#D9D9D9"/>
+          <path d="M9.77143 1.84211C9.77143 2.85947 8.96554 3.68421 7.97143 3.68421C6.97732 3.68421 6.17143 2.85947 6.17143 1.84211C6.17143 0.824739 6.97732 0 7.97143 0C8.96554 0 9.77143 0.824739 9.77143 1.84211Z" fill="#D9D9D9"/>
+          <path d="M0.514286 8.55963L6.61481 2.31641L7.54414 3.26749L1.44362 9.51071L0.514286 8.55963Z" fill="#D9D9D9"/>
+          <path d="M16.2689 5.85032L8.31142 2.43907L8.8192 1.19849L16.7767 4.60974L16.2689 5.85032Z" fill="#D9D9D9"/>
+        </svg>
+
         </button>
 
       </div>
