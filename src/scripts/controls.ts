@@ -11,6 +11,8 @@ export interface ControlCallbacks {
   onUndo(): void;
   onRedo(): void;
   onDeleteNode(): void;
+
+  onSubgraphCreate: () => void;
   onBgColorChange(r: number, g: number, b: number, a: number): void;
   onFontColorChange(r: number, g: number, b: number, a: number): void;
   onThemeChange(theme: ThemeName): void;
@@ -32,6 +34,7 @@ export interface ControlCallbacks {
  */
 export class UIControls {
   private addNodeButton: HTMLButtonElement;
+  private createSubgraphButton: HTMLButtonElement;
   private addGroupButton: HTMLButtonElement;
   private addCompositionButton: HTMLButtonElement;
   private multiSelectButton: HTMLButtonElement;
@@ -65,6 +68,9 @@ export class UIControls {
     this.multiSelectButton = toolPane.shadowRoot?.querySelector(
       "#btn-multi-select"
     )! as HTMLButtonElement;
+    this.createSubgraphButton = toolPane.shadowRoot?.querySelector(
+      "#btn-create-subgraph"
+    )! as HTMLButtonElement;
     this.undoButton = historyPane.shadowRoot?.querySelector(
       "#btn-undo"
     )! as HTMLButtonElement;
@@ -94,6 +100,9 @@ export class UIControls {
     );
     this.multiSelectButton.addEventListener("click", () =>
       callbacks.onToggleMultiSelect()
+    );
+    this.createSubgraphButton.addEventListener("click", () =>
+      callbacks.onSubgraphCreate()
     );
     this.undoButton.addEventListener("click", () => callbacks.onUndo());
     this.redoButton.addEventListener("click", () => callbacks.onRedo());
@@ -131,7 +140,9 @@ export class UIControls {
       );
     });
 
-    const textureSelect = container.shadowRoot?.querySelector("#texture-selector") as TextureSelect | null;
+    const textureSelect = container.shadowRoot?.querySelector(
+      "#texture-selector"
+    ) as TextureSelect | null;
     textureSelect?.refresh(); // so that the uploaded textures appear
 
     container.addEventListener("gg-texture-select-change", (e: Event) => {
@@ -184,6 +195,9 @@ export class UIControls {
   }
   setMultiSelectActive(active: boolean): void {
     this.multiSelectButton.classList.toggle("active", active);
+    if (this.multiSelectButton.classList.contains("active"))
+      this.createSubgraphButton.disabled = false;
+    else this.createSubgraphButton.disabled = true;
   }
   enableUndo(): void {
     this.undoButton.disabled = false;

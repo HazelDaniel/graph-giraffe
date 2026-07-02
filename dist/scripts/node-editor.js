@@ -149,6 +149,7 @@ export class NodeEditor {
             onUndo: () => this.undo(),
             onRedo: () => this.redo(),
             onDeleteNode: () => this.handleDeleteSelected(),
+            onSubgraphCreate: () => this.handleSubgraphCreation(),
             onBgColorChange: (r, g, b, a) => {
                 this.bgColor = [r, g, b, a];
             },
@@ -2272,8 +2273,9 @@ export class NodeEditor {
             this.redo();
             return;
         }
-        if (e.key.toLowerCase() === "g" && this.selectedNodeIds.size > 0 && this.selectedEdgeIds.size === 0) {
-            e.preventDefault();
+    }
+    handleSubgraphCreation() {
+        if (this.selectedNodeIds.size > 0 && this.selectedEdgeIds.size === 0) {
             this.createSubgraphFromSelection();
         }
     }

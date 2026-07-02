@@ -282,6 +282,25 @@ export class ActionPane extends HTMLElement {
             </g>
           </svg>
         </button>
+
+
+        <button id="btn-create-subgraph">
+          <svg
+            viewBox="0 0 16 16"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+          >
+            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+            <g
+              id="SVGRepo_tracerCarrier"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></g>
+            <g id="SVGRepo_iconCarrier">
+            </g>
+          </svg>
+        </button>
+
       </div>
       <div class="panel-right">
         <button id="btn-play-sim">
