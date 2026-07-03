@@ -223,6 +223,18 @@ describe("world action history", () => {
     expectGraphIntegrity(driver);
   });
 
+  it("allows connections through a nested subgraph when both nodes share the same outer subgraph", () => {
+    const { driver } = createDriver();
+    const source = driver.createNode("node", 0, 0)!;
+    const nestedNode = driver.createNode("node", 240, 0)!;
+    const innerSubgraph = driver.createSubgraph([nestedNode.id])!;
+    const outerSubgraph = driver.createSubgraph([source.id, innerSubgraph.id])!;
+
+    expect(driver.connect(source.id, "right", innerSubgraph.id, "left")).toBeTruthy();
+    expect(driver.store.get(outerSubgraph.id)?.childIds).toContain(innerSubgraph.id);
+    expectGraphIntegrity(driver);
+  });
+
   it("restores deleted subtrees and incident edges", () => {
     const { driver, effects } = createDriver();
     const group = driver.createNode("group", 0, 0)!;
@@ -383,6 +395,24 @@ describe("world action history", () => {
     expect(getWorldPosition(child.id, driver.store.allNodesMap)).toEqual({
       x: childWorldBefore.x + 80,
       y: childWorldBefore.y + 50,
+    });
+    expectGraphIntegrity(driver);
+  });
+
+  it("moves descendants inside nested subgraphs when a collapsed parent subgraph moves", () => {
+    const { driver } = createDriver();
+    const nestedLeaf = driver.createNode("node", 20, 20)!;
+    const nestedSubgraph = driver.createSubgraph([nestedLeaf.id])!;
+    const outerLeaf = driver.createNode("node", 200, 40)!;
+    const outerSubgraph = driver.createSubgraph([nestedSubgraph.id, outerLeaf.id])!;
+    const beforeWorld = getWorldPosition(nestedLeaf.id, driver.store.allNodesMap);
+
+    driver.toggleSubgraphCollapse(outerSubgraph.id);
+    driver.moveNodes([outerSubgraph.id], 80, 50, [outerSubgraph.parentId]);
+
+    expect(getWorldPosition(nestedLeaf.id, driver.store.allNodesMap)).toEqual({
+      x: beforeWorld.x + 80,
+      y: beforeWorld.y + 50,
     });
     expectGraphIntegrity(driver);
   });

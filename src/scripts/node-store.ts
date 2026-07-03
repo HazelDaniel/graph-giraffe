@@ -532,6 +532,9 @@ export class NodeStore {
         if (!child) continue;
         child.localX += deltaX;
         child.localY += deltaY;
+        if (child.nodeType === 'subgraph') {
+          visit(child);
+        }
       }
     };
 

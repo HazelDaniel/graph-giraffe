@@ -438,6 +438,9 @@ export class NodeStore {
                     continue;
                 child.localX += deltaX;
                 child.localY += deltaY;
+                if (child.nodeType === 'subgraph') {
+                    visit(child);
+                }
             }
         };
         visit(root);

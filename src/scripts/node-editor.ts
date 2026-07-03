@@ -1468,6 +1468,24 @@ export class NodeEditor {
     return null;
   }
 
+  private getOutermostSubgraphId(nodeId: number): number | null {
+    const node = this.store.get(nodeId);
+    if (!node) return null;
+
+    let currentId: number | null = node.parentId;
+    let outermostSubgraphId: number | null = null;
+    while (currentId !== null) {
+      const ancestor = this.store.get(currentId);
+      if (!ancestor) break;
+      if (ancestor.nodeType === "subgraph") {
+        outermostSubgraphId = ancestor.id;
+      }
+      currentId = ancestor.parentId;
+    }
+
+    return outermostSubgraphId;
+  }
+
   private canEnterContainer(
     sourceOwningSubgraphId: number | null,
     hoveredContainer: NodeData
@@ -2796,10 +2814,8 @@ export class NodeEditor {
       return false;
     }
 
-    const sourceOwningSubgraphId =
-      sourceNode.nodeType === "subgraph" ? null : this.getOwningSubgraphId(sourceNodeId);
-    const targetOwningSubgraphId =
-      targetNode.nodeType === "subgraph" ? null : this.getOwningSubgraphId(targetNodeId);
+    const sourceOwningSubgraphId = this.getOutermostSubgraphId(sourceNodeId);
+    const targetOwningSubgraphId = this.getOutermostSubgraphId(targetNodeId);
     if (sourceOwningSubgraphId !== targetOwningSubgraphId) {
       return false;
     }
