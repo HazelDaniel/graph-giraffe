@@ -30,6 +30,7 @@ export const DEFAULT_HANDLE_STYLE = {
 };
 export const NODE_SIZE = {
     node: { width: 190, height: 150 },
+    hub: { width: 240, height: 100 },
     nodeCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
     group: { width: 220, height: 200 },
     composition: { width: 140, height: 200 },
@@ -41,13 +42,16 @@ export function isContainerNodeType(nodeType) {
     return nodeType === "group" || nodeType === "composition" || nodeType === "subgraph";
 }
 export function isLeafNodeType(nodeType) {
-    return nodeType === "node" || nodeType === "composition-child";
+    return nodeType === "node" || nodeType === "hub" || nodeType === "composition-child";
+}
+export function isNodePrimitiveType(nodeType) {
+    return nodeType === "node" || nodeType === "hub";
 }
 export function isCandidateNodeType(nodeType, connectionMode) {
     if (connectionMode === "group") {
         return nodeType === "group";
     }
-    return nodeType === "node" || nodeType === "composition" || nodeType === "subgraph";
+    return isNodePrimitiveType(nodeType) || nodeType === "composition" || nodeType === "subgraph";
 }
 export function getDefaultNodeSize(nodeType, isCollapsed = false) {
     switch (nodeType) {
@@ -58,6 +62,8 @@ export function getDefaultNodeSize(nodeType, isCollapsed = false) {
             return isCollapsed ? NODE_SIZE.subgraphCollapsed : NODE_SIZE.subgraph;
         case "composition-child":
             return NODE_SIZE.compositionChild;
+        case "hub":
+            return NODE_SIZE.hub;
         case "node":
             return isCollapsed ? NODE_SIZE.nodeCollapsed : NODE_SIZE.node;
         default:

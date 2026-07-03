@@ -9,8 +9,8 @@ import { Renderer } from "./renderer.js";
 import { UIControls } from "./controls.js";
 import { HistoryStack } from "./history.js";
 import { captureNodeHistorySnapshot, cloneNodeProps, } from "./history-snapshots.js";
-import { CreateNodeCommand, CreateSubgraphCommand, ConnectCommand, DeleteNodeCommand, DeleteEdgeCommand, DeleteSelectionCommand, DuplicateIntoCompositionCommand, MoveNodeCommand, MoveSelectionCommand, ReparentCommand, ToggleLockCommand, ToggleSubgraphCollapseCommand, UngraphCommand, UpdateLabelCommand, UpdatePropCommand, } from "./commands.js";
-import { DEFAULT_HANDLE_STYLE, NODE_LAYOUT, isCandidateNodeType, isContainerNodeType, } from "./types.js";
+import { CreateNodeCommand, CreateHubFromConnectionDropCommand, CreateSubgraphCommand, ConnectCommand, DeleteNodeCommand, DeleteEdgeCommand, DeleteSelectionCommand, DuplicateIntoCompositionCommand, MoveNodeCommand, MoveSelectionCommand, ReparentCommand, ToggleLockCommand, ToggleSubgraphCollapseCommand, UngraphCommand, UpdateLabelCommand, UpdatePropCommand, } from "./commands.js";
+import { DEFAULT_HANDLE_STYLE, NODE_LAYOUT, isCandidateNodeType, isContainerNodeType, isNodePrimitiveType, } from "./types.js";
 import { MsdfAtlas } from "./msdf-text.js";
 import { getHandleScreenGeometry, isPointInsideHandle, } from "./handle-geometry.js";
 import { getParentFrameWorldPosition, getWorldPosition } from "./scene-graph.js";
@@ -276,7 +276,7 @@ export class NodeEditor {
         // For leaf nodes: 'node-body' maps to body, 'node-head' maps to head, etc.
         const applyToNodes = (nodes) => {
             for (const node of nodes) {
-                if ((node.nodeType === "node" && kind === "node-body") ||
+                if ((isNodePrimitiveType(node.nodeType) && kind === "node-body") ||
                     (node.nodeType === "group" && kind === "group-body") ||
                     (node.nodeType === "composition" && kind === "composition-body") ||
                     (node.nodeType === "composition-child" && kind === "node-body") || // fallback for body
@@ -288,7 +288,7 @@ export class NodeEditor {
                         didChange = true;
                     }
                 }
-                if ((node.nodeType === "node" && kind === "node-head") ||
+                if ((isNodePrimitiveType(node.nodeType) && kind === "node-head") ||
                     (node.nodeType === "group" && kind === "group-head") ||
                     (node.nodeType === "composition" && kind === "composition-head") ||
                     (node.nodeType === "composition-child" &&
@@ -583,7 +583,7 @@ export class NodeEditor {
                 const targetOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
                 for (const entry of selectionDrag.entries) {
                     const node = this.store.get(entry.nodeId);
-                    if (!node || node.nodeType !== "node")
+                    if (!node || !isNodePrimitiveType(node.nodeType))
                         continue;
                     const sourceOwningSubgraphId = this.getOwningSubgraphId(node.id);
                     if (sourceOwningSubgraphId !== targetOwningSubgraphId)
@@ -635,7 +635,7 @@ export class NodeEditor {
                 if (this.getOwningSubgraphId(node.id) !== null)
                     continue;
                 const oldParentId = node.parentId;
-                if (node.nodeType === "node") {
+                if (isNodePrimitiveType(node.nodeType)) {
                     if (!this.store.setParent(node.id, null))
                         continue;
                     removedReferenceEdgeSnapshots.push(...this.removeCompositionReferenceEdgesForNode(node.id));
@@ -948,6 +948,8 @@ export class NodeEditor {
     }
     restoreEdgeSnapshots(snapshots) {
         for (const snapshot of snapshots) {
+            const source = this.store.get(snapshot.sourceNodeId);
+            const target = this.store.get(snapshot.targetNodeId);
             const edge = this.edgeStore.add({
                 ...snapshot,
                 sourceHandleSide: snapshot.sourceHandleSide,
@@ -958,6 +960,8 @@ export class NodeEditor {
                 isSelected: snapshot.isSelected,
                 visible: snapshot.visible,
                 idOverride: snapshot.id,
+                sourceCanHaveMultipleConnections: source?.nodeType === "hub",
+                targetCanHaveMultipleConnections: target?.nodeType === "hub",
             });
             if (edge) {
                 this.syncHandleStates(edge.sourceNodeId);
@@ -1206,7 +1210,9 @@ export class NodeEditor {
         const selectionBefore = this.captureSelectionSnapshot();
         const label = nodeType === "group"
             ? `Group ${this.store.nextNodeId}`
-            : `Node ${this.store.nextNodeId}`;
+            : nodeType === "hub"
+                ? `Hub ${this.store.nextNodeId}`
+                : `Node ${this.store.nextNodeId}`;
         const node = this.store.add(worldX, worldY, label, this.theme, nodeType);
         if (parentId !== null && !this.store.setParent(node.id, parentId)) {
             this.store.remove(node.id);
@@ -1622,7 +1628,7 @@ export class NodeEditor {
                 return;
             }
         }
-        if (node.nodeType === "node" ||
+        if (isNodePrimitiveType(node.nodeType) ||
             node.nodeType === "composition-child" ||
             node.nodeType === "group") {
             const editX = node.width - NODE_LAYOUT.editBtnPaddingRight;
@@ -1796,7 +1802,7 @@ export class NodeEditor {
             this.refreshContainerChain(refreshContainerId);
         }
         this.store.clearDropTargets();
-        if (this.draggingNode.nodeType === "node" ||
+        if (isNodePrimitiveType(this.draggingNode.nodeType) ||
             this.draggingNode.nodeType === "composition") {
             const hoveredContainer = this.getHoveredContainer(screenX, screenY, this.draggingNode);
             if (hoveredContainer) {
@@ -1849,23 +1855,31 @@ export class NodeEditor {
         if (this.activeConnectionDrag) {
             const source = this.activeConnectionDrag;
             const target = this.hoveredHandle;
-            if (target &&
-                this.isValidConnection(source.sourceNodeId, source.sourceHandleSide, target.nodeId, target.handle.side)) {
-                const edge = this.edgeStore.add({
-                    sourceNodeId: source.sourceNodeId,
-                    sourceHandleSide: source.sourceHandleSide,
-                    targetNodeId: target.nodeId,
-                    targetHandleSide: target.handle.side,
-                });
-                if (edge) {
-                    this.syncHandleStates(edge.sourceNodeId);
-                    this.syncHandleStates(edge.targetNodeId);
-                    this.applyCompositionReferenceForEdge(edge);
-                    const snapshot = { ...edge };
-                    this.pushCommand(new ConnectCommand({
-                        edgeSnapshot: snapshot,
-                    }));
+            if (target) {
+                if (this.isValidConnection(source.sourceNodeId, source.sourceHandleSide, target.nodeId, target.handle.side)) {
+                    const sourceNode = this.store.get(source.sourceNodeId);
+                    const targetNode = this.store.get(target.nodeId);
+                    const edge = this.edgeStore.add({
+                        sourceNodeId: source.sourceNodeId,
+                        sourceHandleSide: source.sourceHandleSide,
+                        targetNodeId: target.nodeId,
+                        targetHandleSide: target.handle.side,
+                        sourceCanHaveMultipleConnections: sourceNode?.nodeType === "hub",
+                        targetCanHaveMultipleConnections: targetNode?.nodeType === "hub",
+                    });
+                    if (edge) {
+                        this.syncHandleStates(edge.sourceNodeId);
+                        this.syncHandleStates(edge.targetNodeId);
+                        this.applyCompositionReferenceForEdge(edge);
+                        const snapshot = { ...edge };
+                        this.pushCommand(new ConnectCommand({
+                            edgeSnapshot: snapshot,
+                        }));
+                    }
                 }
+            }
+            else {
+                this.createHubFromConnectionDrop(source, canvas, e.clientX, e.clientY);
             }
             this.activeConnectionDrag = null;
             this.hoveredHandle = null;
@@ -1908,7 +1922,7 @@ export class NodeEditor {
             const sourceId = source.id; // capture as primitive, not mutable ref
             let command = null;
             const sourceOwningSubgraphId = this.getOwningSubgraphId(source.id);
-            if (source.nodeType === "node") {
+            if (isNodePrimitiveType(source.nodeType)) {
                 const hoveredContainer = this.getHoveredContainer(screenX, screenY, source);
                 const beforePlacement = {
                     localX: snapshot.localX,
@@ -2156,6 +2170,66 @@ export class NodeEditor {
         this.dragSnapshot = null;
         this.syncToolbarState();
     }
+    createHubFromConnectionDrop(source, canvas, clientX, clientY) {
+        const { left, top } = canvas.getBoundingClientRect();
+        const screenX = clientX - left;
+        const screenY = clientY - top;
+        const pickedId = this.pick(screenX, screenY);
+        const dropTarget = pickedId === 0 ? null : this.store.get(pickedId);
+        if (dropTarget && dropTarget.nodeType !== "subgraph") {
+            return false;
+        }
+        const { x: worldX, y: worldY } = this.camera.screenToWorld(screenX, screenY);
+        const selectionBefore = this.captureSelectionSnapshot();
+        const parentId = dropTarget?.nodeType === "subgraph" ? dropTarget.id : null;
+        const hub = this.store.add(worldX, worldY, `Hub ${this.store.nextNodeId}`, this.theme, "hub");
+        if (parentId !== null && !this.store.setParent(hub.id, parentId)) {
+            this.store.remove(hub.id);
+            return false;
+        }
+        const sourceNode = this.store.get(source.sourceNodeId);
+        const edgeParams = source.sourceHandleSide === "right"
+            ? {
+                sourceNodeId: source.sourceNodeId,
+                sourceHandleSide: source.sourceHandleSide,
+                targetNodeId: hub.id,
+                targetHandleSide: "left",
+                sourceCanHaveMultipleConnections: sourceNode?.nodeType === "hub",
+                targetCanHaveMultipleConnections: true,
+            }
+            : {
+                sourceNodeId: hub.id,
+                sourceHandleSide: "right",
+                targetNodeId: source.sourceNodeId,
+                targetHandleSide: source.sourceHandleSide,
+                sourceCanHaveMultipleConnections: true,
+                targetCanHaveMultipleConnections: sourceNode?.nodeType === "hub",
+            };
+        if (!this.isValidConnection(edgeParams.sourceNodeId, edgeParams.sourceHandleSide, edgeParams.targetNodeId, edgeParams.targetHandleSide)) {
+            this.store.remove(hub.id);
+            return false;
+        }
+        const edge = this.edgeStore.add(edgeParams);
+        if (!edge) {
+            this.store.remove(hub.id);
+            return false;
+        }
+        this.syncHandleStates(edge.sourceNodeId);
+        this.syncHandleStates(edge.targetNodeId);
+        this.applyCompositionReferenceForEdge(edge);
+        const hubSnapshot = this.captureNodeSnapshot(hub);
+        const edgeSnapshot = { ...edge };
+        this.clearSelectionState();
+        this.setNodeSelected(hub.id, true);
+        this.refreshContainerChain(parentId);
+        this.pushCommand(new CreateHubFromConnectionDropCommand({
+            hubSnapshot,
+            edgeSnapshot,
+            selectionBefore,
+            parentId,
+        }));
+        return true;
+    }
     isValidConnection(sourceNodeId, sourceHandleSide, targetNodeId, targetHandleSide) {
         if (sourceNodeId === targetNodeId)
             return false;
@@ -2169,6 +2243,12 @@ export class NodeEditor {
         if (targetNode.nodeType === "subgraph" && targetHandleSide !== "left") {
             return false;
         }
+        if (sourceNode.nodeType === "hub" && sourceHandleSide !== "right") {
+            return false;
+        }
+        if (targetNode.nodeType === "hub" && targetHandleSide !== "left") {
+            return false;
+        }
         const sourceOwningSubgraphId = this.getOutermostSubgraphId(sourceNodeId);
         const targetOwningSubgraphId = this.getOutermostSubgraphId(targetNodeId);
         if (sourceOwningSubgraphId !== targetOwningSubgraphId) {
@@ -2179,9 +2259,11 @@ export class NodeEditor {
             !this.canCreateCompositionReference(sourceNodeId, targetNodeId)) {
             return false;
         }
-        if (this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide))
+        if (sourceNode.nodeType !== "hub" &&
+            this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide))
             return false;
-        if (this.edgeStore.hasConnection(targetNodeId, targetHandleSide))
+        if (targetNode.nodeType !== "hub" &&
+            this.edgeStore.hasConnection(targetNodeId, targetHandleSide))
             return false;
         return true;
     }

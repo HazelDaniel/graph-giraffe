@@ -764,6 +764,11 @@ export class Renderer {
       return;
     }
 
+    if (node.nodeType === "hub") {
+      this.drawHubNode(node, worldX, worldY, z, picking);
+      return;
+    }
+
     if (node.isDropTarget) {
       this.setModelMatrix(
         worldX - 6,
@@ -1575,6 +1580,125 @@ export class Renderer {
       );
       xPos -= NODE_LAYOUT.subgraphBtnSpacing;
     }
+  }
+
+  private drawHubNode(
+    node: NodeData,
+    worldX: number,
+    worldY: number,
+    z: number,
+    picking: boolean
+  ): void {
+    const gl = this.gl;
+
+    if (picking) {
+      gl.uniform1i(this.locations.u_UseTexture, 0);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
+      gl.uniform4f(
+        this.locations.u_Color,
+        node.pickColor[0],
+        node.pickColor[1],
+        node.pickColor[2],
+        1.0
+      );
+      this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+      return;
+    }
+
+    const [r, g, b, _] = this.getFontColor();
+    const slotPadding = 10;
+    const iconSlotWidth = Math.max(
+      48,
+      Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28)))
+    );
+    const iconSlotHeight = Math.max(0, node.height - slotPadding * 2);
+    const iconCenterX = worldX + slotPadding + iconSlotWidth / 2;
+    const iconCenterY = worldY + node.height / 2;
+    const labelX = worldX + iconSlotWidth + NODE_LAYOUT.padding * 1.5;
+    const titleY = node.height / 2;
+
+    if (node.isDropTarget || node.isSelected) {
+      this.setModelMatrix(
+        worldX - 3,
+        worldY - 3,
+        node.width + 6,
+        node.height + 6,
+        z
+      );
+      gl.uniform1i(this.locations.u_UseTexture, 0);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 1);
+      gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
+      gl.uniform4f(
+        this.locations.u_Color,
+        node.isDropTarget ? 0.04 : 0.08,
+        node.isDropTarget ? 0.38 : 0.14,
+        node.isDropTarget ? 0.16 : 0.68,
+        0.09
+      );
+      gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1.0, 0.95);
+      gl.uniform1f(this.locations.u_BorderWidth, 2.0);
+      gl.uniform1f(this.locations.u_Radius, 16.0);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    }
+
+    this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+    gl.uniform1i(this.locations.u_UseTexture, 0);
+    gl.uniform1i(this.locations.u_Use9Slice, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 1);
+    gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+    gl.uniform4f(this.locations.u_Color, 0.08, 0.09, 0.1, 0.92);
+    gl.uniform4f(this.locations.u_BorderColor, 1.0, 1.0, 1.0, 0.9);
+    gl.uniform1f(this.locations.u_BorderWidth, 2.0);
+    gl.uniform1f(this.locations.u_Radius, 16.0);
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 0);
+
+    this.setModelMatrix(
+      worldX + slotPadding,
+      worldY + slotPadding,
+      iconSlotWidth,
+      iconSlotHeight,
+      z
+    );
+    gl.uniform1i(this.locations.u_UseTexture, 0);
+    gl.uniform1i(this.locations.u_Use9Slice, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 1);
+    gl.uniform2f(this.locations.u_Dimensions, iconSlotWidth, iconSlotHeight);
+    gl.uniform4f(this.locations.u_Color, 0.15, 0.16, 0.18, 0.92);
+    gl.uniform4f(this.locations.u_BorderColor, 1.0, 1.0, 1.0, 0.28);
+    gl.uniform1f(this.locations.u_BorderWidth, 1.0);
+    gl.uniform1f(this.locations.u_Radius, 12.0);
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 0);
+
+    this.iconRenderer.addText(
+      "",
+      iconCenterX,
+      iconCenterY,
+      Math.max(18, Math.min(28, iconSlotHeight * 0.48)),
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      "center",
+      "middle"
+    );
+
+    this.textRenderer.addText(
+      node.text,
+      labelX,
+      worldY + titleY,
+      14,
+      r,
+      g,
+      b,
+      1.0,
+      "left",
+      "middle"
+    );
   }
 
   private setModelMatrix(x: number, y: number, w: number, h: number, z: number = 0): void {

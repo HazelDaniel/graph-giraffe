@@ -1,7 +1,7 @@
 import { EdgeStore } from "./edge-store.js";
 import { HistoryStack } from "./history.js";
 import { captureEdgeHistorySnapshot, captureNodeHistorySnapshot, cloneNodeProps, } from "./history-snapshots.js";
-import { CreateNodeCommand, CreateSubgraphCommand, ConnectCommand, DeleteNodeCommand, DuplicateIntoCompositionCommand, MoveSelectionCommand, ReparentCommand, ToggleSubgraphCollapseCommand, UngraphCommand, UpdateLabelCommand, UpdatePropCommand, } from "./commands.js";
+import { CreateHubFromConnectionDropCommand, CreateNodeCommand, CreateSubgraphCommand, ConnectCommand, DeleteNodeCommand, DuplicateIntoCompositionCommand, MoveSelectionCommand, ReparentCommand, ToggleSubgraphCollapseCommand, UngraphCommand, UpdateLabelCommand, UpdatePropCommand, } from "./commands.js";
 import { NodeStore } from "./node-store.js";
 import { getParentFrameWorldPosition, getWorldPosition, } from "./scene-graph.js";
 import { DEFAULT_HANDLE_STYLE, isContainerNodeType, } from "./types.js";
@@ -50,11 +50,13 @@ export class WorldActionDriver {
         const selectionBefore = this.captureSelectionSnapshot();
         const label = nodeType === "group"
             ? `Group ${this.store.nextNodeId}`
-            : nodeType === "composition"
-                ? `Composition ${this.store.nextNodeId}`
-                : nodeType === "subgraph"
-                    ? `Subgraph ${this.store.nextNodeId}`
-                    : `Node ${this.store.nextNodeId}`;
+            : nodeType === "hub"
+                ? `Hub ${this.store.nextNodeId}`
+                : nodeType === "composition"
+                    ? `Composition ${this.store.nextNodeId}`
+                    : nodeType === "subgraph"
+                        ? `Subgraph ${this.store.nextNodeId}`
+                        : `Node ${this.store.nextNodeId}`;
         const node = this.store.add(worldX, worldY, label, this.theme, nodeType);
         if (parentId !== null && !this.store.setParent(node.id, parentId)) {
             this.store.remove(node.id);
@@ -82,6 +84,8 @@ export class WorldActionDriver {
             sourceHandleSide,
             targetNodeId,
             targetHandleSide,
+            sourceCanHaveMultipleConnections: this.store.get(sourceNodeId)?.nodeType === "hub",
+            targetCanHaveMultipleConnections: this.store.get(targetNodeId)?.nodeType === "hub",
         });
         if (!edge)
             return null;
@@ -251,6 +255,59 @@ export class WorldActionDriver {
             selectionBefore,
         }));
         return clone;
+    }
+    createHubFromConnectionDrop(sourceNodeId, sourceHandleSide, worldX, worldY, parentId = null) {
+        const source = this.store.get(sourceNodeId);
+        if (!source)
+            return null;
+        const selectionBefore = this.captureSelectionSnapshot();
+        const hub = this.store.add(worldX, worldY, `Hub ${this.store.nextNodeId}`, this.theme, "hub");
+        if (parentId !== null && !this.store.setParent(hub.id, parentId)) {
+            this.store.remove(hub.id);
+            return null;
+        }
+        const edgeParams = sourceHandleSide === "right"
+            ? {
+                sourceNodeId,
+                sourceHandleSide,
+                targetNodeId: hub.id,
+                targetHandleSide: "left",
+                sourceCanHaveMultipleConnections: source.nodeType === "hub",
+                targetCanHaveMultipleConnections: true,
+            }
+            : {
+                sourceNodeId: hub.id,
+                sourceHandleSide: "right",
+                targetNodeId: sourceNodeId,
+                targetHandleSide: sourceHandleSide,
+                sourceCanHaveMultipleConnections: true,
+                targetCanHaveMultipleConnections: source.nodeType === "hub",
+            };
+        if (!this.isValidConnection(edgeParams.sourceNodeId, edgeParams.sourceHandleSide, edgeParams.targetNodeId, edgeParams.targetHandleSide)) {
+            this.store.remove(hub.id);
+            return null;
+        }
+        const edge = this.edgeStore.add(edgeParams);
+        if (!edge) {
+            this.store.remove(hub.id);
+            return null;
+        }
+        this.syncHandleStates(edge.sourceNodeId);
+        this.syncHandleStates(edge.targetNodeId);
+        this.applyCompositionReferenceForEdge(edge);
+        const hubSnapshot = this.captureNodeSnapshot(hub);
+        const edgeSnapshot = captureEdgeHistorySnapshot(edge);
+        this.clearSelectionState();
+        this.setNodeSelected(hub.id, true);
+        this.refreshContainerChain(parentId);
+        this.syncPropertiesPanel();
+        this.pushCommand(new CreateHubFromConnectionDropCommand({
+            hubSnapshot,
+            edgeSnapshot,
+            selectionBefore,
+            parentId,
+        }));
+        return hub;
     }
     createSubgraph(nodeIds) {
         const roots = nodeIds
@@ -631,9 +688,13 @@ export class WorldActionDriver {
     }
     restoreEdgeSnapshots(snapshots) {
         for (const snapshot of snapshots) {
+            const source = this.store.get(snapshot.sourceNodeId);
+            const target = this.store.get(snapshot.targetNodeId);
             const edge = this.edgeStore.add({
                 ...snapshot,
                 idOverride: snapshot.id,
+                sourceCanHaveMultipleConnections: source?.nodeType === "hub",
+                targetCanHaveMultipleConnections: target?.nodeType === "hub",
             });
             if (!edge)
                 continue;
@@ -655,6 +716,10 @@ export class WorldActionDriver {
             return false;
         if (targetNode.nodeType === "subgraph" && targetHandleSide !== "left")
             return false;
+        if (sourceNode.nodeType === "hub" && sourceHandleSide !== "right")
+            return false;
+        if (targetNode.nodeType === "hub" && targetHandleSide !== "left")
+            return false;
         const sourceOwningSubgraphId = this.getOutermostSubgraphId(sourceNodeId);
         const targetOwningSubgraphId = this.getOutermostSubgraphId(targetNodeId);
         if (sourceOwningSubgraphId !== targetOwningSubgraphId)
@@ -664,9 +729,11 @@ export class WorldActionDriver {
             !this.canCreateCompositionReference(sourceNodeId, targetNodeId)) {
             return false;
         }
-        if (this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide))
+        if (sourceNode.nodeType !== "hub" &&
+            this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide))
             return false;
-        if (this.edgeStore.hasConnection(targetNodeId, targetHandleSide))
+        if (targetNode.nodeType !== "hub" &&
+            this.edgeStore.hasConnection(targetNodeId, targetHandleSide))
             return false;
         return true;
     }

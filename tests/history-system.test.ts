@@ -223,6 +223,41 @@ describe("world action history", () => {
     expectGraphIntegrity(driver);
   });
 
+  it("allows hubs to fan in on the left and fan out on the right", () => {
+    const { driver } = createDriver();
+    const sourceA = driver.createNode("node", 0, 0)!;
+    const sourceB = driver.createNode("node", 220, 0)!;
+    const sinkA = driver.createNode("node", 440, 0)!;
+    const sinkB = driver.createNode("node", 660, 0)!;
+    const hub = driver.createNode("hub", 220, 120)!;
+
+    expect(driver.connect(sourceA.id, "right", hub.id, "left")).toBeTruthy();
+    expect(driver.connect(sourceB.id, "right", hub.id, "left")).toBeTruthy();
+    expect(driver.connect(hub.id, "right", sinkA.id, "left")).toBeTruthy();
+    expect(driver.connect(hub.id, "right", sinkB.id, "left")).toBeTruthy();
+    expect(driver.connect(hub.id, "left", sinkA.id, "right")).toBeNull();
+    expect(driver.connect(sourceA.id, "right", hub.id, "right")).toBeNull();
+    expectGraphIntegrity(driver);
+  });
+
+  it("creates a hub and seed edge from a dropped connection", () => {
+    const { driver } = createDriver();
+    const source = driver.createNode("node", 0, 0)!;
+
+    const hub = driver.createHubFromConnectionDrop(source.id, "right", 200, 40)!;
+    const edge = driver.edgeStore.allEdges()[0]!;
+
+    expect(hub.nodeType).toBe("hub");
+    expect(edge).toBeDefined();
+    expect(edge.sourceNodeId).toBe(source.id);
+    expect(edge.targetNodeId).toBe(hub.id);
+    expect(edge.targetHandleSide).toBe("left");
+    expect(driver.selectedNodes).toEqual([hub.id]);
+    expect(driver.store.get(hub.id)?.handles.find((h) => h.side === "left")?.isConnected).toBe(true);
+    expect(driver.store.get(hub.id)?.handles.find((h) => h.side === "right")?.isConnected).toBe(false);
+    expectGraphIntegrity(driver);
+  });
+
   it("keeps subgraphs behind groups, compositions, and leaves in z order", () => {
     const { driver } = createDriver();
     const subgraphA = driver.createNode("subgraph", 0, 0)!;

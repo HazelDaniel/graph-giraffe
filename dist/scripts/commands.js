@@ -158,6 +158,33 @@ export class CreateNodeCommand {
     }
 }
 /**
+ * Hub creation from a dropped connection endpoint.
+ * The hub and its first edge are created together as one undoable action.
+ */
+export class CreateHubFromConnectionDropCommand {
+    type = "create-hub-from-connection-drop";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.removeNodesAndEdges([this.payload.hubSnapshot.id], [this.payload.edgeSnapshot.id]);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.refreshContainerChain(this.payload.parentId);
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.applyNodeSnapshot(this.payload.hubSnapshot);
+        ctx.restoreEdgeSnapshots([this.payload.edgeSnapshot]);
+        ctx.clearSelectionState();
+        ctx.setNodeSelected(this.payload.hubSnapshot.id, true);
+        ctx.refreshContainerChain(this.payload.parentId);
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+}
+/**
  * Edge creation (handle-to-handle connection drag).
  */
 export class ConnectCommand {

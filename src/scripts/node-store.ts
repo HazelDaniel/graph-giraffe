@@ -6,6 +6,7 @@ import {
   getDefaultNodeSize,
   isContainerNodeType,
   isCandidateNodeType,
+  isNodePrimitiveType,
   NodeData,
   ThemeName,
   NodeType,
@@ -175,7 +176,7 @@ export class NodeStore {
     const source = this.get(sourceId);
     const composition = this.get(compositionId);
     if (!source || !composition) return null;
-    if (source.nodeType !== 'node') return null;
+    if (!isNodePrimitiveType(source.nodeType)) return null;
     if (composition.nodeType !== 'composition') return null;
 
     const world = getWorldPosition(source.id, this.allNodesMap);
@@ -653,7 +654,7 @@ export class NodeStore {
     const node = this.get(nodeId);
     if (!node) return;
 
-    if (node.nodeType !== 'node') {
+    if (!isNodePrimitiveType(node.nodeType)) {
       return;
     }
 
@@ -672,7 +673,7 @@ export class NodeStore {
   shouldCollapseNode(node: NodeData): boolean {
     if (node.compositionRefId !== null) return false;
     if (node.nodeType === 'composition-child') return true;
-    if (node.nodeType !== 'node') return false;
+    if (!isNodePrimitiveType(node.nodeType)) return false;
     if (node.parentId === null) return false;
 
     const parent = this.get(node.parentId);
@@ -731,7 +732,7 @@ export class NodeStore {
     nodeType: NodeType,
     existingHandles: NodeHandleData[] = []
   ): NodeHandleData[] {
-    if (nodeType === 'subgraph') {
+    if (nodeType === 'subgraph' || isNodePrimitiveType(nodeType)) {
       return (['left', 'right'] as const).map((side) => ({
         candidateId,
         side,

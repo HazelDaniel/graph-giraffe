@@ -23,12 +23,12 @@ export class EdgeStore {
         return Boolean(edgeIds && edgeIds.size > 0);
     }
     add(params) {
-        const { sourceNodeId, sourceHandleSide, targetNodeId, targetHandleSide, edgeType = 'orthogonal', headType = 'arrow', headSkinId = 'arrow', label = '', isSelected = false, visible = true, idOverride, } = params;
+        const { sourceNodeId, sourceHandleSide, targetNodeId, targetHandleSide, sourceCanHaveMultipleConnections = false, targetCanHaveMultipleConnections = false, edgeType = 'orthogonal', headType = 'arrow', headSkinId = 'arrow', label = '', isSelected = false, visible = true, idOverride, } = params;
         if (sourceNodeId === targetNodeId)
             return null;
-        if (this.hasConnection(sourceNodeId, sourceHandleSide))
+        if (!sourceCanHaveMultipleConnections && this.hasConnection(sourceNodeId, sourceHandleSide))
             return null;
-        if (this.hasConnection(targetNodeId, targetHandleSide))
+        if (!targetCanHaveMultipleConnections && this.hasConnection(targetNodeId, targetHandleSide))
             return null;
         const existing = this.findEdgeByEndpoints(sourceNodeId, sourceHandleSide, targetNodeId, targetHandleSide);
         if (existing)

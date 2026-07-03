@@ -11,6 +11,8 @@ export interface CreateEdgeParams {
   sourceHandleSide: HandleSide;
   targetNodeId: number;
   targetHandleSide: HandleSide;
+  sourceCanHaveMultipleConnections?: boolean;
+  targetCanHaveMultipleConnections?: boolean;
   edgeType?: EdgeType;
   headType?: EdgeHeadType;
   headSkinId?: EdgeHeadSkinId;
@@ -57,6 +59,8 @@ export class EdgeStore {
       sourceHandleSide,
       targetNodeId,
       targetHandleSide,
+      sourceCanHaveMultipleConnections = false,
+      targetCanHaveMultipleConnections = false,
       edgeType = 'orthogonal',
       headType = 'arrow',
       headSkinId = 'arrow',
@@ -67,8 +71,8 @@ export class EdgeStore {
     } = params;
 
     if (sourceNodeId === targetNodeId) return null;
-    if (this.hasConnection(sourceNodeId, sourceHandleSide)) return null;
-    if (this.hasConnection(targetNodeId, targetHandleSide)) return null;
+    if (!sourceCanHaveMultipleConnections && this.hasConnection(sourceNodeId, sourceHandleSide)) return null;
+    if (!targetCanHaveMultipleConnections && this.hasConnection(targetNodeId, targetHandleSide)) return null;
 
     const existing = this.findEdgeByEndpoints(
       sourceNodeId,

@@ -13,6 +13,7 @@ import {
 import {
   Command,
   CommandContext,
+  CreateHubFromConnectionDropCommand,
   CreateNodeCommand,
   CreateSubgraphCommand,
   ConnectCommand,
@@ -123,9 +124,11 @@ export class WorldActionDriver {
     const label =
       nodeType === "group"
         ? `Group ${this.store.nextNodeId}`
-        : nodeType === "composition"
-          ? `Composition ${this.store.nextNodeId}`
-          : nodeType === "subgraph"
+        : nodeType === "hub"
+          ? `Hub ${this.store.nextNodeId}`
+          : nodeType === "composition"
+            ? `Composition ${this.store.nextNodeId}`
+            : nodeType === "subgraph"
             ? `Subgraph ${this.store.nextNodeId}`
           : `Node ${this.store.nextNodeId}`;
     const node = this.store.add(worldX, worldY, label, this.theme, nodeType);
@@ -173,6 +176,8 @@ export class WorldActionDriver {
       sourceHandleSide,
       targetNodeId,
       targetHandleSide,
+      sourceCanHaveMultipleConnections: this.store.get(sourceNodeId)?.nodeType === "hub",
+      targetCanHaveMultipleConnections: this.store.get(targetNodeId)?.nodeType === "hub",
     });
     if (!edge) return null;
 
@@ -368,6 +373,88 @@ export class WorldActionDriver {
     }));
 
     return clone;
+  }
+
+  createHubFromConnectionDrop(
+    sourceNodeId: number,
+    sourceHandleSide: HandleSide,
+    worldX: number,
+    worldY: number,
+    parentId: number | null = null
+  ): NodeData | null {
+    const source = this.store.get(sourceNodeId);
+    if (!source) return null;
+
+    const selectionBefore = this.captureSelectionSnapshot();
+    const hub = this.store.add(
+      worldX,
+      worldY,
+      `Hub ${this.store.nextNodeId}`,
+      this.theme,
+      "hub"
+    );
+
+    if (parentId !== null && !this.store.setParent(hub.id, parentId)) {
+      this.store.remove(hub.id);
+      return null;
+    }
+
+    const edgeParams =
+      sourceHandleSide === "right"
+        ? {
+            sourceNodeId,
+            sourceHandleSide,
+            targetNodeId: hub.id,
+            targetHandleSide: "left" as const,
+            sourceCanHaveMultipleConnections: source.nodeType === "hub",
+            targetCanHaveMultipleConnections: true,
+          }
+        : {
+            sourceNodeId: hub.id,
+            sourceHandleSide: "right" as const,
+            targetNodeId: sourceNodeId,
+            targetHandleSide: sourceHandleSide,
+            sourceCanHaveMultipleConnections: true,
+            targetCanHaveMultipleConnections: source.nodeType === "hub",
+          };
+
+    if (
+      !this.isValidConnection(
+        edgeParams.sourceNodeId,
+        edgeParams.sourceHandleSide,
+        edgeParams.targetNodeId,
+        edgeParams.targetHandleSide
+      )
+    ) {
+      this.store.remove(hub.id);
+      return null;
+    }
+
+    const edge = this.edgeStore.add(edgeParams);
+    if (!edge) {
+      this.store.remove(hub.id);
+      return null;
+    }
+
+    this.syncHandleStates(edge.sourceNodeId);
+    this.syncHandleStates(edge.targetNodeId);
+    this.applyCompositionReferenceForEdge(edge);
+
+    const hubSnapshot = this.captureNodeSnapshot(hub);
+    const edgeSnapshot = captureEdgeHistorySnapshot(edge);
+    this.clearSelectionState();
+    this.setNodeSelected(hub.id, true);
+    this.refreshContainerChain(parentId);
+    this.syncPropertiesPanel();
+
+    this.pushCommand(new CreateHubFromConnectionDropCommand({
+      hubSnapshot,
+      edgeSnapshot,
+      selectionBefore,
+      parentId,
+    }));
+
+    return hub;
   }
 
   createSubgraph(nodeIds: number[]): NodeData | null {
@@ -810,9 +897,13 @@ export class WorldActionDriver {
 
   private restoreEdgeSnapshots(snapshots: EdgeHistorySnapshot[]): void {
     for (const snapshot of snapshots) {
+      const source = this.store.get(snapshot.sourceNodeId);
+      const target = this.store.get(snapshot.targetNodeId);
       const edge = this.edgeStore.add({
         ...snapshot,
         idOverride: snapshot.id,
+        sourceCanHaveMultipleConnections: source?.nodeType === "hub",
+        targetCanHaveMultipleConnections: target?.nodeType === "hub",
       });
       if (!edge) continue;
       this.syncHandleStates(edge.sourceNodeId);
@@ -836,6 +927,8 @@ export class WorldActionDriver {
     if (sourceHandleSide === targetHandleSide) return false;
     if (sourceNode.nodeType === "subgraph" && sourceHandleSide !== "right") return false;
     if (targetNode.nodeType === "subgraph" && targetHandleSide !== "left") return false;
+    if (sourceNode.nodeType === "hub" && sourceHandleSide !== "right") return false;
+    if (targetNode.nodeType === "hub" && targetHandleSide !== "left") return false;
 
     const sourceOwningSubgraphId =
       this.getOutermostSubgraphId(sourceNodeId);
@@ -851,8 +944,14 @@ export class WorldActionDriver {
       return false;
     }
 
-    if (this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide)) return false;
-    if (this.edgeStore.hasConnection(targetNodeId, targetHandleSide)) return false;
+    if (
+      sourceNode.nodeType !== "hub" &&
+      this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide)
+    ) return false;
+    if (
+      targetNode.nodeType !== "hub" &&
+      this.edgeStore.hasConnection(targetNodeId, targetHandleSide)
+    ) return false;
     return true;
   }
 

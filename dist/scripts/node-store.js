@@ -1,4 +1,4 @@
-import { DEFAULT_HANDLE_STYLE, getDefaultNodeSize, isContainerNodeType, isCandidateNodeType } from './types.js';
+import { DEFAULT_HANDLE_STYLE, getDefaultNodeSize, isContainerNodeType, isCandidateNodeType, isNodePrimitiveType } from './types.js';
 import { getDefaultTextureIds, getCompositionReferenceTextureIds } from './texture-registry.js';
 import { getParentFrameWorldPosition, getWorldPosition, reparent, } from './scene-graph.js';
 import { AccessibilityTree } from './accessibility.js';
@@ -128,7 +128,7 @@ export class NodeStore {
         const composition = this.get(compositionId);
         if (!source || !composition)
             return null;
-        if (source.nodeType !== 'node')
+        if (!isNodePrimitiveType(source.nodeType))
             return null;
         if (composition.nodeType !== 'composition')
             return null;
@@ -544,7 +544,7 @@ export class NodeStore {
         const node = this.get(nodeId);
         if (!node)
             return;
-        if (node.nodeType !== 'node') {
+        if (!isNodePrimitiveType(node.nodeType)) {
             return;
         }
         const shouldCollapse = this.shouldCollapseNode(node);
@@ -561,7 +561,7 @@ export class NodeStore {
             return false;
         if (node.nodeType === 'composition-child')
             return true;
-        if (node.nodeType !== 'node')
+        if (!isNodePrimitiveType(node.nodeType))
             return false;
         if (node.parentId === null)
             return false;
@@ -604,7 +604,7 @@ export class NodeStore {
         }));
     }
     createHandleState(candidateId, nodeType, existingHandles = []) {
-        if (nodeType === 'subgraph') {
+        if (nodeType === 'subgraph' || isNodePrimitiveType(nodeType)) {
             return ['left', 'right'].map((side) => ({
                 candidateId,
                 side,

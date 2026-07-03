@@ -1,4 +1,2 @@
-- edges in subgraphs can't be picked due to the subgraphs having a higher z-value. subgaphs should have the least z-values and in decreasing order on creation so that a more reecent subgraph can be at the back of an old subgraph. that way, a parent subgraph always stays at the back of its descendants as well
-
-- on history traversal, the texture color of the headers of nodes in a group changed back to the color they had when the node was detached from a group 
-- on 2x full history bi-directional traversal, a composition node that was a part of a multi-selection has just its children displayed and totally orphaned, as well as being the only visible primitives (composition-child) on the screen when i navigate to the last entry on the undo stack (the supposed initial state before any creation)
+- on history traversal, the texture color of the headers of nodes in a group changed back to the color they had when the node was detached from a group  (not verified)
+- on 2x full history bi-directional traversal, a composition node that was a part of a multi-selection has just its children displayed and totally orphaned, as well as being the only visible primitives (composition-child) on the screen when i navigate to the last entry on the undo stack (the supposed initial state before any creation) (not verified)

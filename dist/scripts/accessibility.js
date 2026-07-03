@@ -6,6 +6,8 @@ function describeNodeType(type) {
             return 'Composition';
         case 'composition-child':
             return 'Composition child';
+        case 'hub':
+            return 'Hub';
         case 'node':
         default:
             return 'Node';
