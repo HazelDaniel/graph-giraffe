@@ -324,7 +324,7 @@ export class WorldActionDriver {
     } else {
       const target = this.store.get(parentId);
       if (!target || !isContainerNodeType(target.nodeType)) return false;
-      if (!this.canReparentIntoContainer(sourceOwningSubgraphId, target)) return false;
+      if (!this.canReparentIntoContainer(node, sourceOwningSubgraphId, target)) return false;
     }
 
     const selectionBefore = this.captureSelectionSnapshot();
@@ -1016,9 +1016,12 @@ export class WorldActionDriver {
   }
 
   private canReparentIntoContainer(
+    source: NodeData,
     sourceOwningSubgraphId: number | null,
     target: NodeData
   ): boolean {
+    if (source.nodeType === "hub" && target.nodeType === "group") return false;
+
     if (target.nodeType === "subgraph") {
       const targetOwningSubgraphId = this.getOwningSubgraphId(target.id);
       return (

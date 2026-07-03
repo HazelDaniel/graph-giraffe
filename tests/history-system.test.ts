@@ -611,4 +611,15 @@ describe("world action history", () => {
     expect(driver.store.get(composition.id)?.childIds).not.toContain(clone.id);
     expectGraphIntegrity(driver);
   });
+
+  it("rejects hubs from being nested inside groups", () => {
+    const { driver } = createDriver();
+    const hub = driver.createNode("hub", 0, 0)!;
+    const group = driver.createNode("group", 240, 0)!;
+
+    expect(driver.store.setParent(hub.id, group.id)).toBe(false);
+    expect(driver.reparentNode(hub.id, group.id)).toBe(false);
+    expect(driver.store.get(hub.id)?.parentId).toBeNull();
+    expectGraphIntegrity(driver);
+  });
 });

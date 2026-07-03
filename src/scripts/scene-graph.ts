@@ -101,6 +101,10 @@ export function reparent(
       if (newParent.nodeType !== 'subgraph') return false;
     }
 
+    if (child.nodeType === 'hub') {
+      if (newParent.nodeType === 'group') return false;
+    }
+
     if (child.nodeType === 'composition') {
       if (newParent.nodeType !== 'group' && newParent.nodeType !== 'subgraph') return false;
     }

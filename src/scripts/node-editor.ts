@@ -1462,6 +1462,10 @@ export class NodeEditor {
     sourceOwningSubgraphId: number | null,
     hoveredContainer: NodeData
   ): boolean {
+    if (this.draggingNode?.nodeType === "hub" && hoveredContainer.nodeType === "group") {
+      return false;
+    }
+
     if (hoveredContainer.nodeType === "subgraph") {
       const hoveredOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
       return (

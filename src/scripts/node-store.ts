@@ -451,6 +451,7 @@ export class NodeStore {
     if (parentId !== null) {
       const parent = this.get(parentId);
       if (!parent || !isContainerNodeType(parent.nodeType)) return false;
+      if (node.nodeType === 'hub' && parent.nodeType === 'group') return false;
     }
 
     if (node.parentId !== null) {
@@ -486,6 +487,12 @@ export class NodeStore {
   ): boolean {
     const node = this.get(childId);
     if (!node) return false;
+
+    if (parentId !== null) {
+      const parent = this.get(parentId);
+      if (!parent || !isContainerNodeType(parent.nodeType)) return false;
+      if (node.nodeType === 'hub' && parent.nodeType === 'group') return false;
+    }
 
     if (node.parentId !== null) {
       const currentParent = this.get(node.parentId);

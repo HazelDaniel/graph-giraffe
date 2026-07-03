@@ -209,7 +209,7 @@ export class WorldActionDriver {
             const target = this.store.get(parentId);
             if (!target || !isContainerNodeType(target.nodeType))
                 return false;
-            if (!this.canReparentIntoContainer(sourceOwningSubgraphId, target))
+            if (!this.canReparentIntoContainer(node, sourceOwningSubgraphId, target))
                 return false;
         }
         const selectionBefore = this.captureSelectionSnapshot();
@@ -790,7 +790,9 @@ export class WorldActionDriver {
         }
         return outermostSubgraphId;
     }
-    canReparentIntoContainer(sourceOwningSubgraphId, target) {
+    canReparentIntoContainer(source, sourceOwningSubgraphId, target) {
+        if (source.nodeType === "hub" && target.nodeType === "group")
+            return false;
         if (target.nodeType === "subgraph") {
             const targetOwningSubgraphId = this.getOwningSubgraphId(target.id);
             return (sourceOwningSubgraphId === target.id ||

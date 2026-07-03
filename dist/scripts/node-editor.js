@@ -1085,6 +1085,9 @@ export class NodeEditor {
         return outermostSubgraphId;
     }
     canEnterContainer(sourceOwningSubgraphId, hoveredContainer) {
+        if (this.draggingNode?.nodeType === "hub" && hoveredContainer.nodeType === "group") {
+            return false;
+        }
         if (hoveredContainer.nodeType === "subgraph") {
             const hoveredOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
             return (sourceOwningSubgraphId === hoveredContainer.id ||
