@@ -16,7 +16,7 @@ const STYLE_TEMPLATE = `
         display: flex;
         flex-direction: column;
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 20;
+        z-index: 50;
         border-radius: var(--radius-md) 0 0 var(--radius-md);
       }
 

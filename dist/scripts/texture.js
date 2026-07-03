@@ -154,19 +154,6 @@ export function createOverlayTexture(gl, ctx, canvas, text, width, height, theme
         ctx.textBaseline = "middle";
         ctx.fillText(text, 15, titleY);
     }
-    // Close icon
-    ctx.fillStyle = "#ef4444";
-    ctx.font = "14px Geist, sans-serif";
-    ctx.fillText("✕", width - NODE_LAYOUT.closeBtnPaddingRight, titleY);
-    if (nodeType === "node" ||
-        nodeType === "composition-child" ||
-        nodeType === "group" ||
-        isCollapsed) {
-        // Edit icon
-        ctx.fillStyle = s.titleFill;
-        ctx.font = "14px Geist, sans-serif";
-        ctx.fillText("✎", width - NODE_LAYOUT.editBtnPaddingRight, titleY);
-    }
     if (nodeType === "group") {
         // Draw "+" plus button at the bottom center
         const btnX = width / 2;

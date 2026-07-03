@@ -69,6 +69,9 @@ export class NodeEditor {
     activeLabelEdit = null;
     selectionRep = null;
     draggingSelection = null;
+    selectionToolbar = null;
+    selectionToolbarNodeId = null;
+    selectionToolbarActionSignature = "";
     activeTouches = new Map();
     gestureMode = false;
     pinchDistance = null;
@@ -132,7 +135,7 @@ export class NodeEditor {
         const labelCanvas = document.getElementById("2d-label-canvas");
         const geometry = new GeometryNode(gl, "rounded-square");
         const bgGeometry = new BGGeometryNode(gl, "dotted", backgroundCanvas);
-        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, () => this.selectedNodeIds, msdfProgram, iconBGProgam, this.msdfAtlas, this.iconAtlas);
+        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, () => this.selectedNodeIds, () => this.updateSelectionToolbarPosition(), msdfProgram, iconBGProgam, this.msdfAtlas, this.iconAtlas);
         const container = document.getElementById("sidebar");
         const historyPane = document.getElementById("undo-redo-wrapper");
         const toolPane = document.getElementById("tool-panel");
@@ -141,6 +144,12 @@ export class NodeEditor {
         if (!toolPane)
             throw new Error('"tool-panel" element not found');
         this.uploadTextureSources();
+        this.selectionToolbar = document.createElement("gg-selection-toolbar");
+        document.body.appendChild(this.selectionToolbar);
+        this.selectionToolbar.addEventListener("gg-selection-toolbar-action", (e) => {
+            const customEvent = e;
+            this.handleSelectionToolbarAction(customEvent.detail.action);
+        });
         this.controls = new UIControls(canvas, container, historyPane, toolPane, {
             onAddNode: () => this.handleAddNode(canvas, "node"),
             onAddGroup: () => this.handleAddNode(canvas, "group"),
@@ -375,6 +384,7 @@ export class NodeEditor {
         this.selectedEdgeIds.clear();
         this.selectionKind = null;
         this.selectionRep = null;
+        this.syncSelectionToolbar();
     }
     syncSelectionKind() {
         if (this.selectedNodeIds.size > 0 && this.selectedEdgeIds.size > 0) {
@@ -402,6 +412,7 @@ export class NodeEditor {
             this.selectedNodeIds.delete(nodeId);
         }
         this.syncSelectionKind();
+        this.syncSelectionToolbar();
     }
     setEdgeSelected(edgeId, isSelected) {
         const edge = this.edgeStore.get(edgeId);
@@ -415,6 +426,7 @@ export class NodeEditor {
             this.selectedEdgeIds.delete(edgeId);
         }
         this.syncSelectionKind();
+        this.syncSelectionToolbar();
     }
     selectOnlyNode(nodeId) {
         this.clearSelectionState();
@@ -717,6 +729,7 @@ export class NodeEditor {
         }
         this.selectionKind = snapshot.kind;
         this.syncSelectionKind();
+        this.syncSelectionToolbar();
     }
     clearSelectionAndHideProperties() {
         this.clearSelectionState();
@@ -869,48 +882,6 @@ export class NodeEditor {
             this.syncHandleStates(snapshot.targetNodeId);
         }
         return snapshots;
-    }
-    getSubgraphButtonHit(node, localClickX, localClickY) {
-        const collapsed = Boolean(node.isCollapsed);
-        const actions = collapsed
-            ? ["expand", "delete", "clone", "edit"]
-            : ["collapse", "ungraph", "delete", "clone", "edit"];
-        const titleY = collapsed ? node.height / 2 : 20;
-        let xPos = node.width - NODE_LAYOUT.subgraphBtnPaddingRight;
-        for (const action of actions) {
-            const dx = localClickX - xPos;
-            const dy = localClickY - titleY;
-            if (dx * dx + dy * dy <=
-                NODE_LAYOUT.subgraphBtnClickRadius * NODE_LAYOUT.subgraphBtnClickRadius) {
-                return { action };
-            }
-            xPos -= NODE_LAYOUT.subgraphBtnSpacing;
-        }
-        return null;
-    }
-    handleSubgraphButton(node, action) {
-        switch (action) {
-            case "expand":
-            case "collapse":
-                this.toggleSubgraphCollapse(node.id);
-                break;
-            case "ungraph":
-                this.ungraphSubgraphWithHistory(node.id);
-                break;
-            case "delete":
-                this.deleteNodeTreeWithHistory(node.id);
-                break;
-            case "clone":
-                // Clone is intentionally shallow for the first pass; it duplicates the subgraph container only.
-                this.cloneSubgraphWithHistory(node.id);
-                break;
-            case "edit":
-                this.beginLabelEdit(node);
-                this.selectOnlyNode(node.id);
-                this.controls.showProperties(node);
-                break;
-        }
-        this.syncToolbarState();
     }
     applyNodeSnapshot(snapshot) {
         let node = this.store.get(snapshot.id);
@@ -1456,6 +1427,108 @@ export class NodeEditor {
         else {
             this.controls.disableRedo();
         }
+        this.syncSelectionToolbar();
+    }
+    getSelectionToolbarButtons(node) {
+        const baseButtons = (items) => items.map(([action, glyph, label]) => ({ action, glyph, label }));
+        if (node.nodeType === "subgraph") {
+            return node.isCollapsed
+                ? baseButtons([
+                    ["expand", "+", "Expand"],
+                    ["delete", "×", "Delete"],
+                    ["clone", "⧉", "Clone"],
+                    ["edit", "✎", "Edit"],
+                ])
+                : baseButtons([
+                    ["collapse", "−", "Collapse"],
+                    ["ungraph", "U", "Ungraph"],
+                    ["delete", "×", "Delete"],
+                    ["clone", "⧉", "Clone"],
+                    ["edit", "✎", "Edit"],
+                ]);
+        }
+        if (node.nodeType === "node" ||
+            node.nodeType === "composition-child" ||
+            node.nodeType === "group" ||
+            node.nodeType === "hub") {
+            return baseButtons([
+                ["delete", "×", "Delete"],
+                ["edit", "✎", "Edit"],
+            ]);
+        }
+        if (node.nodeType === "composition") {
+            return baseButtons([["delete", "×", "Delete"]]);
+        }
+        return [];
+    }
+    syncSelectionToolbar() {
+        if (!this.selectionToolbar)
+            return;
+        const node = this.getSingleSelectedNode();
+        if (!node) {
+            this.selectionToolbar.hide();
+            this.selectionToolbarNodeId = null;
+            this.selectionToolbarActionSignature = "";
+            return;
+        }
+        const actions = this.getSelectionToolbarButtons(node);
+        const signature = actions.map((action) => action.action).join("|");
+        if (this.selectionToolbarNodeId !== node.id ||
+            this.selectionToolbarActionSignature !== signature) {
+            this.selectionToolbar.setActions(actions);
+            this.selectionToolbarNodeId = node.id;
+            this.selectionToolbarActionSignature = signature;
+        }
+        this.updateSelectionToolbarPosition();
+        this.selectionToolbar.show();
+    }
+    updateSelectionToolbarPosition() {
+        if (!this.selectionToolbar)
+            return;
+        const node = this.getSingleSelectedNode();
+        if (!node)
+            return;
+        const world = getWorldPosition(node.id, this.store.allNodesMap);
+        const anchorX = world.x + node.width - 12;
+        const anchorY = node.nodeType === "subgraph"
+            ? node.isCollapsed
+                ? world.y + node.height / 2
+                : world.y + 20
+            : isContainerNodeType(node.nodeType)
+                ? world.y + 20
+                : world.y + NODE_LAYOUT.headerHeight / 2;
+        const screen = this.camera.worldToScreen(anchorX, anchorY);
+        this.selectionToolbar.setPosition(screen.x, screen.y);
+    }
+    handleSelectionToolbarAction(action) {
+        const node = this.getSingleSelectedNode();
+        if (!node)
+            return;
+        switch (action) {
+            case "delete":
+                this.handleDeleteSelected();
+                return;
+            case "edit":
+                this.beginLabelEdit(node);
+                this.controls.showProperties(node);
+                return;
+            case "collapse":
+            case "expand":
+                if (node.nodeType === "subgraph") {
+                    this.toggleSubgraphCollapse(node.id);
+                }
+                return;
+            case "ungraph":
+                if (node.nodeType === "subgraph") {
+                    this.ungraphSubgraphWithHistory(node.id);
+                }
+                return;
+            case "clone":
+                if (node.nodeType === "subgraph") {
+                    this.cloneSubgraphWithHistory(node.id);
+                }
+                return;
+        }
     }
     refreshContainerChain(containerId) {
         let currentId = containerId;
@@ -1574,14 +1647,6 @@ export class NodeEditor {
         const localClickX = worldX - nodeWorld.x;
         const localClickY = worldY - nodeWorld.y;
         if (node.nodeType === "subgraph") {
-            const subgraphHit = this.getSubgraphButtonHit(node, localClickX, localClickY);
-            if (subgraphHit) {
-                this.handleSubgraphButton(node, subgraphHit.action);
-                this.hoveredHandle = null;
-                return;
-            }
-        }
-        if (node.nodeType === "subgraph") {
             const edgeHit = this.hitTestEdge(screenX, screenY);
             if (edgeHit) {
                 this.controls.hideProperties();
@@ -1590,22 +1655,6 @@ export class NodeEditor {
                 this.draggingNode = null;
                 this.dragSnapshot = null;
                 this.syncToolbarState();
-                return;
-            }
-        }
-        if (node.nodeType !== "subgraph") {
-            const closeX = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-            const closeY = isContainerNodeType(node.nodeType)
-                ? 20
-                : NODE_LAYOUT.headerHeight / 2;
-            const closeDx = localClickX - closeX;
-            const closeDy = localClickY - closeY;
-            if (closeDx * closeDx + closeDy * closeDy <=
-                NODE_LAYOUT.closeBtnClickRadius * NODE_LAYOUT.closeBtnClickRadius) {
-                this.deleteNodeTreeWithHistory(node.id);
-                this.draggingNode = null;
-                this.dragSnapshot = null;
-                this.hoveredHandle = null;
                 return;
             }
         }
@@ -1625,23 +1674,6 @@ export class NodeEditor {
                     afterSnapshot,
                 }));
                 this.hoveredHandle = null;
-                return;
-            }
-        }
-        if (isNodePrimitiveType(node.nodeType) ||
-            node.nodeType === "composition-child" ||
-            node.nodeType === "group") {
-            const editX = node.width - NODE_LAYOUT.editBtnPaddingRight;
-            const editY = NODE_LAYOUT.headerHeight / 2;
-            const editDx = localClickX - editX;
-            const editDy = localClickY - editY;
-            if (editDx * editDx + editDy * editDy <=
-                NODE_LAYOUT.editBtnClickRadius * NODE_LAYOUT.editBtnClickRadius) {
-                this.beginLabelEdit(node);
-                this.selectOnlyNode(node.id);
-                this.controls.showProperties(node);
-                this.hoveredHandle = null;
-                this.syncToolbarState();
                 return;
             }
         }

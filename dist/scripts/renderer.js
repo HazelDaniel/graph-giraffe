@@ -31,6 +31,7 @@ export class Renderer {
     getBgColor;
     getFontColor;
     getSelectedNodeIds;
+    onFrame;
     msdfProgram;
     iconBGProgram;
     msdfAtlas;
@@ -39,7 +40,7 @@ export class Renderer {
     projMatrix = new Matrix4();
     constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, 
     /** Callback so Renderer never stores bgColor itself — it belongs to the editor. */
-    getBgColor, getFontColor, getSelectedNodeIds, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas) {
+    getBgColor, getFontColor, getSelectedNodeIds, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas) {
         this.gl = gl;
         this.canvas = canvas;
         this.bgCanvas = bgCanvas;
@@ -57,6 +58,7 @@ export class Renderer {
         this.getBgColor = getBgColor;
         this.getFontColor = getFontColor;
         this.getSelectedNodeIds = getSelectedNodeIds;
+        this.onFrame = onFrame;
         this.msdfProgram = msdfProgram;
         this.iconBGProgram = iconBGProgram;
         this.msdfAtlas = msdfAtlas;
@@ -106,6 +108,7 @@ export class Renderer {
     tick() {
         this.drawBGFrame();
         this.drawFrame();
+        this.onFrame();
         requestAnimationFrame(this.tick.bind(this));
     }
     invalidateTextures() {
@@ -605,29 +608,6 @@ export class Renderer {
                 this.iconRenderer.addText(isLocked ? "\uF006" : "\uF007", // Placeholder — swap with lock/unlock codepoints
                 worldX + lockX, worldY + lockY, 16, r, g, b, 1.0, "center", "middle");
             }
-            // Close Icon
-            if (node.nodeType === "node" ||
-                node.nodeType === "composition" ||
-                node.nodeType === "group") {
-                const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-                this.iconBackgroundRenderer.addQuad(worldX + xPos + 0.3, worldY + titleY, 1 - r, 1 - g, 1 - b, 0.75, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "rounded-square");
-                this.iconRenderer.addText("", worldX + xPos, worldY + titleY, 16, 200 / 255, 1 / 255, 1 / 255, 1.0, "center", "middle");
-            }
-            // Edit Icon (node only)
-            if (node.nodeType === "node" ||
-                node.nodeType === "group" ||
-                node.nodeType === "composition-child") {
-                const xPos = node.width - NODE_LAYOUT.editBtnPaddingRight;
-                // Using '...' because true pencil emoji isn't in MSDF atlas
-                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "rounded-square");
-                this.iconRenderer.addText("", worldX + xPos, worldY + titleY, 16, r, g, b, 1.0, "center", "middle");
-            }
-            // Close Icon (composition child)
-            if (isCollapsed && node.nodeType === "composition-child") {
-                const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-                this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "rounded-square");
-                this.iconRenderer.addText("", worldX + xPos, worldY + node.height / 2, 16, r, g, b, 1.0, "center", "middle");
-            }
             // Group Add (+) Icon
             if (node.nodeType === "group" && !isCollapsed) {
                 const xPos = node.width / 2;
@@ -818,15 +798,6 @@ export class Renderer {
         gl.uniform1i(this.locations.u_RenderMode, 0);
         const titleY = collapsed ? node.height / 2 : 20;
         this.textRenderer.addText(node.text, worldX + NODE_LAYOUT.padding, worldY + titleY, 14, r, g, b, 1.0, "left", "middle");
-        const buttons = collapsed
-            ? ["+", "x", "c", "e"]
-            : ["-", "u", "x", "c", "e"];
-        let xPos = node.width - NODE_LAYOUT.subgraphBtnPaddingRight;
-        for (const label of buttons) {
-            this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + titleY, r, g, b, 0.08, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 15, "center", undefined, "rounded-square");
-            this.textRenderer.addText(label, worldX + xPos, worldY + titleY, 12, r, g, b, 1.0, "center", "middle");
-            xPos -= NODE_LAYOUT.subgraphBtnSpacing;
-        }
     }
     drawHubNode(node, worldX, worldY, z, picking) {
         const gl = this.gl;

@@ -55,6 +55,7 @@ export class Renderer {
     private getBgColor: () => [number, number, number, number],
     private getFontColor: () => [number, number, number, number],
     private getSelectedNodeIds: () => Set<number>,
+    private onFrame: () => void,
     private msdfProgram: WebGLProgram,
     private iconBGProgram: WebGLProgram,
     private msdfAtlas: MsdfAtlas,
@@ -127,6 +128,7 @@ export class Renderer {
   private tick(): void {
     this.drawBGFrame();
     this.drawFrame();
+    this.onFrame();
     requestAnimationFrame(this.tick.bind(this));
   }
 
@@ -915,115 +917,6 @@ export class Renderer {
         );
       }
 
-      // Close Icon
-      if (
-        node.nodeType === "node" ||
-        node.nodeType === "composition" ||
-        node.nodeType === "group"
-      ) {
-        const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-        this.iconBackgroundRenderer.addQuad(
-          worldX + xPos + 0.3,
-          worldY + titleY,
-          1 - r,
-          1 - g,
-          1 - b,
-          0.75,
-          dumbGlyphWidth,
-          dumbGlyphHeight,
-          this.iconAtlas.common?.base || 0,
-          this.iconAtlas.common?.lineHeight || 0,
-          16,
-          "center",
-					undefined,
-					"rounded-square",
-        );
-        this.iconRenderer.addText(
-          "",
-          worldX + xPos,
-          worldY + titleY,
-          16,
-          200 / 255,
-          1 / 255,
-          1 / 255,
-          1.0,
-          "center",
-          "middle"
-        );
-      }
-
-      // Edit Icon (node only)
-      if (
-        node.nodeType === "node" ||
-        node.nodeType === "group" ||
-        node.nodeType === "composition-child"
-      ) {
-        const xPos = node.width - NODE_LAYOUT.editBtnPaddingRight;
-        // Using '...' because true pencil emoji isn't in MSDF atlas
-
-        this.iconBackgroundRenderer.addQuad(
-          worldX + xPos,
-          worldY + titleY,
-          r,
-          g,
-          b,
-          0.05,
-          dumbGlyphWidth,
-          dumbGlyphHeight,
-          this.iconAtlas.common?.base || 0,
-          this.iconAtlas.common?.lineHeight || 0,
-          16,
-          "center",
-          undefined,
-          "rounded-square"
-        );
-        this.iconRenderer.addText(
-          "",
-          worldX + xPos,
-          worldY + titleY,
-          16,
-          r,
-          g,
-          b,
-          1.0,
-          "center",
-          "middle"
-        );
-      }
-
-      // Close Icon (composition child)
-      if (isCollapsed && node.nodeType === "composition-child") {
-        const xPos = node.width - NODE_LAYOUT.closeBtnPaddingRight;
-        this.iconBackgroundRenderer.addQuad(
-          worldX + xPos,
-          worldY + titleY,
-          r,
-          g,
-          b,
-          0.05,
-          dumbGlyphWidth,
-          dumbGlyphHeight,
-          this.iconAtlas.common?.base || 0,
-          this.iconAtlas.common?.lineHeight || 0,
-          16,
-          "center",
-          undefined,
-          "rounded-square"
-        );
-        this.iconRenderer.addText(
-          "",
-          worldX + xPos,
-          worldY + node.height / 2,
-          16,
-          r,
-          g,
-          b,
-          1.0,
-          "center",
-          "middle"
-        );
-      }
-
       // Group Add (+) Icon
       if (node.nodeType === "group" && !isCollapsed) {
         const xPos = node.width / 2;
@@ -1545,41 +1438,6 @@ export class Renderer {
       "middle"
     );
 
-    const buttons = collapsed
-      ? ["+", "x", "c", "e"]
-      : ["-", "u", "x", "c", "e"];
-    let xPos = node.width - NODE_LAYOUT.subgraphBtnPaddingRight;
-    for (const label of buttons) {
-      this.iconBackgroundRenderer.addQuad(
-        worldX + xPos,
-        worldY + titleY,
-        r,
-        g,
-        b,
-        0.08,
-        dumbGlyphWidth,
-        dumbGlyphHeight,
-        this.iconAtlas.common?.base || 0,
-        this.iconAtlas.common?.lineHeight || 0,
-        15,
-        "center",
-        undefined,
-        "rounded-square"
-      );
-      this.textRenderer.addText(
-        label,
-        worldX + xPos,
-        worldY + titleY,
-        12,
-        r,
-        g,
-        b,
-        1.0,
-        "center",
-        "middle"
-      );
-      xPos -= NODE_LAYOUT.subgraphBtnSpacing;
-    }
   }
 
   private drawHubNode(
