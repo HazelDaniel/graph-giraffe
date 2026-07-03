@@ -279,8 +279,9 @@ export class NodeStore {
   /**
    * Compute the z-value for a node using tiered per-type creation order.
    *
-   * Three tiers ensure containers always render behind leaves:
-   *   Groups        → base z = groupIdx * Z_STEP           (lowest)
+   * Three tiers keep subgraphs behind the rest of the scene:
+   *   Subgraphs     → base z = -0.05 - subgraphIdx * Z_STEP (lowest)
+   *   Groups        → base z = groupIdx * Z_STEP
    *   Compositions  → base z = Z_COMP_TIER + compIdx * Z_STEP
    *   Leaves        → base z = Z_LEAF_TIER + leafIdx * Z_STEP (highest)
    *
@@ -299,7 +300,7 @@ export class NodeStore {
     let baseZ: number;
     switch (node.nodeType) {
       case 'subgraph':
-        baseZ = -0.05 + (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
+        baseZ = -0.05 - (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
         break;
       case 'group':
         baseZ = (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;

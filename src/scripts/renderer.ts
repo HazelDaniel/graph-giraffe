@@ -1503,10 +1503,10 @@ export class Renderer {
       gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
       gl.uniform4f(
         this.locations.u_Color,
-        node.isDropTarget ? 0.08 : 0.12,
-        node.isDropTarget ? 0.42 : 0.18,
-        node.isDropTarget ? 0.2 : 0.72,
-        0.28
+        node.isDropTarget ? 0.04 : 0.08,
+        node.isDropTarget ? 0.38 : 0.14,
+        node.isDropTarget ? 0.16 : 0.68,
+        0.09
       );
       gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1.0, 0.95);
       gl.uniform1f(this.locations.u_BorderWidth, 2.0);

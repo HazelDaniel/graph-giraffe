@@ -223,6 +223,29 @@ describe("world action history", () => {
     expectGraphIntegrity(driver);
   });
 
+  it("keeps subgraphs behind groups, compositions, and leaves in z order", () => {
+    const { driver } = createDriver();
+    const subgraphA = driver.createNode("subgraph", 0, 0)!;
+    const subgraphB = driver.createNode("subgraph", 240, 0)!;
+    const group = driver.createNode("group", 480, 0)!;
+    const composition = driver.createNode("composition", 720, 0)!;
+    const node = driver.createNode("node", 960, 0)!;
+
+    expect(driver.store.getZForNode(subgraphB.id, new Set())).toBeLessThan(
+      driver.store.getZForNode(subgraphA.id, new Set())
+    );
+    expect(driver.store.getZForNode(subgraphA.id, new Set())).toBeLessThan(
+      driver.store.getZForNode(group.id, new Set())
+    );
+    expect(driver.store.getZForNode(group.id, new Set())).toBeLessThan(
+      driver.store.getZForNode(composition.id, new Set())
+    );
+    expect(driver.store.getZForNode(composition.id, new Set())).toBeLessThan(
+      driver.store.getZForNode(node.id, new Set())
+    );
+    expectGraphIntegrity(driver);
+  });
+
   it("allows connections through a nested subgraph when both nodes share the same outer subgraph", () => {
     const { driver } = createDriver();
     const source = driver.createNode("node", 0, 0)!;
@@ -396,6 +419,8 @@ describe("world action history", () => {
       x: childWorldBefore.x + 80,
       y: childWorldBefore.y + 50,
     });
+    expect(driver.store.isEffectivelyVisible(group.id)).toBe(false);
+    expect(driver.store.isEffectivelyVisible(child.id)).toBe(false);
     expectGraphIntegrity(driver);
   });
 

@@ -1575,6 +1575,18 @@ export class NodeEditor {
                 return;
             }
         }
+        if (node.nodeType === "subgraph") {
+            const edgeHit = this.hitTestEdge(screenX, screenY);
+            if (edgeHit) {
+                this.controls.hideProperties();
+                this.selectEdgeByClick(edgeHit.id);
+                this.hoveredHandle = null;
+                this.draggingNode = null;
+                this.dragSnapshot = null;
+                this.syncToolbarState();
+                return;
+            }
+        }
         if (node.nodeType !== "subgraph") {
             const closeX = node.width - NODE_LAYOUT.closeBtnPaddingRight;
             const closeY = isContainerNodeType(node.nodeType)
@@ -2179,6 +2191,14 @@ export class NodeEditor {
             const geometry = buildEdgeRouteGeometry(edges[i], this.store, this.camera);
             if (!geometry)
                 continue;
+            const sourceNode = this.store.get(edges[i].sourceNodeId);
+            const targetNode = this.store.get(edges[i].targetNodeId);
+            if (!sourceNode ||
+                !targetNode ||
+                !this.store.isEffectivelyVisible(sourceNode.id) ||
+                !this.store.isEffectivelyVisible(targetNode.id)) {
+                continue;
+            }
             if (hitTestEdgePolyline(screenX, screenY, geometry.screenPoints)) {
                 return { id: edges[i].id };
             }
