@@ -53,6 +53,8 @@ async function init(): Promise<void> {
       generateTetureSkinOption("group-head",  "Group Head Blank", 1, "jklajjlfldfkffkldfdfjsljfjklfdsdlfjlsiifjsl"),
     ]
   );
+
+  editor.debug = true;
   editor.render();
 }
 

@@ -10,6 +10,7 @@ import { UIControls } from "./controls.js";
 import { HistoryStack } from "./history.js";
 import { captureNodeHistorySnapshot, cloneNodeProps, } from "./history-snapshots.js";
 import { CreateNodeCommand, CreateHubFromConnectionDropCommand, CreateSubgraphCommand, ConnectCommand, DeleteNodeCommand, DeleteEdgeCommand, DeleteSelectionCommand, DuplicateIntoCompositionCommand, MoveNodeCommand, MoveSelectionCommand, ReparentCommand, ToggleLockCommand, ToggleSubgraphCollapseCommand, UngraphCommand, UpdateLabelCommand, UpdatePropCommand, } from "./commands.js";
+import { GraphEventEmitter } from "./events.js";
 import { DEFAULT_HANDLE_STYLE, NODE_LAYOUT, isCandidateNodeType, isContainerNodeType, isNodePrimitiveType, } from "./types.js";
 import { MsdfAtlas } from "./msdf-text.js";
 import { getHandleScreenGeometry, isPointInsideHandle, } from "./handle-geometry.js";
@@ -34,6 +35,13 @@ export class NodeEditor {
     IconBGVsSource;
     IconBGFsSource;
     nodeTextureUploadList;
+    events = new GraphEventEmitter();
+    get debug() {
+        return this.events.debug;
+    }
+    set debug(value) {
+        this.events.debug = value;
+    }
     camera;
     store;
     edgeStore;
@@ -132,7 +140,6 @@ export class NodeEditor {
         const locations = getShaderLocations(gl, program);
         const bgLocations = getBGShaderLocations(gl, bgProgram);
         // We instantiate Renderer here now since it needs MsdfAtlas which is loaded asynchronously
-        // wait, Renderer is instantiated in constructor currently. I need to move it here or initialize it in init().
         const backgroundCanvas = document.getElementById(this.backgroundCanvasId);
         const labelCanvas = document.getElementById("2d-label-canvas");
         const geometry = new GeometryNode(gl, "rounded-square");
@@ -222,6 +229,12 @@ export class NodeEditor {
                         selectionBefore,
                         parentId,
                     }));
+                    this.events.dispatch("node:propChange", {
+                        nodeId: node.id,
+                        nodeType: node.nodeType,
+                        label,
+                        value,
+                    });
                 }
             }
         });
@@ -323,13 +336,17 @@ export class NodeEditor {
         }
     }
     undo() {
-        if (!this.history.undo(this.commandContext))
+        const cmd = this.history.undo(this.commandContext);
+        if (!cmd)
             return;
+        this.events.dispatch("history:command", { command: cmd, action: "undo" });
         this.syncToolbarState();
     }
     redo() {
-        if (!this.history.redo(this.commandContext))
+        const cmd = this.history.redo(this.commandContext);
+        if (!cmd)
             return;
+        this.events.dispatch("history:command", { command: cmd, action: "redo" });
         this.syncToolbarState();
     }
     handleResize(canvas) {
@@ -340,6 +357,7 @@ export class NodeEditor {
     }
     pushCommand(command) {
         this.history.push(command);
+        this.events.dispatch("history:command", { command, action: "do" });
         this.syncToolbarState();
     }
     get commandContext() {
@@ -584,7 +602,7 @@ export class NodeEditor {
         }
         return null;
     }
-    applySelectionDrop(selectionDrag, hoveredContainer) {
+    async applySelectionDrop(selectionDrag, hoveredContainer) {
         const rootIds = selectionDrag.entries.map((entry) => entry.nodeId);
         const beforeSnapshots = this.captureNodeSnapshots(rootIds);
         const cloneSnapshots = [];
@@ -626,8 +644,24 @@ export class NodeEditor {
                         continue;
                     const oldParentId = node.parentId;
                     const parentChanged = oldParentId !== hoveredContainer.id;
-                    if (parentChanged && !this.store.setParent(node.id, hoveredContainer.id))
-                        continue;
+                    if (parentChanged) {
+                        const allowed = await this.events.dispatchBefore("before:nodeReparent", {
+                            nodeId: node.id,
+                            nodeType: node.nodeType,
+                            newParentId: hoveredContainer.id,
+                            newParentType: hoveredContainer.nodeType,
+                        });
+                        if (!allowed)
+                            continue;
+                        if (!this.store.setParent(node.id, hoveredContainer.id))
+                            continue;
+                        this.events.dispatch("node:reparent", {
+                            nodeId: node.id,
+                            nodeType: node.nodeType,
+                            oldParentId,
+                            newParentId: hoveredContainer.id,
+                        });
+                    }
                     if (oldParentId !== null) {
                         affectedParents.add(oldParentId);
                     }
@@ -799,6 +833,12 @@ export class NodeEditor {
             previousLabel: session.previousLabel,
             nextLabel,
         }));
+        this.events.dispatch("node:labelChange", {
+            nodeId: node.id,
+            nodeType: node.nodeType,
+            oldLabel: session.previousLabel,
+            newLabel: nextLabel,
+        });
     }
     captureNodeSnapshot(node) {
         return captureNodeHistorySnapshot(node);
@@ -1091,9 +1131,17 @@ export class NodeEditor {
         }
         return sourceOwningSubgraphId === this.getOwningSubgraphId(hoveredContainer.id);
     }
-    deleteNodeTreeWithHistory(nodeId) {
+    async deleteNodeTreeWithHistory(nodeId) {
         const node = this.store.get(nodeId);
         if (!node)
+            return;
+        // Notice we do NOT check before:nodeDelete here because deleteCurrentSelectionWithHistory 
+        // already checked it for the root selection. If this is called from outside, we should check it.
+        const allowed = await this.events.dispatchBefore("before:nodeDelete", {
+            nodeId: node.id,
+            nodeType: node.nodeType,
+        });
+        if (!allowed)
             return;
         this.activeLabelEdit = null;
         const selectionBefore = this.captureSelectionSnapshot();
@@ -1131,14 +1179,30 @@ export class NodeEditor {
             selectionBefore,
         }));
     }
-    deleteCurrentSelectionWithHistory() {
-        const nodeIds = [...this.selectedNodeIds];
+    async deleteCurrentSelectionWithHistory() {
+        let nodeIds = [...this.selectedNodeIds];
         const edgeIds = [...this.selectedEdgeIds];
         if (nodeIds.length === 0 && edgeIds.length === 0) {
             return;
         }
+        const filteredNodeIds = [];
+        for (const nodeId of nodeIds) {
+            const node = this.store.get(nodeId);
+            if (!node)
+                continue;
+            const allowed = await this.events.dispatchBefore("before:nodeDelete", {
+                nodeId: node.id,
+                nodeType: node.nodeType,
+            });
+            if (allowed)
+                filteredNodeIds.push(nodeId);
+        }
+        nodeIds = filteredNodeIds;
+        if (nodeIds.length === 0 && edgeIds.length === 0) {
+            return;
+        }
         if (nodeIds.length === 1 && edgeIds.length === 0) {
-            this.deleteNodeTreeWithHistory(nodeIds[0]);
+            await this.deleteNodeTreeWithHistory(nodeIds[0]);
             return;
         }
         if (nodeIds.length === 0 && edgeIds.length === 1) {
@@ -1176,7 +1240,20 @@ export class NodeEditor {
             parentIds: [...parentIds],
         }));
     }
-    createNodeWithHistory(nodeType, worldX, worldY, parentId = null) {
+    async createNodeWithHistory(nodeType, worldX, worldY, parentId = null) {
+        let parentType = null;
+        if (parentId !== null) {
+            parentType = this.store.get(parentId)?.nodeType ?? null;
+        }
+        const allowed = await this.events.dispatchBefore("before:nodeCreate", {
+            nodeType,
+            localX: worldX,
+            localY: worldY,
+            parentId,
+            parentType,
+        });
+        if (!allowed)
+            return null;
         const selectionBefore = this.captureSelectionSnapshot();
         const label = nodeType === "group"
             ? `Group ${this.store.nextNodeId}`
@@ -1200,11 +1277,11 @@ export class NodeEditor {
         }));
         return node;
     }
-    handleAddNode(canvas, nodeType) {
+    async handleAddNode(canvas, nodeType) {
         const screenX = Math.random() * (canvas.width - 200) + 100;
         const screenY = Math.random() * (canvas.height - 200) + 100;
         const { x, y } = this.camera.screenToWorld(screenX, screenY);
-        this.createNodeWithHistory(nodeType, x, y);
+        await this.createNodeWithHistory(nodeType, x, y);
     }
     handleAddComposition(canvas) {
         const selectionBefore = this.captureSelectionSnapshot();
@@ -1281,6 +1358,10 @@ export class NodeEditor {
             beforeSnapshot,
             afterSnapshot,
         }));
+        this.events.dispatch("subgraph:collapseToggle", {
+            subgraphId: node.id,
+            isCollapsed: node.isCollapsed,
+        });
         this.syncPropertiesPanelForSelection();
     }
     ungraphSubgraphWithHistory(subgraphId) {
@@ -1337,8 +1418,8 @@ export class NodeEditor {
             selectOnRedo: true,
         }));
     }
-    handleDeleteSelected() {
-        this.deleteCurrentSelectionWithHistory();
+    async handleDeleteSelected() {
+        await this.deleteCurrentSelectionWithHistory();
     }
     pick(screenX, screenY) {
         this.pickFBO.bind();
@@ -1636,6 +1717,10 @@ export class NodeEditor {
             if (edgeHit) {
                 this.controls.hideProperties();
                 this.selectEdgeByClick(edgeHit.id);
+                this.events.dispatch("edge:click", {
+                    edgeId: edgeHit.id,
+                    event: e,
+                });
                 this.hoveredHandle = null;
                 this.draggingNode = null;
                 this.dragSnapshot = null;
@@ -1645,6 +1730,7 @@ export class NodeEditor {
             this.clearSelectionAndHideProperties();
             this.draggingNode = null;
             this.dragSnapshot = null;
+            this.events.dispatch("pane:click", { event: e });
             this.hoveredHandle = null;
             this.syncToolbarState();
             this.startPan(e.clientX, e.clientY);
@@ -1692,7 +1778,7 @@ export class NodeEditor {
             const plusDy = localClickY - plusY;
             if (plusDx * plusDx + plusDy * plusDy <=
                 NODE_LAYOUT.plusBtnClickRadius * NODE_LAYOUT.plusBtnClickRadius) {
-                this.createNodeWithHistory("node", 0, 0, node.id);
+                this.createNodeWithHistory("node", 0, 0, node.id).catch(console.error);
                 this.hoveredHandle = null;
                 this.syncToolbarState();
                 return;
@@ -1709,12 +1795,23 @@ export class NodeEditor {
             this.draggingNode = null;
             this.dragSnapshot = null;
             this.startSelectionDrag(worldX, worldY, node);
+            if (this.draggingSelection) {
+                this.events.dispatch("node:dragStart", {
+                    nodeIds: this.draggingSelection.entries.map((en) => en.nodeId),
+                    event: e,
+                });
+            }
             this.hoveredHandle = null;
             this.syncToolbarState();
             return;
         }
         this.controls.hideProperties();
         this.selectNodeByClick(node.id);
+        this.events.dispatch("node:click", {
+            nodeId: node.id,
+            nodeType: node.nodeType,
+            event: e,
+        });
         this.hoveredHandle = null;
         if (this.isInLockedGroup(node.id)) {
             this.draggingNode = null;
@@ -1739,6 +1836,10 @@ export class NodeEditor {
         };
         this.dragOffsetX = worldX - nodeWorld.x;
         this.dragOffsetY = worldY - nodeWorld.y;
+        this.events.dispatch("node:dragStart", {
+            nodeIds: [node.id],
+            event: e,
+        });
         this.syncToolbarState();
     }
     startPan(clientX, clientY) {
@@ -1800,6 +1901,10 @@ export class NodeEditor {
         }
         if (this.draggingSelection) {
             this.moveSelectionDrag(worldX, worldY, screenX, screenY);
+            this.events.dispatch("node:drag", {
+                nodeIds: this.draggingSelection.entries.map((e) => e.nodeId),
+                event: e,
+            });
             return;
         }
         if (!this.draggingNode)
@@ -1837,10 +1942,14 @@ export class NodeEditor {
                 hoveredContainer.isDropTarget = true;
             }
         }
+        this.events.dispatch("node:drag", {
+            nodeIds: [this.draggingNode.id],
+            event: e,
+        });
     }
-    handlePointerUp(e, canvas) {
+    async handlePointerUp(e, canvas) {
         if (e.pointerType === "mouse") {
-            this.handleMouseUp(e, canvas);
+            await this.handleMouseUp(e, canvas);
             this.releasePointer(canvas, e);
             return;
         }
@@ -1851,7 +1960,7 @@ export class NodeEditor {
             this.isPanning = false;
         }
         if (this.activeTouches.size === 0) {
-            this.handleMouseUp(e, canvas);
+            await this.handleMouseUp(e, canvas);
         }
         this.releasePointer(canvas, e);
     }
@@ -1878,7 +1987,7 @@ export class NodeEditor {
             // Ignore release failures during pointer cancellation teardown.
         }
     }
-    handleMouseUp(e, canvas) {
+    async handleMouseUp(e, canvas) {
         this.isPanning = false;
         if (this.activeConnectionDrag) {
             const source = this.activeConnectionDrag;
@@ -1887,13 +1996,27 @@ export class NodeEditor {
                 if (this.isValidConnection(source.sourceNodeId, source.sourceHandleSide, target.nodeId, target.handle.side)) {
                     const sourceNode = this.store.get(source.sourceNodeId);
                     const targetNode = this.store.get(target.nodeId);
+                    if (!sourceNode || !targetNode)
+                        return;
+                    const allowed = await this.events.dispatchBefore("before:connect", {
+                        sourceId: source.sourceNodeId,
+                        sourceType: sourceNode.nodeType,
+                        targetId: target.nodeId,
+                        targetType: targetNode.nodeType,
+                    });
+                    if (!allowed) {
+                        this.activeConnectionDrag = null;
+                        this.hoveredHandle = null;
+                        this.syncToolbarState();
+                        return;
+                    }
                     const edge = this.edgeStore.add({
                         sourceNodeId: source.sourceNodeId,
                         sourceHandleSide: source.sourceHandleSide,
                         targetNodeId: target.nodeId,
                         targetHandleSide: target.handle.side,
-                        sourceCanHaveMultipleConnections: sourceNode?.nodeType === "hub",
-                        targetCanHaveMultipleConnections: targetNode?.nodeType === "hub",
+                        sourceCanHaveMultipleConnections: sourceNode.nodeType === "hub",
+                        targetCanHaveMultipleConnections: targetNode.nodeType === "hub",
                     });
                     if (edge) {
                         this.syncHandleStates(edge.sourceNodeId);
@@ -1903,6 +2026,13 @@ export class NodeEditor {
                         this.pushCommand(new ConnectCommand({
                             edgeSnapshot: snapshot,
                         }));
+                        this.events.dispatch("connect", {
+                            sourceId: source.sourceNodeId,
+                            sourceType: sourceNode.nodeType,
+                            targetId: target.nodeId,
+                            targetType: targetNode.nodeType,
+                            edgeId: edge.id,
+                        });
                     }
                 }
             }
@@ -1921,7 +2051,20 @@ export class NodeEditor {
             const selectionDrag = this.draggingSelection;
             const selectionBefore = this.captureSelectionSnapshot();
             const hoveredContainer = this.inferSelectionDropTarget(screenX, screenY, selectionDrag);
-            const dropResult = this.applySelectionDrop(selectionDrag, hoveredContainer);
+            const dropResult = await this.applySelectionDrop(selectionDrag, hoveredContainer);
+            const draggedNodeIds = [];
+            if (this.draggingSelection) {
+                draggedNodeIds.push(...this.draggingSelection.entries.map((e) => e.nodeId));
+            }
+            else if (this.draggingNode) {
+                draggedNodeIds.push(this.draggingNode.id);
+            }
+            if (draggedNodeIds.length > 0) {
+                this.events.dispatch("node:dragStop", {
+                    nodeIds: draggedNodeIds,
+                    event: e,
+                });
+            }
             this.draggingSelection = null;
             this.draggingNode = null;
             this.dragSnapshot = null;
@@ -2193,6 +2336,12 @@ export class NodeEditor {
                 this.pushCommand(command);
             }
         }
+        if (this.draggingNode) {
+            this.events.dispatch("node:dragStop", {
+                nodeIds: [this.draggingNode.id],
+                event: e,
+            });
+        }
         this.store.clearDropTargets();
         this.draggingNode = null;
         this.dragSnapshot = null;
@@ -2259,6 +2408,9 @@ export class NodeEditor {
             selectionBefore,
             parentId,
         }));
+        this.events.dispatch("hub:created", {
+            hubId: hub.id,
+        });
         return true;
     }
     isValidConnection(sourceNodeId, sourceHandleSide, targetNodeId, targetHandleSide) {

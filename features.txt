@@ -5,7 +5,7 @@
 
  3. edge labels
 
- 4. Command-based history system — replaces closures with serializable command objects + snapshots. This is foundational: it unblocks simulation (you
+ 4[]. Command-based history system — replaces closures with serializable command objects + snapshots. This is foundational: it unblocks simulation (you
 		can replay command streams), persistence (serialize state), and multiplayer (sync commands). There's already a skill for this.
 
  5. Node type plugin/registry system — open up NodeType to a registry where each type declares its own: layout rules, handle config, rendering
@@ -15,15 +15,12 @@
  6. Animation/tweening engine — a lightweight tween system (not a full physics engine) that can drive: edge label position along edge paths, node
 		position transitions, edge pulse/glow effects, camera smooth pan. This feeds into both the "handle-to-handle animation" feature and simulation.
 
- 7. Node buttons — the feature already tracked in features.txt. These are interactive click targets on node headers (max 3), which will be the pattern
-		 for future interactive node primitives like sliders.
-
- 8. support for 1 -> N edge connections (keeping existing compatibility rules)
- 9. subgraphs — a re-usable family of primitives that can be collapsed/viewed as ordinary nodes
- 10. hubs — primitives that support many to many connections on their two ports
- 11. type propagation — input and output types are inferred on connection to determine compatible types, validations rules are then inferred by the editor before runtime
- 12. import and export deliverables — this keeps the state of all primitives currently drawn on screen and exports it to a format that only the platform understands - perhaps a json (to avoid writing our own parser). the exported deliverable could then be imported and loaded to restore the states of all primitives and draw them on the screen
- 13. plugin based system to accomodate the definitions and use of new primitives. 
+ 7[]. subgraphs — a re-usable family of primitives that can be collapsed/viewed as ordinary nodes
+ 8[]. hubs — primitives that support many to many connections on their two ports
+ 9. type propagation — input and output types are inferred on connection to determine compatible types, validations rules are then inferred by the editor before runtime
+ 10. event handling — 
+ 11. import and export deliverables — this keeps the state of all primitives currently drawn on screen and exports it to a format that only the platform understands - perhaps a json (to avoid writing our own parser). the exported deliverable could then be imported and loaded to restore the states of all primitives and draw them on the screen
+ 12. plugin based system to accomodate the definitions and use of new primitives. 
 
 - EVENT ACTIONS (undoable/redoable):
 	* connection

@@ -593,13 +593,13 @@ export class WorldActionDriver {
   undo(): boolean {
     const changed = this.history.undo(this.commandContext);
     this.syncToolbarState();
-    return changed;
+    return !!changed;
   }
 
   redo(): boolean {
     const changed = this.history.redo(this.commandContext);
     this.syncToolbarState();
-    return changed;
+    return !!changed;
   }
 
   private pushCommand(command: Command): void {

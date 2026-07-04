@@ -422,12 +422,12 @@ export class WorldActionDriver {
     undo() {
         const changed = this.history.undo(this.commandContext);
         this.syncToolbarState();
-        return changed;
+        return !!changed;
     }
     redo() {
         const changed = this.history.redo(this.commandContext);
         this.syncToolbarState();
-        return changed;
+        return !!changed;
     }
     pushCommand(command) {
         this.history.push(command);

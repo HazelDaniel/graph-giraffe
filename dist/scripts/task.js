@@ -35,6 +35,7 @@ async function init() {
         generateTetureSkinOption("group-head", "Group Head Glassy", 0, "jklajkffkldfdfjsljfjklfdsdlfjlsiifjsl"),
         generateTetureSkinOption("group-head", "Group Head Blank", 1, "jklajjlfldfkffkldfdfjsljfjklfdsdlfjlsiifjsl"),
     ]);
+    editor.debug = true;
     editor.render();
 }
 document.addEventListener("DOMContentLoaded", init);

@@ -33,18 +33,18 @@ export class HistoryStack {
     undo(ctx) {
         const command = this.undoStack.pop();
         if (!command)
-            return false;
+            return null;
         command.undo(ctx);
         this.redoStack.push(command);
-        return true;
+        return command;
     }
     redo(ctx) {
         const command = this.redoStack.pop();
         if (!command)
-            return false;
+            return null;
         command.redo(ctx);
         this.undoStack.push(command);
-        return true;
+        return command;
     }
 }
 //# sourceMappingURL=history.js.map

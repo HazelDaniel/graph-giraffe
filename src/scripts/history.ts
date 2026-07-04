@@ -52,21 +52,21 @@ export class HistoryStack {
     return this.redoStack.length > 0;
   }
 
-  undo(ctx: CommandContext): boolean {
+  undo(ctx: CommandContext): Command | null {
     const command = this.undoStack.pop();
-    if (!command) return false;
+    if (!command) return null;
 
     command.undo(ctx);
     this.redoStack.push(command);
-    return true;
+    return command;
   }
 
-  redo(ctx: CommandContext): boolean {
+  redo(ctx: CommandContext): Command | null {
     const command = this.redoStack.pop();
-    if (!command) return false;
+    if (!command) return null;
 
     command.redo(ctx);
     this.undoStack.push(command);
-    return true;
+    return command;
   }
 }
