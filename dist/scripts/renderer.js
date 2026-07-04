@@ -844,7 +844,7 @@ export class Renderer {
         gl.uniform1f(this.locations.u_Radius, 12.0);
         gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         gl.uniform1i(this.locations.u_RenderMode, 0);
-        this.iconRenderer.addText("", iconCenterX, iconCenterY, Math.max(18, Math.min(28, iconSlotHeight * 0.48)), 1.0, 1.0, 1.0, 1.0, "center", "middle");
+        this.iconRenderer.addText("", iconCenterX, iconCenterY, Math.max(18, Math.min(28, iconSlotHeight * 0.48)), 1.0, 1.0, 1.0, 1.0, "center", "middle");
         this.textRenderer.addText(node.text, labelX, worldY + titleY, 14, r, g, b, 1.0, "left", "middle");
     }
     setModelMatrix(x, y, w, h, z = 0) {

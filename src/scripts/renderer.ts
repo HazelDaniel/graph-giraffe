@@ -1497,7 +1497,7 @@ export class Renderer {
     gl.uniform1i(this.locations.u_RenderMode, 0);
 
     this.iconRenderer.addText(
-      "",
+      "",
       iconCenterX,
       iconCenterY,
       Math.max(18, Math.min(28, iconSlotHeight * 0.48)),
