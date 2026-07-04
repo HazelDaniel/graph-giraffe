@@ -4,7 +4,8 @@ export type SelectionToolbarAction =
   | "delete"
   | "edit"
   | "expand"
-  | "ungraph";
+  | "ungraph"
+  | "spotlight";
 
 export interface SelectionToolbarButtonSpec {
   action: SelectionToolbarAction;
@@ -22,7 +23,7 @@ const STYLE_TEMPLATE = `
     top: 0;
     transform: translate(-86%, calc(-100% - 16px));
     contain: layout style paint;
-    will-change: transform;
+    will-change: transform, left, top;
   }
 
   :host>.root {
@@ -139,6 +140,7 @@ export class SelectionToolbar extends HTMLElement {
     this.posY = screenY;
     this.style.left = `${Math.round(screenX)}px`;
     this.style.top = `${Math.round(screenY)}px`;
+    // this.style.transform = `translate(${Math.round(screenX)}px, ${Math.round(screenY) - parseInt(getComputedStyle(this).height) + 2}px)`;
   }
 
   show(): void {

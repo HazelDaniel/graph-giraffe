@@ -258,6 +258,19 @@ describe("world action history", () => {
     expectGraphIntegrity(driver);
   });
 
+  it("rejects hub creation from a dropped composition connection", () => {
+    const { driver } = createDriver();
+    const composition = driver.createNode("composition", 0, 0)!;
+    const beforeEdges = driver.edgeStore.allEdges().length;
+
+    const hub = driver.createHubFromConnectionDrop(composition.id, "right", 200, 40);
+
+    expect(hub).toBeNull();
+    expect(driver.edgeStore.allEdges()).toHaveLength(beforeEdges);
+    expect(driver.store.get(composition.id)?.nodeType).toBe("composition");
+    expectGraphIntegrity(driver);
+  });
+
   it("keeps subgraphs behind groups, compositions, and leaves in z order", () => {
     const { driver } = createDriver();
     const subgraphA = driver.createNode("subgraph", 0, 0)!;

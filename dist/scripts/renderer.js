@@ -615,14 +615,6 @@ export class Renderer {
                 this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + yPos + 1.2, r, g, b, 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "circle");
                 this.textRenderer.addText("+", worldX + xPos, worldY + yPos, 20, r, g, b, 1.0, "center", "middle");
             }
-            // Group Spotlight Icon
-            if (node.nodeType === "group" && !isCollapsed) {
-                const spotX = node.width - NODE_LAYOUT.spotlightBtnPaddingRight;
-                const spotY = node.height - NODE_LAYOUT.spotlightBtnPaddingBottom;
-                this.iconBackgroundRenderer.addQuad(worldX + spotX, worldY + spotY + 1.2, r, g, b, 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "circle");
-                this.iconRenderer.addText("", // Placeholder — swap with the actual spotlight codepoint
-                worldX + spotX, worldY + spotY + 2, 16, r, g, b, 1.0, "center", "middle");
-            }
             if (!headOnly) {
                 if (node.nodeType === "node" && node.compositionRefId !== null) {
                     const padding = NODE_LAYOUT.padding;

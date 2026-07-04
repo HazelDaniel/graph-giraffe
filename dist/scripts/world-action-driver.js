@@ -260,6 +260,8 @@ export class WorldActionDriver {
         const source = this.store.get(sourceNodeId);
         if (!source)
             return null;
+        if (source.nodeType === "composition")
+            return null;
         const selectionBefore = this.captureSelectionSnapshot();
         const hub = this.store.add(worldX, worldY, `Hub ${this.store.nextNodeId}`, this.theme, "hub");
         if (parentId !== null && !this.store.setParent(hub.id, parentId)) {

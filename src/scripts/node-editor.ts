@@ -79,6 +79,12 @@ import {
   SelectionToolbarButtonSpec,
 } from "../components/selection-toolbar.js";
 import { WAIT } from "./globals.js";
+import { CLONE, COLLAPSE, DELETE, EDIT, EXPAND, SPOTLIGHT, UNGRAPH } from "../sprite.js";
+
+const baseButtons = (
+  items: Array<[SelectionToolbarAction, string, string]>
+): SelectionToolbarButtonSpec[] =>
+  items.map(([action, glyph, label]) => ({ action, glyph, label }));
 
 interface DragSnapshot {
   localX: number;
@@ -1375,13 +1381,6 @@ export class NodeEditor {
     return removed;
   }
 
-  private refreshAfterRestoration(rootParentId: number | null): void {
-    if (rootParentId !== null) {
-      this.refreshContainerChain(rootParentId);
-    }
-    this.syncToolbarState();
-  }
-
   /** Zoom the camera to center a group node in the viewport with padding. */
   private spotlightGroup(groupId: number): void {
     const node = this.store.get(groupId);
@@ -1757,10 +1756,6 @@ export class NodeEditor {
     }));
   }
 
-  private deleteSubgraphWithHistory(subgraphId: number): void {
-    this.deleteNodeTreeWithHistory(subgraphId);
-  }
-
   private cloneSubgraphWithHistory(subgraphId: number): void {
     const subgraph = this.store.get(subgraphId);
     if (!subgraph || subgraph.nodeType !== "subgraph") return;
@@ -1912,42 +1907,47 @@ export class NodeEditor {
   private getSelectionToolbarButtons(
     node: NodeData
   ): SelectionToolbarButtonSpec[] {
-    const baseButtons = (
-      items: Array<[SelectionToolbarAction, string, string]>
-    ): SelectionToolbarButtonSpec[] =>
-      items.map(([action, glyph, label]) => ({ action, glyph, label }));
 
     if (node.nodeType === "subgraph") {
       return node.isCollapsed
         ? baseButtons([
-            ["expand", "+", "Expand"],
-            ["delete", "×", "Delete"],
-            ["clone", "⧉", "Clone"],
-            ["edit", "✎", "Edit"],
+            ["expand", `${EXPAND}`, "Expand"],
+            ["clone", `${CLONE}`, "Clone"],
+            ["edit", `${EDIT}`, "Edit"],
+            ["delete", `${DELETE}`, "Delete"],
           ])
         : baseButtons([
-            ["collapse", "−", "Collapse"],
-            ["ungraph", "U", "Ungraph"],
-            ["delete", "×", "Delete"],
-            ["clone", "⧉", "Clone"],
-            ["edit", "✎", "Edit"],
+            ["collapse", `${COLLAPSE}`, "Collapse"],
+            ["ungraph", `${UNGRAPH}` , "Ungraph"],
+            ["clone", `${CLONE}`, "Clone"],
+            ["edit", `${EDIT}`, "Edit"],
+            ["delete", `${DELETE}`, "Delete"],
           ]);
     }
 
     if (
       node.nodeType === "node" ||
       node.nodeType === "composition-child" ||
-      node.nodeType === "group" ||
       node.nodeType === "hub"
     ) {
       return baseButtons([
-        ["delete", "×", "Delete"],
-        ["edit", "✎", "Edit"],
+        ["edit", `${EDIT}`, "Edit"],
+        ["delete", `${DELETE}`, "Delete"],
       ]);
     }
 
+    if (node.nodeType === "group") {
+      return baseButtons([
+        ["spotlight", `${SPOTLIGHT}`, "Spotlight"],
+        ["edit", `${EDIT}`, "Edit"],
+        ["delete", `${DELETE}`, "Delete"],
+      ])
+    }
+
     if (node.nodeType === "composition") {
-      return baseButtons([["delete", "×", "Delete"]]);
+      return baseButtons([
+        ["delete", `${DELETE}`, "Delete"],
+      ]);
     }
 
     return [];
@@ -2023,6 +2023,10 @@ export class NodeEditor {
         if (node.nodeType === "subgraph") {
           this.ungraphSubgraphWithHistory(node.id);
         }
+        return;
+      case "spotlight":
+        if (node.nodeType !== "group") return;
+          this.spotlightGroup(node.id);
         return;
       case "clone":
         if (node.nodeType === "subgraph") {
@@ -2216,21 +2220,6 @@ export class NodeEditor {
         this.createNodeWithHistory("node", 0, 0, node.id);
         this.hoveredHandle = null;
         this.syncToolbarState();
-        return;
-      }
-    }
-
-    if (node.nodeType === "group") {
-      const spotX = node.width - NODE_LAYOUT.spotlightBtnPaddingRight;
-      const spotY = node.height - NODE_LAYOUT.spotlightBtnPaddingBottom;
-      const spotDx = localClickX - spotX;
-      const spotDy = localClickY - spotY;
-      if (
-        spotDx * spotDx + spotDy * spotDy <=
-        NODE_LAYOUT.spotlightBtnClickRadius * NODE_LAYOUT.spotlightBtnClickRadius
-      ) {
-        this.spotlightGroup(node.id);
-        this.hoveredHandle = null;
         return;
       }
     }
@@ -2874,6 +2863,11 @@ export class NodeEditor {
     clientX: number,
     clientY: number
   ): boolean {
+    const sourceNode = this.store.get(source.sourceNodeId);
+    if (sourceNode?.nodeType === "composition") {
+      return false;
+    }
+
     const { left, top } = canvas.getBoundingClientRect();
     const screenX = clientX - left;
     const screenY = clientY - top;
@@ -2900,7 +2894,6 @@ export class NodeEditor {
       return false;
     }
 
-    const sourceNode = this.store.get(source.sourceNodeId);
     const edgeParams =
       source.sourceHandleSide === "right"
         ? {
