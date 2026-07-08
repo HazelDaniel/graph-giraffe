@@ -1,3 +1,4 @@
+import { Matrix4 } from '../vendor/cuon-matrix.js';
 import {
   NodeData,
   NodeShaderLocations,

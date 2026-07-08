@@ -1,18 +1,17 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ES6",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "declarationDir": "./dist",
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
     "noImplicitAny": true,
     "sourceMap": true,
-    "typeRoots": [
-      "../../lib"
-    ]
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
-  "include": [
-    "src/**/*",
-    "./lib/types.d.ts"
-  ]
+  "include": ["src/**/*"]
 }

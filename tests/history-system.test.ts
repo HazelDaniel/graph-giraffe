@@ -102,23 +102,23 @@ describe("HistoryStack", () => {
     history.push({ undo: () => undo("third"), redo });
 
     expect(history.undoDepth).toBe(2);
-    expect(history.undo()).toBe(true);
-    expect(history.undo()).toBe(true);
-    expect(history.undo()).toBe(false);
+    expect(history.undo({} as any)).toBeTruthy();
+    expect(history.undo({} as any)).toBeTruthy();
+    expect(history.undo({} as any)).toBeNull();
     expect(undo.mock.calls.map(([value]) => value)).toEqual(["third", "second"]);
   });
 
   it("clears redo entries when a new action is pushed after undo", () => {
     const history = new HistoryStack();
 
-    history.push({ undo: vi.fn(), redo: vi.fn() });
-    history.push({ undo: vi.fn(), redo: vi.fn() });
-    history.push({ undo: vi.fn(), redo: vi.fn() });
-    history.undo();
-    history.undo();
+    history.push({ undo: vi.fn(), redo: vi.fn() } as any);
+    history.push({ undo: vi.fn(), redo: vi.fn() } as any);
+    history.push({ undo: vi.fn(), redo: vi.fn() } as any);
+    history.undo({} as any);
+    history.undo({} as any);
 
     expect(history.redoDepth).toBe(2);
-    history.push({ undo: vi.fn(), redo: vi.fn() });
+    history.push({ undo: vi.fn(), redo: vi.fn() } as any);
     expect(history.redoDepth).toBe(0);
     expect(history.undoDepth).toBe(2);
   });

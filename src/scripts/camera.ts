@@ -1,3 +1,5 @@
+import { Matrix4 } from '../vendor/cuon-matrix.js';
+
 /**
  * Manages all viewport camera state: pan (translation) and zoom (scale).
  * The view matrix produced here is applied per-frame as u_ViewMatrix in the shader.
