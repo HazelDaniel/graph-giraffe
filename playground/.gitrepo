@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:HazelDaniel/playground.graph-giraffe.git
+	branch = master
+	commit = 242c20d65fc7c6c0dfd719ddcddc8b0bce2fc69d
+	parent = 99c0bf30037aec47379b4cf8f32e50c1ed2e73f2
+	method = merge
+	cmdver = 0.4.9
