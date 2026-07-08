@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:HazelDaniel/landing.graph-giraffe.git
+	branch = master
+	commit = 76dd0ff2b34c64e17ab029b7eafefe8f5a8dd2a5
+	parent = 03314680ad1808013f1e514796997deb1e2d9896
+	method = merge
+	cmdver = 0.4.9
