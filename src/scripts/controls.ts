@@ -1,6 +1,7 @@
-import { TextureSelect } from "../components/texture-select.js";
-import { ThemeName, NodeData } from "./types.js";
-import { GGPropGroup } from "../components/prop-group.js";
+import { GGPropGroup } from "../components/prop-group";
+import { TextureSelect } from "../components/texture-select";
+import { NodeData, ThemeName } from "./types";
+
 
 /** All interaction events the NodeEditor handles, expressed as plain callbacks. */
 export interface ControlCallbacks {

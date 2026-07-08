@@ -5,6 +5,16 @@
  * Only intentionally public types and classes are exported here.
  */
 
+// ─── Components / Custom Elements ────────────────────────
+import './components/action-pane.js';
+import './components/history-pane.js';
+import './components/loading-screen.js';
+import './components/prop-group.js';
+import './components/select.js';
+import './components/selection-toolbar.js';
+import './components/texture-select.js';
+import './components/ui-controls.js';
+
 // ─── Core ────────────────────────────────────────────────
 
 export { NodeEditor } from './scripts/node-editor.js';

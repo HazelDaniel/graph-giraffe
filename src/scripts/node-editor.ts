@@ -1,3 +1,10 @@
+import { TextureSelect } from "../components/texture-select.js";
+import { GGPropGroup } from "../components/prop-group.js";
+import {ActionPane } from "../components/action-pane.js";
+import {HistoryPane } from "../components/history-pane.js";
+import { CustomSelect } from "../components/select.js";
+import { UIControls as UIControlElement } from "../components/ui-controls.js";
+
 import { BGGeometryNode, GeometryNode } from "./geometry.js";
 import {
   createProgram,

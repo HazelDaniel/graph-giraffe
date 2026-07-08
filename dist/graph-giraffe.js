@@ -1,6 +1,747 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+const PI = 3.141592653589793;
+if (typeof CanvasRenderingContext2D.prototype.roundRect !== "function") {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+    if (typeof radii === "number") radii = [radii, radii, radii, radii];
+    if (!Array.isArray(radii)) radii = [0, 0, 0, 0];
+    let tl = radii[0] || 0;
+    let tr = radii[1] !== void 0 ? radii[1] : tl;
+    let br = radii[2] !== void 0 ? radii[2] : tr;
+    let bl = radii[3] !== void 0 ? radii[3] : tl;
+    this.beginPath();
+    this.moveTo(x + tl, y);
+    this.lineTo(x + w - tr, y);
+    this.arcTo(x + w, y, x + w, y + tr, tr);
+    this.lineTo(x + w, y + h - br);
+    this.arcTo(x + w, y + h, x + w - br, y + h, br);
+    this.lineTo(x + bl, y + h);
+    this.arcTo(x, y + h, x, y + h - bl, bl);
+    this.lineTo(x, y + tl);
+    this.arcTo(x, y, x + tl, y, tl);
+    this.closePath();
+    return this;
+  };
+}
+const dumbGlyphHeight = 16;
+const dumbGlyphWidth = 16;
+const NODE_LAYOUT = {
+  headerHeight: 30,
+  padding: 10,
+  closeBtnPaddingRight: 20,
+  closeBtnClickRadius: 15,
+  editBtnPaddingRight: 45,
+  editBtnClickRadius: 15,
+  plusBtnPaddingBottom: 20,
+  plusBtnClickRadius: 12,
+  spotlightBtnPaddingRight: 20,
+  spotlightBtnPaddingBottom: 20,
+  spotlightBtnClickRadius: 12,
+  lockBtnTopY: 20,
+  // matches group header titleY
+  lockBtnClickRadius: 12,
+  subgraphBtnPaddingRight: 18,
+  subgraphBtnSpacing: 24,
+  subgraphBtnClickRadius: 12
+};
+const HANDLE_LAYOUT = {
+  sideInset: 8,
+  offsetX: -2
+};
+const DEFAULT_HANDLE_STYLE = {
+  shape: "circle",
+  backgroundColor: "rgba(33, 36, 39, 0.95)",
+  connectedBorderColor: "#2C9F92",
+  disconnectedBorderColor: "rgba(148, 163, 184, 0.85)",
+  borderWidth: 2,
+  size: 12
+};
+const NODE_SIZE = {
+  node: { width: 190, height: 150 },
+  hub: { width: 240, height: 100 },
+  nodeCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
+  group: { width: 220, height: 200 },
+  composition: { width: 140, height: 200 },
+  compositionChild: { width: 160, height: NODE_LAYOUT.headerHeight },
+  subgraph: { width: 220, height: 160 },
+  subgraphCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight }
+};
+function isContainerNodeType(nodeType) {
+  return nodeType === "group" || nodeType === "composition" || nodeType === "subgraph";
+}
+function isLeafNodeType(nodeType) {
+  return nodeType === "node" || nodeType === "hub" || nodeType === "composition-child";
+}
+function isNodePrimitiveType(nodeType) {
+  return nodeType === "node" || nodeType === "hub";
+}
+function isCandidateNodeType(nodeType, connectionMode) {
+  if (connectionMode === "group") {
+    return nodeType === "group";
+  }
+  return isNodePrimitiveType(nodeType) || nodeType === "composition" || nodeType === "subgraph";
+}
+function getDefaultNodeSize(nodeType, isCollapsed = false) {
+  switch (nodeType) {
+    case "group":
+    case "composition":
+      return NODE_SIZE.group;
+    case "subgraph":
+      return isCollapsed ? NODE_SIZE.subgraphCollapsed : NODE_SIZE.subgraph;
+    case "composition-child":
+      return NODE_SIZE.compositionChild;
+    case "hub":
+      return NODE_SIZE.hub;
+    case "node":
+      return isCollapsed ? NODE_SIZE.nodeCollapsed : NODE_SIZE.node;
+    default:
+      return NODE_SIZE.node;
+  }
+}
+function drawHandle(ctx, handle, x, y) {
+  const { style, isConnected } = handle;
+  const radius = style.size / 2;
+  const borderColor = isConnected ? style.connectedBorderColor : style.disconnectedBorderColor;
+  ctx.save();
+  ctx.fillStyle = style.backgroundColor;
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = style.borderWidth;
+  if (style.shape === "circle") {
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, 2 * PI);
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.rect(x - radius, y - radius, style.size, style.size);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+const NODE_THEMES = {
+  dark: {
+    bgFill: "rgba(30, 41, 59, 0.8)",
+    borderStroke: "rgba(255, 255, 255, 0.1)",
+    headerFill: "rgba(14, 13, 13, 0.9)",
+    titleFill: "#f8fafc",
+    bodyFill: "rgba(19, 18, 18, 0.8)",
+    borderWidth: 1
+  },
+  light: {
+    bgFill: "rgba(248, 250, 252, 0.9)",
+    borderStroke: "rgba(0, 0, 0, 0.1)",
+    headerFill: "rgba(226, 232, 240, 1)",
+    titleFill: "#0f172a",
+    bodyFill: "rgba(205, 205, 205, 0.9)",
+    borderWidth: 1
+  },
+  neon: {
+    bgFill: "rgba(10, 10, 20, 0.9)",
+    borderStroke: "rgb(10, 35, 39)",
+    headerFill: "rgba(10, 35, 39, 0.76)",
+    titleFill: "#cffafe",
+    bodyFill: "rgb(16, 96, 128)",
+    borderWidth: 2
+  }
+};
+const G_NODE_THEMES = {
+  dark: {
+    bgFill: "rgb(9, 9, 10)",
+    borderStroke: "rgba(255, 255, 255, 0.14)",
+    headerFill: "rgba(22, 20, 20, 0.79)",
+    titleFill: "#f8fafc",
+    bodyFill: "rgb(27, 27, 27)",
+    borderWidth: 1
+  },
+  light: {
+    bgFill: "rgba(248, 250, 252, 0.9)",
+    borderStroke: "rgba(0, 0, 0, 0.4)",
+    headerFill: "rgba(226, 232, 240, 1)",
+    titleFill: "#0f172a",
+    bodyFill: "#475569",
+    borderWidth: 1
+  },
+  neon: {
+    bgFill: "rgba(10, 10, 20, 0.9)",
+    borderStroke: "#06b6d4",
+    headerFill: "rgba(6, 182, 212, 0.2)",
+    titleFill: "#cffafe",
+    bodyFill: "rgb(16, 96, 128)",
+    borderWidth: 2
+  }
+};
+const C_NODE_THEMES = {
+  dark: {
+    bgFill: "rgb(9, 9, 10)",
+    borderStroke: "rgba(44, 159, 146, 0.9)",
+    headerFill: "none",
+    titleFill: "#f8fafc",
+    bodyFill: "rgba(3, 3, 3)",
+    borderWidth: 1
+  },
+  light: {
+    bgFill: "rgba(248, 250, 252, 0.9)",
+    borderStroke: "rgba(0, 0, 0, 0.4)",
+    headerFill: "rgba(226, 232, 240, 1)",
+    titleFill: "#0f172a",
+    bodyFill: "rgba(44, 159, 146, 0.3)",
+    borderWidth: 1
+  },
+  neon: {
+    bgFill: "rgba(10, 10, 20, 0.9)",
+    borderStroke: "#06b6d4",
+    headerFill: "rgba(6, 182, 212, 0.2)",
+    titleFill: "#cffafe",
+    bodyFill: "rgba(44, 159, 146, 0.3)",
+    borderWidth: 2
+  }
+};
+const CR_NODE_THEMES = {
+  dark: {
+    bgFill: "rgb(9, 9, 10)",
+    borderStroke: "rgba(255, 255, 255, 0.95)",
+    headerFill: "rgba(22, 20, 20, 0.79)",
+    titleFill: "#f8fafc",
+    bodyFill: "rgba(44, 159, 146, 0.3)",
+    borderWidth: 1
+  },
+  light: {
+    bgFill: "rgba(248, 250, 252, 0.9)",
+    borderStroke: "rgba(0, 0, 0, 0.4)",
+    headerFill: "rgba(226, 232, 240, 1)",
+    titleFill: "#0f172a",
+    bodyFill: "rgba(44, 159, 146, 0.3)",
+    borderWidth: 1
+  },
+  neon: {
+    bgFill: "rgba(10, 10, 20, 0.9)",
+    borderStroke: "#06b6d4",
+    headerFill: "rgba(6, 182, 212, 0.2)",
+    titleFill: "#cffafe",
+    bodyFill: "rgba(44, 159, 146, 0.3)",
+    borderWidth: 2
+  }
+};
+const SVG_NS = "http://www.w3.org/2000/svg";
+const NODE_HEAD_TEXTURE_SKINS = [
+  ` <svg width="595" height="93" viewBox="0 0 595 93" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_i_4024_15406)"> <rect width="595" height="93" rx="9" fill="#D946EF"/> </g> <defs> <filter id="filter0_i_4024_15406" x="0" y="0" width="595" height="97" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"> <feFlood flood-opacity="0" result="BackgroundImageFix"/> <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/> <feGaussianBlur stdDeviation="24.5"/> <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/> <feBlend mode="normal" in2="shape" result="effect1_innerShadow_4024_15406"/> </filter>
+</defs> </svg> `,
+  `
+<svg width="202" height="30" viewBox="0 0 202 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_in_2_2)">
+<rect width="202" height="30" rx="8" fill="#F0F0F0"/>
+</g>
+<defs>
+<filter id="filter0_in_2_2" x="0" y="0" width="202" height="34" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="5"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.62 0"/>
+<feBlend mode="normal" in2="shape" result="effect1_innerShadow_2_2"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.25 0.25" stitchTiles="stitch" numOctaves="3" result="noise" seed="1670" />
+<feColorMatrix in="noise" type="luminanceToAlpha" result="alphaNoise" />
+<feComponentTransfer in="alphaNoise" result="coloredNoise1">
+<feFuncA type="discrete" tableValues="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "/>
+</feComponentTransfer>
+<feComposite operator="in" in2="effect1_innerShadow_2_2" in="coloredNoise1" result="noise1Clipped" />
+<feFlood flood-color="rgba(0, 0, 0, 0.25)" result="color1Flood" />
+<feComposite operator="in" in2="noise1Clipped" in="color1Flood" result="color1" />
+<feMerge result="effect2_noise_2_2">
+<feMergeNode in="effect1_innerShadow_2_2" />
+<feMergeNode in="color1" />
+</feMerge>
+</filter>
+</defs>
+</svg>
+
+`,
+  `
+<svg width="202" height="30" viewBox="0 0 202 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_i_2_3)">
+<rect width="202" height="30" rx="8" fill="#F0F0F0" fill-opacity="0.2"/>
+</g>
+<defs>
+<filter id="filter0_i_2_3" x="0" y="0" width="202" height="34" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="5"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.62 0"/>
+<feBlend mode="normal" in2="shape" result="effect1_innerShadow_2_3"/>
+</filter>
+</defs>
+</svg>
+
+
+`
+];
+const COMPOSITION_HEAD_TEXTURE_SKINS = [];
+const COMPOSITION_CHILD_HEAD_TEXTURE_SKINS = [];
+const COMPOSITION_REFERENCE_CHILD_HEAD_TEXTURE_SKINS = [];
+const NODE_BODY_TEXTURE_SKINS = [
+  `
+  <svg width="262" height="234" viewBox="0 0 262 234" fill="none" xmlns="http://www.w3.org/2000/svg"> <g filter="url(#filter0_d_4026_2521)">
+<path d="M4.75 28.75C4.75 13.286 17.2861 0.75 32.7501 0.75H57.177C63.9909 0.75 70.5709 3.23467 75.6842 7.73843L107.5 35.7616C112.613 40.2653 119.193 42.75 126.007 42.75H228.75C244.214 42.75 256.75 55.286 256.75 70.75V196.75C256.75 212.214 244.214 224.75 228.75 224.75H32.7501C17.2861 224.75 4.75 212.214 4.75 196.75V42.75V28.75Z" fill="url(#paint0_radial_4026_2521)" shape-rendering="crispEdges"/> <path d="M126.007 42.75H228.75C244.214 42.75 256.75 55.286 256.75 70.75V196.75C256.75 212.214 244.214 224.75 228.75 224.75H32.7501C17.2861 224.75 4.75 212.214 4.75 196.75V42.75M126.007 42.75C119.193 42.75 112.613 40.2653 107.5 35.7616L75.6842 7.73843C70.5709 3.23467 63.9909 0.75 57.177 0.75H32.7501C17.2861 0.75 4.75 13.286 4.75 28.75V42.75M126.007 42.75H4.75" stroke="var(--stroke-theme)" stroke-opacity="0.16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" shape-rendering="crispEdges"/> </g>
+<defs> <filter id="filter0_d_4026_2521" x="0" y="0" width="261.5" height="233.5" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"> <feFlood flood-opacity="0" result="BackgroundImageFix"/> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/> <feGaussianBlur stdDeviation="2"/> <feComposite in2="hardAlpha" operator="out"/> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.28 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_4026_2521"/> <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_4026_2521" result="shape"/> </filter> <radialGradient id="paint0_radial_4026_2521" cx="0" cy="0" r="1" gradientTransform="matrix(-232.683 -221.365 249.035 -261.996 130.75 112.75)" gradientUnits="userSpaceOnUse">
+<stop stop-color="#D946EF"/> <stop offset="1" stop-color="#7C2889"/> </radialGradient>
+</defs>
+</svg>
+`,
+  `
+<svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_in_2_12)">
+<rect width="206" height="142" rx="8" fill="var(--theme)"/>
+</g>
+<defs>
+<filter id="filter0_in_2_12" x="0" y="0" width="206" height="146" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="5"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.62 0"/>
+<feBlend mode="normal" in2="shape" result="effect1_innerShadow_2_12"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.25 0.25" stitchTiles="stitch" numOctaves="3" result="noise" seed="1670" />
+<feColorMatrix in="noise" type="luminanceToAlpha" result="alphaNoise" />
+<feComponentTransfer in="alphaNoise" result="coloredNoise1">
+<feFuncA type="discrete" tableValues="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "/>
+</feComponentTransfer>
+<feComposite operator="in" in2="effect1_innerShadow_2_12" in="coloredNoise1" result="noise1Clipped" />
+<feFlood flood-color="rgba(0, 0, 0, 0.25)" result="color1Flood" />
+<feComposite operator="in" in2="noise1Clipped" in="color1Flood" result="color1" />
+<feMerge result="effect2_noise_2_12">
+<feMergeNode in="effect1_innerShadow_2_12" />
+<feMergeNode in="color1" />
+</feMerge>
+</filter>
+</defs>
+</svg>
+
+`,
+  `
+<svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_i_2_13)">
+<rect width="206" height="142" rx="8" fill="var(--theme)" fill-opacity="0.2"/>
+</g>
+<defs>
+<filter id="filter0_i_2_13" x="0" y="0" width="206" height="146" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="5"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.62 0"/>
+<feBlend mode="normal" in2="shape" result="effect1_innerShadow_2_13"/>
+</filter>
+</defs>
+</svg>
+`,
+  `
+<svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_i_2_14)">
+<rect width="206" height="142" rx="8" fill="var(--theme)"/>
+</g>
+<defs>
+<filter id="filter0_i_2_14" x="0" y="0" width="206" height="146" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="5"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0"/>
+<feBlend mode="normal" in2="shape" result="effect1_innerShadow_2_14"/>
+</filter>
+</defs>
+</svg>
+
+`
+];
+const GROUP_HEAD_TEXTURE_SKINS = [
+  NODE_BODY_TEXTURE_SKINS[2],
+  `
+<svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="206" height="142" rx="8" fill="var(--theme)" fill-opacity="0"/>
+</svg>
+
+`
+];
+const GROUP_BODY_TEXTURE_SKINS = [NODE_BODY_TEXTURE_SKINS[2]];
+const COMPOSITION_BODY_TEXTURE_SKINS = [];
+const COMPOSITION_REFERENCE_BODY_TEXTURE_SKINS = [];
+const DEFAULT_TEXTURE_SKINS = {
+  "node-head": NODE_HEAD_TEXTURE_SKINS,
+  "node-body": NODE_BODY_TEXTURE_SKINS,
+  "composition-head": COMPOSITION_HEAD_TEXTURE_SKINS,
+  "composition-body": COMPOSITION_BODY_TEXTURE_SKINS,
+  "composition-child-head": COMPOSITION_CHILD_HEAD_TEXTURE_SKINS,
+  "composition-reference-child-head": COMPOSITION_REFERENCE_CHILD_HEAD_TEXTURE_SKINS,
+  "group-head": GROUP_HEAD_TEXTURE_SKINS,
+  "group-body": GROUP_BODY_TEXTURE_SKINS,
+  "composition-reference-body": COMPOSITION_REFERENCE_BODY_TEXTURE_SKINS
+};
+const DEFAULT_TEXTURE_SOURCES = [
+  createDefaultSource(
+    "gg-node-body-default",
+    "Default Node Body",
+    "node-body",
+    "var(--theme)",
+    "var(--stroke-theme)"
+  ),
+  createDefaultSource(
+    "gg-node-head-default",
+    "Default Node Head",
+    "node-head",
+    "var(--theme)",
+    "var(--stroke-theme)"
+  ),
+  createDefaultSource(
+    "gg-group-body-default",
+    "Default Group Body",
+    "group-body",
+    "var(--theme)",
+    "var(--stroke-theme)"
+  ),
+  createDefaultSource(
+    "gg-group-head-default",
+    "Default Group Head",
+    "group-head",
+    "var(--theme)",
+    "var(--stroke-theme)"
+  ),
+  createDefaultSource(
+    "gg-composition-body-default",
+    "Default Composition Body",
+    "composition-body",
+    "var(--theme)",
+    "var(--stroke-theme)"
+  ),
+  createDefaultSource(
+    "gg-composition-head-default",
+    "Default Composition Head",
+    "composition-head",
+    "var(--theme)",
+    "var(--stroke-theme)"
+  ),
+  createDefaultSource(
+    "gg-composition-child-head-default",
+    "Default Child Head",
+    "composition-child-head",
+    "var(--theme)",
+    "var(--stroke-theme)"
+  ),
+  createDefaultSource(
+    "gg-composition-reference-body",
+    "Default Reference Body",
+    "composition-reference-body",
+    "var(--theme)",
+    "var(--stroke-theme)"
+  )
+];
+const TEXTURE_KIND_TO_LOOKUP = {
+  "node-body": { lookupKey: "node", suffixKey: "body" },
+  "node-head": { lookupKey: "node", suffixKey: "head" },
+  "group-body": { lookupKey: "group", suffixKey: "body" },
+  "group-head": { lookupKey: "group", suffixKey: "head" },
+  "composition-body": { lookupKey: "composition", suffixKey: "body" },
+  "composition-head": { lookupKey: "composition", suffixKey: "head" },
+  "composition-child-head": { lookupKey: "composition-child", suffixKey: "head" },
+  "composition-reference-body": { lookupKey: "composition-reference", suffixKey: "body" },
+  "composition-reference-child-head": { lookupKey: "composition-reference", suffixKey: "head" }
+};
+const NODE_ID_TEXTURE_LOOKUP = {
+  node: {
+    body: "gg-node-body-default",
+    head: "gg-node-head-default"
+  },
+  hub: {
+    body: "gg-node-body-default",
+    head: "gg-node-head-default"
+  },
+  group: {
+    body: "gg-group-body-default",
+    head: "gg-group-head-default"
+  },
+  composition: {
+    body: "gg-composition-body-default",
+    head: "gg-composition-head-default"
+  },
+  "composition-child": {
+    body: "gg-node-body-default",
+    head: "gg-composition-child-head-default"
+  },
+  subgraph: {
+    body: "",
+    head: ""
+  },
+  "composition-reference": {
+    body: "gg-composition-reference-body",
+    head: "gg-composition-reference-child-head"
+  }
+};
+const _textureRegistry = class _textureRegistry {
+  constructor(defaultSources = DEFAULT_TEXTURE_SOURCES) {
+    __publicField(this, "sources", /* @__PURE__ */ new Map());
+    __publicField(this, "ownedPreviewUrls", /* @__PURE__ */ new Set());
+    __publicField(this, "theme_", null);
+    for (const source of defaultSources) {
+      this.registerDefault(source);
+    }
+    document == null ? void 0 : document.addEventListener("gg-texture-select-change", (e) => {
+      const customEvent = e;
+      const kind = customEvent.detail.kind;
+      const mapping = TEXTURE_KIND_TO_LOOKUP[kind];
+      if (!mapping) return;
+      NODE_ID_TEXTURE_LOOKUP[mapping.lookupKey] = {
+        ...NODE_ID_TEXTURE_LOOKUP[mapping.lookupKey],
+        [mapping.suffixKey]: customEvent.detail.value
+      };
+    });
+  }
+  static get instance() {
+    if (!this._instance) {
+      this._instance = new _textureRegistry();
+    }
+    return this._instance;
+  }
+  set theme(newTheme) {
+    if (this.theme_ === newTheme) return;
+    this.theme_ = newTheme;
+    this.updatePreviewUrls();
+  }
+  updatePreviewUrls() {
+    for (const source of this.sources.values()) {
+      if (source.sourceType === "upload") {
+        if (source.previewUrl && this.ownedPreviewUrls.has(source.previewUrl)) {
+          URL.revokeObjectURL(source.previewUrl);
+          this.ownedPreviewUrls.delete(source.previewUrl);
+        }
+        source.previewUrl = createSvgPreviewUrl(
+          this.getResolvedSvgText(source)
+        );
+        this.ownedPreviewUrls.add(source.previewUrl);
+      }
+    }
+    document == null ? void 0 : document.dispatchEvent(new CustomEvent("gg-texture-registry-update"));
+  }
+  getStrokeColorForKind(kind) {
+    const theme = this.theme_ || "dark";
+    switch (kind) {
+      case "composition-reference-body":
+        return CR_NODE_THEMES[theme].borderStroke;
+      case "composition-body":
+        return C_NODE_THEMES[theme].borderStroke;
+      case "node-body":
+        return NODE_THEMES[theme].borderStroke;
+      case "composition-child-head":
+      case "composition-head":
+      case "group-head":
+      case "node-head":
+      case "composition-reference-child-head":
+        return "none";
+      default:
+        return G_NODE_THEMES[theme].borderStroke;
+    }
+  }
+  getThemeColorForKind(kind) {
+    const theme = this.theme_ || "dark";
+    switch (kind) {
+      case "node-head":
+      case "composition-reference-child-head":
+      case "composition-child-head":
+        return NODE_THEMES[theme].headerFill;
+      case "node-body":
+        return NODE_THEMES[theme].bodyFill;
+      case "composition-reference-body":
+        return CR_NODE_THEMES[theme].bodyFill;
+      case "group-head":
+        return G_NODE_THEMES[theme].headerFill;
+      case "composition-head":
+        return C_NODE_THEMES[theme].headerFill;
+      case "group-body":
+        return G_NODE_THEMES[theme].bodyFill;
+      case "composition-body":
+        return C_NODE_THEMES[theme].bodyFill;
+      default:
+        return G_NODE_THEMES[theme].bgFill;
+    }
+  }
+  getResolvedSvgText(source) {
+    return source.svgText.replaceAll(
+      "var(--theme)",
+      this.getThemeColorForKind(source.kind)
+    ).replaceAll(
+      "var(--stroke-theme)",
+      this.getStrokeColorForKind(source.kind)
+    );
+  }
+  all() {
+    return [...this.sources.values()].map((source) => ({ ...source }));
+  }
+  byKind(kind) {
+    return this.all().filter((source) => source.kind === kind);
+  }
+  get(id) {
+    const source = this.sources.get(id);
+    if (!source) return void 0;
+    return { ...source, svgText: this.getResolvedSvgText(source) };
+  }
+  has(id) {
+    return this.sources.has(id);
+  }
+  addUploaded(params) {
+    const svgText = sanitizeSvg(params.svgText);
+    const id = this.ensureUniqueId(params.id ?? slugify(params.label));
+    const source = {
+      id,
+      label: params.label,
+      kind: params.kind,
+      sourceType: "upload",
+      svgText,
+      previewUrl: ""
+    };
+    source.previewUrl = createSvgPreviewUrl(this.getResolvedSvgText(source));
+    if (source.previewUrl) {
+      this.ownedPreviewUrls.add(source.previewUrl);
+    }
+    this.sources.set(source.id, source);
+    return { ...source };
+  }
+  removeUploaded(id) {
+    const source = this.sources.get(id);
+    if (!source || source.sourceType !== "upload") return false;
+    if (source.previewUrl && this.ownedPreviewUrls.has(source.previewUrl)) {
+      URL.revokeObjectURL(source.previewUrl);
+      this.ownedPreviewUrls.delete(source.previewUrl);
+    }
+    this.sources.delete(id);
+    return true;
+  }
+  dispose() {
+    for (const previewUrl of this.ownedPreviewUrls) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    this.ownedPreviewUrls.clear();
+  }
+  registerDefault(source) {
+    this.sources.set(source.id, {
+      ...source,
+      sourceType: "default",
+      previewUrl: source.previewUrl ?? svgToDataUrl(source.svgText)
+    });
+  }
+  ensureUniqueId(baseId) {
+    const cleanBase = baseId || "texture";
+    if (!this.sources.has(cleanBase)) return cleanBase;
+    let suffix = 2;
+    while (this.sources.has(`${cleanBase}-${suffix}`)) {
+      suffix += 1;
+    }
+    return `${cleanBase}-${suffix}`;
+  }
+};
+__publicField(_textureRegistry, "_instance", null);
+let textureRegistry = _textureRegistry;
+function getDefaultTextureIds(nodeType) {
+  const defaults = NODE_ID_TEXTURE_LOOKUP[nodeType];
+  return { ...defaults };
+}
+function getCompositionReferenceTextureIds() {
+  const defaults = NODE_ID_TEXTURE_LOOKUP["composition-reference"];
+  return { ...defaults };
+}
+function createDefaultSource(id, label, kind, fill, stroke) {
+  const svgText = buildDefaultTextureSvg(fill, stroke);
+  return {
+    id,
+    label,
+    kind,
+    sourceType: "default",
+    svgText,
+    previewUrl: svgToDataUrl(svgText)
+  };
+}
+function generateTetureSkinOption(kind, label, index, id) {
+  const skinReg = DEFAULT_TEXTURE_SKINS[kind];
+  const svgText = index < skinReg.length ? skinReg[index] : skinReg[0];
+  const source = {
+    id,
+    label,
+    kind,
+    sourceType: "upload",
+    svgText,
+    previewUrl: createSvgPreviewUrl(svgText)
+  };
+  if (source.previewUrl) {
+    TextureRegistry.ownedPreviewUrls.add(source.previewUrl);
+  }
+  return { ...source };
+}
+function buildDefaultTextureSvg(fill, stroke) {
+  return `
+  <svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="${SVG_NS}">
+    <rect x="0.5" y="0.5" width="205" height="141" rx="7.5" fill="${fill}"  stroke="${stroke}" stroke-width="2"/>
+  </svg>
+`;
+}
+function sanitizeSvg(svgText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svgText, "image/svg+xml");
+  const svg = doc.documentElement;
+  if (svg.nodeName.toLowerCase() === "parsererror" || svg.nodeName.toLowerCase() !== "svg") {
+    throw new Error("Uploaded texture must be a valid SVG document");
+  }
+  const forbiddenElements = /* @__PURE__ */ new Set([
+    "script",
+    "foreignobject",
+    "iframe",
+    "object",
+    "embed",
+    "audio",
+    "video",
+    "canvas"
+  ]);
+  for (const element of [...svg.querySelectorAll("*")]) {
+    const tagName = element.tagName.toLowerCase();
+    if (forbiddenElements.has(tagName)) {
+      element.remove();
+      continue;
+    }
+    for (const attr of [...element.attributes]) {
+      const name = attr.name.toLowerCase();
+      const value = attr.value.trim().toLowerCase();
+      if (name.startsWith("on") || value.startsWith("javascript:") || value.includes("url(http:") || value.includes("url(https:") || value.includes("url(//")) {
+        element.removeAttribute(attr.name);
+      }
+    }
+  }
+  return new XMLSerializer().serializeToString(svg);
+}
+function createSvgPreviewUrl(svgText) {
+  return URL.createObjectURL(
+    new Blob([svgText], { type: "image/svg+xml;charset=utf-8" })
+  );
+}
+function svgToDataUrl(svgText) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
+}
+function slugify(label) {
+  return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+const TextureRegistry = textureRegistry.instance;
 class GeometryNode {
   constructor(gl, meshType) {
     __publicField(this, "vertexBuffer", null);
@@ -1074,79 +1815,6 @@ class EdgeStore {
     }
   }
 }
-const NODE_LAYOUT = {
-  headerHeight: 30,
-  padding: 10,
-  closeBtnPaddingRight: 20,
-  closeBtnClickRadius: 15,
-  editBtnPaddingRight: 45,
-  editBtnClickRadius: 15,
-  plusBtnPaddingBottom: 20,
-  plusBtnClickRadius: 12,
-  spotlightBtnPaddingRight: 20,
-  spotlightBtnPaddingBottom: 20,
-  spotlightBtnClickRadius: 12,
-  lockBtnTopY: 20,
-  // matches group header titleY
-  lockBtnClickRadius: 12,
-  subgraphBtnPaddingRight: 18,
-  subgraphBtnSpacing: 24,
-  subgraphBtnClickRadius: 12
-};
-const HANDLE_LAYOUT = {
-  sideInset: 8,
-  offsetX: -2
-};
-const DEFAULT_HANDLE_STYLE = {
-  shape: "circle",
-  backgroundColor: "rgba(33, 36, 39, 0.95)",
-  connectedBorderColor: "#2C9F92",
-  disconnectedBorderColor: "rgba(148, 163, 184, 0.85)",
-  borderWidth: 2,
-  size: 12
-};
-const NODE_SIZE = {
-  node: { width: 190, height: 150 },
-  hub: { width: 240, height: 100 },
-  nodeCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
-  group: { width: 220, height: 200 },
-  composition: { width: 140, height: 200 },
-  compositionChild: { width: 160, height: NODE_LAYOUT.headerHeight },
-  subgraph: { width: 220, height: 160 },
-  subgraphCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight }
-};
-function isContainerNodeType(nodeType) {
-  return nodeType === "group" || nodeType === "composition" || nodeType === "subgraph";
-}
-function isLeafNodeType(nodeType) {
-  return nodeType === "node" || nodeType === "hub" || nodeType === "composition-child";
-}
-function isNodePrimitiveType(nodeType) {
-  return nodeType === "node" || nodeType === "hub";
-}
-function isCandidateNodeType(nodeType, connectionMode) {
-  if (connectionMode === "group") {
-    return nodeType === "group";
-  }
-  return isNodePrimitiveType(nodeType) || nodeType === "composition" || nodeType === "subgraph";
-}
-function getDefaultNodeSize(nodeType, isCollapsed = false) {
-  switch (nodeType) {
-    case "group":
-    case "composition":
-      return NODE_SIZE.group;
-    case "subgraph":
-      return isCollapsed ? NODE_SIZE.subgraphCollapsed : NODE_SIZE.subgraph;
-    case "composition-child":
-      return NODE_SIZE.compositionChild;
-    case "hub":
-      return NODE_SIZE.hub;
-    case "node":
-      return isCollapsed ? NODE_SIZE.nodeCollapsed : NODE_SIZE.node;
-    default:
-      return NODE_SIZE.node;
-  }
-}
 function getHandleScreenGeometry(worldX, worldY, node, handle, zoom, panX, panY) {
   const originX = worldX * zoom + panX;
   const originY = worldY * zoom + panY;
@@ -1475,674 +2143,6 @@ function normalize(point) {
 function lerp(a, b, t) {
   return a + (b - a) * t;
 }
-const PI = 3.141592653589793;
-if (typeof CanvasRenderingContext2D.prototype.roundRect !== "function") {
-  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
-    if (typeof radii === "number") radii = [radii, radii, radii, radii];
-    if (!Array.isArray(radii)) radii = [0, 0, 0, 0];
-    let tl = radii[0] || 0;
-    let tr = radii[1] !== void 0 ? radii[1] : tl;
-    let br = radii[2] !== void 0 ? radii[2] : tr;
-    let bl = radii[3] !== void 0 ? radii[3] : tl;
-    this.beginPath();
-    this.moveTo(x + tl, y);
-    this.lineTo(x + w - tr, y);
-    this.arcTo(x + w, y, x + w, y + tr, tr);
-    this.lineTo(x + w, y + h - br);
-    this.arcTo(x + w, y + h, x + w - br, y + h, br);
-    this.lineTo(x + bl, y + h);
-    this.arcTo(x, y + h, x, y + h - bl, bl);
-    this.lineTo(x, y + tl);
-    this.arcTo(x, y, x + tl, y, tl);
-    this.closePath();
-    return this;
-  };
-}
-const dumbGlyphHeight = 16;
-const dumbGlyphWidth = 16;
-function drawHandle(ctx, handle, x, y) {
-  const { style, isConnected } = handle;
-  const radius = style.size / 2;
-  const borderColor = isConnected ? style.connectedBorderColor : style.disconnectedBorderColor;
-  ctx.save();
-  ctx.fillStyle = style.backgroundColor;
-  ctx.strokeStyle = borderColor;
-  ctx.lineWidth = style.borderWidth;
-  if (style.shape === "circle") {
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, 2 * PI);
-    ctx.fill();
-    ctx.stroke();
-  } else {
-    ctx.beginPath();
-    ctx.rect(x - radius, y - radius, style.size, style.size);
-    ctx.fill();
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-const NODE_THEMES = {
-  dark: {
-    bgFill: "rgba(30, 41, 59, 0.8)",
-    borderStroke: "rgba(255, 255, 255, 0.1)",
-    headerFill: "rgba(14, 13, 13, 0.9)",
-    titleFill: "#f8fafc",
-    bodyFill: "rgba(19, 18, 18, 0.8)",
-    borderWidth: 1
-  },
-  light: {
-    bgFill: "rgba(248, 250, 252, 0.9)",
-    borderStroke: "rgba(0, 0, 0, 0.1)",
-    headerFill: "rgba(226, 232, 240, 1)",
-    titleFill: "#0f172a",
-    bodyFill: "rgba(205, 205, 205, 0.9)",
-    borderWidth: 1
-  },
-  neon: {
-    bgFill: "rgba(10, 10, 20, 0.9)",
-    borderStroke: "rgb(10, 35, 39)",
-    headerFill: "rgba(10, 35, 39, 0.76)",
-    titleFill: "#cffafe",
-    bodyFill: "rgb(16, 96, 128)",
-    borderWidth: 2
-  }
-};
-const G_NODE_THEMES = {
-  dark: {
-    bgFill: "rgb(9, 9, 10)",
-    borderStroke: "rgba(255, 255, 255, 0.14)",
-    headerFill: "rgba(22, 20, 20, 0.79)",
-    titleFill: "#f8fafc",
-    bodyFill: "rgb(27, 27, 27)",
-    borderWidth: 1
-  },
-  light: {
-    bgFill: "rgba(248, 250, 252, 0.9)",
-    borderStroke: "rgba(0, 0, 0, 0.4)",
-    headerFill: "rgba(226, 232, 240, 1)",
-    titleFill: "#0f172a",
-    bodyFill: "#475569",
-    borderWidth: 1
-  },
-  neon: {
-    bgFill: "rgba(10, 10, 20, 0.9)",
-    borderStroke: "#06b6d4",
-    headerFill: "rgba(6, 182, 212, 0.2)",
-    titleFill: "#cffafe",
-    bodyFill: "rgb(16, 96, 128)",
-    borderWidth: 2
-  }
-};
-const C_NODE_THEMES = {
-  dark: {
-    bgFill: "rgb(9, 9, 10)",
-    borderStroke: "rgba(44, 159, 146, 0.9)",
-    headerFill: "none",
-    titleFill: "#f8fafc",
-    bodyFill: "rgba(3, 3, 3)",
-    borderWidth: 1
-  },
-  light: {
-    bgFill: "rgba(248, 250, 252, 0.9)",
-    borderStroke: "rgba(0, 0, 0, 0.4)",
-    headerFill: "rgba(226, 232, 240, 1)",
-    titleFill: "#0f172a",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
-    borderWidth: 1
-  },
-  neon: {
-    bgFill: "rgba(10, 10, 20, 0.9)",
-    borderStroke: "#06b6d4",
-    headerFill: "rgba(6, 182, 212, 0.2)",
-    titleFill: "#cffafe",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
-    borderWidth: 2
-  }
-};
-const CR_NODE_THEMES = {
-  dark: {
-    bgFill: "rgb(9, 9, 10)",
-    borderStroke: "rgba(255, 255, 255, 0.95)",
-    headerFill: "rgba(22, 20, 20, 0.79)",
-    titleFill: "#f8fafc",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
-    borderWidth: 1
-  },
-  light: {
-    bgFill: "rgba(248, 250, 252, 0.9)",
-    borderStroke: "rgba(0, 0, 0, 0.4)",
-    headerFill: "rgba(226, 232, 240, 1)",
-    titleFill: "#0f172a",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
-    borderWidth: 1
-  },
-  neon: {
-    bgFill: "rgba(10, 10, 20, 0.9)",
-    borderStroke: "#06b6d4",
-    headerFill: "rgba(6, 182, 212, 0.2)",
-    titleFill: "#cffafe",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
-    borderWidth: 2
-  }
-};
-const SVG_NS = "http://www.w3.org/2000/svg";
-const NODE_HEAD_TEXTURE_SKINS = [
-  ` <svg width="595" height="93" viewBox="0 0 595 93" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g filter="url(#filter0_i_4024_15406)"> <rect width="595" height="93" rx="9" fill="#D946EF"/> </g> <defs> <filter id="filter0_i_4024_15406" x="0" y="0" width="595" height="97" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"> <feFlood flood-opacity="0" result="BackgroundImageFix"/> <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-<feOffset dy="4"/> <feGaussianBlur stdDeviation="24.5"/> <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/> <feBlend mode="normal" in2="shape" result="effect1_innerShadow_4024_15406"/> </filter>
-</defs> </svg> `,
-  `
-<svg width="202" height="30" viewBox="0 0 202 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g filter="url(#filter0_in_2_2)">
-<rect width="202" height="30" rx="8" fill="#F0F0F0"/>
-</g>
-<defs>
-<filter id="filter0_in_2_2" x="0" y="0" width="202" height="34" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-<feFlood flood-opacity="0" result="BackgroundImageFix"/>
-<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-<feOffset dy="4"/>
-<feGaussianBlur stdDeviation="5"/>
-<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
-<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.62 0"/>
-<feBlend mode="normal" in2="shape" result="effect1_innerShadow_2_2"/>
-<feTurbulence type="fractalNoise" baseFrequency="0.25 0.25" stitchTiles="stitch" numOctaves="3" result="noise" seed="1670" />
-<feColorMatrix in="noise" type="luminanceToAlpha" result="alphaNoise" />
-<feComponentTransfer in="alphaNoise" result="coloredNoise1">
-<feFuncA type="discrete" tableValues="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "/>
-</feComponentTransfer>
-<feComposite operator="in" in2="effect1_innerShadow_2_2" in="coloredNoise1" result="noise1Clipped" />
-<feFlood flood-color="rgba(0, 0, 0, 0.25)" result="color1Flood" />
-<feComposite operator="in" in2="noise1Clipped" in="color1Flood" result="color1" />
-<feMerge result="effect2_noise_2_2">
-<feMergeNode in="effect1_innerShadow_2_2" />
-<feMergeNode in="color1" />
-</feMerge>
-</filter>
-</defs>
-</svg>
-
-`,
-  `
-<svg width="202" height="30" viewBox="0 0 202 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g filter="url(#filter0_i_2_3)">
-<rect width="202" height="30" rx="8" fill="#F0F0F0" fill-opacity="0.2"/>
-</g>
-<defs>
-<filter id="filter0_i_2_3" x="0" y="0" width="202" height="34" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-<feFlood flood-opacity="0" result="BackgroundImageFix"/>
-<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-<feOffset dy="4"/>
-<feGaussianBlur stdDeviation="5"/>
-<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
-<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.62 0"/>
-<feBlend mode="normal" in2="shape" result="effect1_innerShadow_2_3"/>
-</filter>
-</defs>
-</svg>
-
-
-`
-];
-const COMPOSITION_HEAD_TEXTURE_SKINS = [];
-const COMPOSITION_CHILD_HEAD_TEXTURE_SKINS = [];
-const COMPOSITION_REFERENCE_CHILD_HEAD_TEXTURE_SKINS = [];
-const NODE_BODY_TEXTURE_SKINS = [
-  `
-  <svg width="262" height="234" viewBox="0 0 262 234" fill="none" xmlns="http://www.w3.org/2000/svg"> <g filter="url(#filter0_d_4026_2521)">
-<path d="M4.75 28.75C4.75 13.286 17.2861 0.75 32.7501 0.75H57.177C63.9909 0.75 70.5709 3.23467 75.6842 7.73843L107.5 35.7616C112.613 40.2653 119.193 42.75 126.007 42.75H228.75C244.214 42.75 256.75 55.286 256.75 70.75V196.75C256.75 212.214 244.214 224.75 228.75 224.75H32.7501C17.2861 224.75 4.75 212.214 4.75 196.75V42.75V28.75Z" fill="url(#paint0_radial_4026_2521)" shape-rendering="crispEdges"/> <path d="M126.007 42.75H228.75C244.214 42.75 256.75 55.286 256.75 70.75V196.75C256.75 212.214 244.214 224.75 228.75 224.75H32.7501C17.2861 224.75 4.75 212.214 4.75 196.75V42.75M126.007 42.75C119.193 42.75 112.613 40.2653 107.5 35.7616L75.6842 7.73843C70.5709 3.23467 63.9909 0.75 57.177 0.75H32.7501C17.2861 0.75 4.75 13.286 4.75 28.75V42.75M126.007 42.75H4.75" stroke="var(--stroke-theme)" stroke-opacity="0.16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" shape-rendering="crispEdges"/> </g>
-<defs> <filter id="filter0_d_4026_2521" x="0" y="0" width="261.5" height="233.5" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"> <feFlood flood-opacity="0" result="BackgroundImageFix"/> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-<feOffset dy="4"/> <feGaussianBlur stdDeviation="2"/> <feComposite in2="hardAlpha" operator="out"/> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.28 0"/>
-<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_4026_2521"/> <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_4026_2521" result="shape"/> </filter> <radialGradient id="paint0_radial_4026_2521" cx="0" cy="0" r="1" gradientTransform="matrix(-232.683 -221.365 249.035 -261.996 130.75 112.75)" gradientUnits="userSpaceOnUse">
-<stop stop-color="#D946EF"/> <stop offset="1" stop-color="#7C2889"/> </radialGradient>
-</defs>
-</svg>
-`,
-  `
-<svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g filter="url(#filter0_in_2_12)">
-<rect width="206" height="142" rx="8" fill="var(--theme)"/>
-</g>
-<defs>
-<filter id="filter0_in_2_12" x="0" y="0" width="206" height="146" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-<feFlood flood-opacity="0" result="BackgroundImageFix"/>
-<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-<feOffset dy="4"/>
-<feGaussianBlur stdDeviation="5"/>
-<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
-<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.62 0"/>
-<feBlend mode="normal" in2="shape" result="effect1_innerShadow_2_12"/>
-<feTurbulence type="fractalNoise" baseFrequency="0.25 0.25" stitchTiles="stitch" numOctaves="3" result="noise" seed="1670" />
-<feColorMatrix in="noise" type="luminanceToAlpha" result="alphaNoise" />
-<feComponentTransfer in="alphaNoise" result="coloredNoise1">
-<feFuncA type="discrete" tableValues="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "/>
-</feComponentTransfer>
-<feComposite operator="in" in2="effect1_innerShadow_2_12" in="coloredNoise1" result="noise1Clipped" />
-<feFlood flood-color="rgba(0, 0, 0, 0.25)" result="color1Flood" />
-<feComposite operator="in" in2="noise1Clipped" in="color1Flood" result="color1" />
-<feMerge result="effect2_noise_2_12">
-<feMergeNode in="effect1_innerShadow_2_12" />
-<feMergeNode in="color1" />
-</feMerge>
-</filter>
-</defs>
-</svg>
-
-`,
-  `
-<svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g filter="url(#filter0_i_2_13)">
-<rect width="206" height="142" rx="8" fill="var(--theme)" fill-opacity="0.2"/>
-</g>
-<defs>
-<filter id="filter0_i_2_13" x="0" y="0" width="206" height="146" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-<feFlood flood-opacity="0" result="BackgroundImageFix"/>
-<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-<feOffset dy="4"/>
-<feGaussianBlur stdDeviation="5"/>
-<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
-<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.62 0"/>
-<feBlend mode="normal" in2="shape" result="effect1_innerShadow_2_13"/>
-</filter>
-</defs>
-</svg>
-`,
-  `
-<svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g filter="url(#filter0_i_2_14)">
-<rect width="206" height="142" rx="8" fill="var(--theme)"/>
-</g>
-<defs>
-<filter id="filter0_i_2_14" x="0" y="0" width="206" height="146" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-<feFlood flood-opacity="0" result="BackgroundImageFix"/>
-<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-<feOffset dy="4"/>
-<feGaussianBlur stdDeviation="5"/>
-<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
-<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0"/>
-<feBlend mode="normal" in2="shape" result="effect1_innerShadow_2_14"/>
-</filter>
-</defs>
-</svg>
-
-`
-];
-const GROUP_HEAD_TEXTURE_SKINS = [
-  NODE_BODY_TEXTURE_SKINS[2],
-  `
-<svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="206" height="142" rx="8" fill="var(--theme)" fill-opacity="0"/>
-</svg>
-
-`
-];
-const GROUP_BODY_TEXTURE_SKINS = [NODE_BODY_TEXTURE_SKINS[2]];
-const COMPOSITION_BODY_TEXTURE_SKINS = [];
-const COMPOSITION_REFERENCE_BODY_TEXTURE_SKINS = [];
-const DEFAULT_TEXTURE_SKINS = {
-  "node-head": NODE_HEAD_TEXTURE_SKINS,
-  "node-body": NODE_BODY_TEXTURE_SKINS,
-  "composition-head": COMPOSITION_HEAD_TEXTURE_SKINS,
-  "composition-body": COMPOSITION_BODY_TEXTURE_SKINS,
-  "composition-child-head": COMPOSITION_CHILD_HEAD_TEXTURE_SKINS,
-  "composition-reference-child-head": COMPOSITION_REFERENCE_CHILD_HEAD_TEXTURE_SKINS,
-  "group-head": GROUP_HEAD_TEXTURE_SKINS,
-  "group-body": GROUP_BODY_TEXTURE_SKINS,
-  "composition-reference-body": COMPOSITION_REFERENCE_BODY_TEXTURE_SKINS
-};
-const DEFAULT_TEXTURE_SOURCES = [
-  createDefaultSource(
-    "gg-node-body-default",
-    "Default Node Body",
-    "node-body",
-    "var(--theme)",
-    "var(--stroke-theme)"
-  ),
-  createDefaultSource(
-    "gg-node-head-default",
-    "Default Node Head",
-    "node-head",
-    "var(--theme)",
-    "var(--stroke-theme)"
-  ),
-  createDefaultSource(
-    "gg-group-body-default",
-    "Default Group Body",
-    "group-body",
-    "var(--theme)",
-    "var(--stroke-theme)"
-  ),
-  createDefaultSource(
-    "gg-group-head-default",
-    "Default Group Head",
-    "group-head",
-    "var(--theme)",
-    "var(--stroke-theme)"
-  ),
-  createDefaultSource(
-    "gg-composition-body-default",
-    "Default Composition Body",
-    "composition-body",
-    "var(--theme)",
-    "var(--stroke-theme)"
-  ),
-  createDefaultSource(
-    "gg-composition-head-default",
-    "Default Composition Head",
-    "composition-head",
-    "var(--theme)",
-    "var(--stroke-theme)"
-  ),
-  createDefaultSource(
-    "gg-composition-child-head-default",
-    "Default Child Head",
-    "composition-child-head",
-    "var(--theme)",
-    "var(--stroke-theme)"
-  ),
-  createDefaultSource(
-    "gg-composition-reference-body",
-    "Default Reference Body",
-    "composition-reference-body",
-    "var(--theme)",
-    "var(--stroke-theme)"
-  )
-];
-const TEXTURE_KIND_TO_LOOKUP = {
-  "node-body": { lookupKey: "node", suffixKey: "body" },
-  "node-head": { lookupKey: "node", suffixKey: "head" },
-  "group-body": { lookupKey: "group", suffixKey: "body" },
-  "group-head": { lookupKey: "group", suffixKey: "head" },
-  "composition-body": { lookupKey: "composition", suffixKey: "body" },
-  "composition-head": { lookupKey: "composition", suffixKey: "head" },
-  "composition-child-head": { lookupKey: "composition-child", suffixKey: "head" },
-  "composition-reference-body": { lookupKey: "composition-reference", suffixKey: "body" },
-  "composition-reference-child-head": { lookupKey: "composition-reference", suffixKey: "head" }
-};
-const NODE_ID_TEXTURE_LOOKUP = {
-  node: {
-    body: "gg-node-body-default",
-    head: "gg-node-head-default"
-  },
-  hub: {
-    body: "gg-node-body-default",
-    head: "gg-node-head-default"
-  },
-  group: {
-    body: "gg-group-body-default",
-    head: "gg-group-head-default"
-  },
-  composition: {
-    body: "gg-composition-body-default",
-    head: "gg-composition-head-default"
-  },
-  "composition-child": {
-    body: "gg-node-body-default",
-    head: "gg-composition-child-head-default"
-  },
-  subgraph: {
-    body: "",
-    head: ""
-  },
-  "composition-reference": {
-    body: "gg-composition-reference-body",
-    head: "gg-composition-reference-child-head"
-  }
-};
-const _textureRegistry = class _textureRegistry {
-  constructor(defaultSources = DEFAULT_TEXTURE_SOURCES) {
-    __publicField(this, "sources", /* @__PURE__ */ new Map());
-    __publicField(this, "ownedPreviewUrls", /* @__PURE__ */ new Set());
-    __publicField(this, "theme_", null);
-    for (const source of defaultSources) {
-      this.registerDefault(source);
-    }
-    document == null ? void 0 : document.addEventListener("gg-texture-select-change", (e) => {
-      const customEvent = e;
-      const kind = customEvent.detail.kind;
-      const mapping = TEXTURE_KIND_TO_LOOKUP[kind];
-      if (!mapping) return;
-      NODE_ID_TEXTURE_LOOKUP[mapping.lookupKey] = {
-        ...NODE_ID_TEXTURE_LOOKUP[mapping.lookupKey],
-        [mapping.suffixKey]: customEvent.detail.value
-      };
-    });
-  }
-  static get instance() {
-    if (!this._instance) {
-      this._instance = new _textureRegistry();
-    }
-    return this._instance;
-  }
-  set theme(newTheme) {
-    if (this.theme_ === newTheme) return;
-    this.theme_ = newTheme;
-    this.updatePreviewUrls();
-  }
-  updatePreviewUrls() {
-    for (const source of this.sources.values()) {
-      if (source.sourceType === "upload") {
-        if (source.previewUrl && this.ownedPreviewUrls.has(source.previewUrl)) {
-          URL.revokeObjectURL(source.previewUrl);
-          this.ownedPreviewUrls.delete(source.previewUrl);
-        }
-        source.previewUrl = createSvgPreviewUrl(
-          this.getResolvedSvgText(source)
-        );
-        this.ownedPreviewUrls.add(source.previewUrl);
-      }
-    }
-    document == null ? void 0 : document.dispatchEvent(new CustomEvent("gg-texture-registry-update"));
-  }
-  getStrokeColorForKind(kind) {
-    const theme = this.theme_ || "dark";
-    switch (kind) {
-      case "composition-reference-body":
-        return CR_NODE_THEMES[theme].borderStroke;
-      case "composition-body":
-        return C_NODE_THEMES[theme].borderStroke;
-      case "node-body":
-        return NODE_THEMES[theme].borderStroke;
-      case "composition-child-head":
-      case "composition-head":
-      case "group-head":
-      case "node-head":
-      case "composition-reference-child-head":
-        return "none";
-      default:
-        return G_NODE_THEMES[theme].borderStroke;
-    }
-  }
-  getThemeColorForKind(kind) {
-    const theme = this.theme_ || "dark";
-    switch (kind) {
-      case "node-head":
-      case "composition-reference-child-head":
-      case "composition-child-head":
-        return NODE_THEMES[theme].headerFill;
-      case "node-body":
-        return NODE_THEMES[theme].bodyFill;
-      case "composition-reference-body":
-        return CR_NODE_THEMES[theme].bodyFill;
-      case "group-head":
-        return G_NODE_THEMES[theme].headerFill;
-      case "composition-head":
-        return C_NODE_THEMES[theme].headerFill;
-      case "group-body":
-        return G_NODE_THEMES[theme].bodyFill;
-      case "composition-body":
-        return C_NODE_THEMES[theme].bodyFill;
-      default:
-        return G_NODE_THEMES[theme].bgFill;
-    }
-  }
-  getResolvedSvgText(source) {
-    return source.svgText.replaceAll(
-      "var(--theme)",
-      this.getThemeColorForKind(source.kind)
-    ).replaceAll(
-      "var(--stroke-theme)",
-      this.getStrokeColorForKind(source.kind)
-    );
-  }
-  all() {
-    return [...this.sources.values()].map((source) => ({ ...source }));
-  }
-  byKind(kind) {
-    return this.all().filter((source) => source.kind === kind);
-  }
-  get(id) {
-    const source = this.sources.get(id);
-    if (!source) return void 0;
-    return { ...source, svgText: this.getResolvedSvgText(source) };
-  }
-  has(id) {
-    return this.sources.has(id);
-  }
-  addUploaded(params) {
-    const svgText = sanitizeSvg(params.svgText);
-    const id = this.ensureUniqueId(params.id ?? slugify(params.label));
-    const source = {
-      id,
-      label: params.label,
-      kind: params.kind,
-      sourceType: "upload",
-      svgText,
-      previewUrl: ""
-    };
-    source.previewUrl = createSvgPreviewUrl(this.getResolvedSvgText(source));
-    if (source.previewUrl) {
-      this.ownedPreviewUrls.add(source.previewUrl);
-    }
-    this.sources.set(source.id, source);
-    return { ...source };
-  }
-  removeUploaded(id) {
-    const source = this.sources.get(id);
-    if (!source || source.sourceType !== "upload") return false;
-    if (source.previewUrl && this.ownedPreviewUrls.has(source.previewUrl)) {
-      URL.revokeObjectURL(source.previewUrl);
-      this.ownedPreviewUrls.delete(source.previewUrl);
-    }
-    this.sources.delete(id);
-    return true;
-  }
-  dispose() {
-    for (const previewUrl of this.ownedPreviewUrls) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    this.ownedPreviewUrls.clear();
-  }
-  registerDefault(source) {
-    this.sources.set(source.id, {
-      ...source,
-      sourceType: "default",
-      previewUrl: source.previewUrl ?? svgToDataUrl(source.svgText)
-    });
-  }
-  ensureUniqueId(baseId) {
-    const cleanBase = baseId || "texture";
-    if (!this.sources.has(cleanBase)) return cleanBase;
-    let suffix = 2;
-    while (this.sources.has(`${cleanBase}-${suffix}`)) {
-      suffix += 1;
-    }
-    return `${cleanBase}-${suffix}`;
-  }
-};
-__publicField(_textureRegistry, "_instance", null);
-let textureRegistry = _textureRegistry;
-function getDefaultTextureIds(nodeType) {
-  const defaults = NODE_ID_TEXTURE_LOOKUP[nodeType];
-  return { ...defaults };
-}
-function getCompositionReferenceTextureIds() {
-  const defaults = NODE_ID_TEXTURE_LOOKUP["composition-reference"];
-  return { ...defaults };
-}
-function createDefaultSource(id, label, kind, fill, stroke) {
-  const svgText = buildDefaultTextureSvg(fill, stroke);
-  return {
-    id,
-    label,
-    kind,
-    sourceType: "default",
-    svgText,
-    previewUrl: svgToDataUrl(svgText)
-  };
-}
-function generateTetureSkinOption(kind, label, index, id) {
-  const skinReg = DEFAULT_TEXTURE_SKINS[kind];
-  const svgText = index < skinReg.length ? skinReg[index] : skinReg[0];
-  const source = {
-    id,
-    label,
-    kind,
-    sourceType: "upload",
-    svgText,
-    previewUrl: createSvgPreviewUrl(svgText)
-  };
-  if (source.previewUrl) {
-    TextureRegistry.ownedPreviewUrls.add(source.previewUrl);
-  }
-  return { ...source };
-}
-function buildDefaultTextureSvg(fill, stroke) {
-  return `
-  <svg width="206" height="142" viewBox="0 0 206 142" fill="none" xmlns="${SVG_NS}">
-    <rect x="0.5" y="0.5" width="205" height="141" rx="7.5" fill="${fill}"  stroke="${stroke}" stroke-width="2"/>
-  </svg>
-`;
-}
-function sanitizeSvg(svgText) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(svgText, "image/svg+xml");
-  const svg = doc.documentElement;
-  if (svg.nodeName.toLowerCase() === "parsererror" || svg.nodeName.toLowerCase() !== "svg") {
-    throw new Error("Uploaded texture must be a valid SVG document");
-  }
-  const forbiddenElements = /* @__PURE__ */ new Set([
-    "script",
-    "foreignobject",
-    "iframe",
-    "object",
-    "embed",
-    "audio",
-    "video",
-    "canvas"
-  ]);
-  for (const element of [...svg.querySelectorAll("*")]) {
-    const tagName = element.tagName.toLowerCase();
-    if (forbiddenElements.has(tagName)) {
-      element.remove();
-      continue;
-    }
-    for (const attr of [...element.attributes]) {
-      const name = attr.name.toLowerCase();
-      const value = attr.value.trim().toLowerCase();
-      if (name.startsWith("on") || value.startsWith("javascript:") || value.includes("url(http:") || value.includes("url(https:") || value.includes("url(//")) {
-        element.removeAttribute(attr.name);
-      }
-    }
-  }
-  return new XMLSerializer().serializeToString(svg);
-}
-function createSvgPreviewUrl(svgText) {
-  return URL.createObjectURL(
-    new Blob([svgText], { type: "image/svg+xml;charset=utf-8" })
-  );
-}
-function svgToDataUrl(svgText) {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
-}
-function slugify(label) {
-  return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-}
-const TextureRegistry = textureRegistry.instance;
 function describeNodeType(type) {
   switch (type) {
     case "group":
