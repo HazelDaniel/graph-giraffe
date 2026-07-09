@@ -7872,7 +7872,9 @@ const _NodeEditor = class _NodeEditor {
     this.IconBGFsSource = IconBGFsSource;
     this.nodeTextureUploadList = nodeTextureUploadList;
     const canvas = document.getElementById(canvasId);
-    const backgroundCanvas = document.getElementById(backgroundCanvasId);
+    const backgroundCanvas = document.getElementById(
+      backgroundCanvasId
+    );
     if (!canvas) throw new Error(`Canvas "${canvasId}" not found`);
     if (!backgroundCanvas)
       throw new Error(`Canvas "${backgroundCanvasId}" not found`);
@@ -7920,20 +7922,38 @@ const _NodeEditor = class _NodeEditor {
     const gl = canvas.getContext("webgl2");
     const program = createProgram(gl, this.vsSource, this.fsSource);
     const msdfProgram = createProgram(gl, this.msdfVsSource, this.msdfFsSource);
-    const iconBGProgam = createProgram(gl, this.IconBGVsSource, this.IconBGFsSource);
+    const iconBGProgam = createProgram(
+      gl,
+      this.IconBGVsSource,
+      this.IconBGFsSource
+    );
     const bgProgram = createProgram(gl, this.bgVsSource, this.bgFsSource);
     this.msdfAtlas = new MsdfAtlas(gl);
     this.iconAtlas = new MsdfAtlas(gl);
     const assetsPath = this.assetsPath;
     const basePath = assetsPath.endsWith("/") ? assetsPath : `${assetsPath}/`;
-    await Promise.all([
-      this.msdfAtlas.load(`${basePath}msdf-atlas.png`, `${basePath}msdf-atlas.json`),
-      this.iconAtlas.load(`${basePath}icon-atlas.png`, `${basePath}icon-atlas.json`)
-    ]);
+    try {
+      await Promise.all([
+        this.msdfAtlas.load(
+          `${basePath}msdf-atlas.png`,
+          `${basePath}msdf-atlas.json`
+        ),
+        this.iconAtlas.load(
+          `${basePath}icon-atlas.png`,
+          `${basePath}icon-atlas.json`
+        )
+      ]);
+    } catch (err) {
+      throw new Error("assets failed to load!");
+    }
     const locations = getShaderLocations(gl, program);
     const bgLocations = getBGShaderLocations(gl, bgProgram);
-    const backgroundCanvas = document.getElementById(this.backgroundCanvasId);
-    const labelCanvas = document.getElementById("2d-label-canvas");
+    const backgroundCanvas = document.getElementById(
+      this.backgroundCanvasId
+    );
+    const labelCanvas = document.getElementById(
+      "2d-label-canvas"
+    );
     const geometry = new GeometryNode(gl, "rounded-square");
     const bgGeometry = new BGGeometryNode(gl, "dotted", backgroundCanvas);
     this.renderer = new Renderer(
@@ -8017,44 +8037,52 @@ const _NodeEditor = class _NodeEditor {
     this.controls.setMultiSelectActive(this.isMultiSelectMode);
     window.addEventListener("resize", () => this.handleResize(canvas));
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
-    window.addEventListener("pointercancel", (e) => this.handlePointerCancel(e, canvas));
+    window.addEventListener(
+      "pointercancel",
+      (e) => this.handlePointerCancel(e, canvas)
+    );
     this.setupPropGroupListener();
     this.handleResize(canvas);
     this.syncToolbarState();
   }
   setupPropGroupListener() {
-    this.controls.nodePropGroup.addEventListener("gg-prop-change", (e) => {
-      const customEvent = e;
-      const { label, value } = customEvent.detail;
-      if (this.selectedNodeIds.size === 1) {
-        const nodeId = Array.from(this.selectedNodeIds)[0];
-        const node = this.store.get(nodeId);
-        if (node && node.props) {
-          const beforeSnapshot = this.captureNodeSnapshot(node);
-          const selectionBefore = this.captureSelectionSnapshot();
-          const didChange = this.updatePropValue(node.props, label, value);
-          if (!didChange) return;
-          this.store.syncNodePresentation(node.id);
-          const afterSnapshot = this.captureNodeSnapshot(node);
-          const parentId = node.parentId;
-          if (parentId !== null) {
-            this.refreshContainerChain(parentId);
+    this.controls.nodePropGroup.addEventListener(
+      "gg-prop-change",
+      (e) => {
+        const customEvent = e;
+        const { label, value } = customEvent.detail;
+        if (this.selectedNodeIds.size === 1) {
+          const nodeId = Array.from(this.selectedNodeIds)[0];
+          const node = this.store.get(nodeId);
+          if (node && node.props) {
+            const beforeSnapshot = this.captureNodeSnapshot(node);
+            const selectionBefore = this.captureSelectionSnapshot();
+            const didChange = this.updatePropValue(node.props, label, value);
+            if (!didChange) return;
+            this.store.syncNodePresentation(node.id);
+            const afterSnapshot = this.captureNodeSnapshot(node);
+            const parentId = node.parentId;
+            if (parentId !== null) {
+              this.refreshContainerChain(parentId);
+            }
+            this.pushCommand(
+              new UpdatePropCommand({
+                beforeSnapshot,
+                afterSnapshot,
+                selectionBefore,
+                parentId
+              })
+            );
+            this.events.dispatch("node:propChange", {
+              nodeId: node.id,
+              nodeType: node.nodeType,
+              label,
+              value
+            });
           }
-          this.pushCommand(new UpdatePropCommand({
-            beforeSnapshot,
-            afterSnapshot,
-            selectionBefore,
-            parentId
-          }));
-          this.events.dispatch("node:propChange", {
-            nodeId: node.id,
-            nodeType: node.nodeType,
-            label,
-            value
-          });
         }
       }
-    });
+    );
   }
   syncPropertiesPanelForSelection() {
     const selected = this.getSingleSelectedNode();
@@ -8395,7 +8423,9 @@ const _NodeEditor = class _NodeEditor {
     let didChange = false;
     if ((hoveredContainer == null ? void 0 : hoveredContainer.nodeType) === "composition") {
       if (this.selectionRep && this.selectionRep.nodeType !== "group") {
-        const targetOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
+        const targetOwningSubgraphId = this.getOwningSubgraphId(
+          hoveredContainer.id
+        );
         for (const entry of selectionDrag.entries) {
           const node = this.store.get(entry.nodeId);
           if (!node || !isNodePrimitiveType(node.nodeType)) continue;
@@ -8415,7 +8445,9 @@ const _NodeEditor = class _NodeEditor {
     } else if ((hoveredContainer == null ? void 0 : hoveredContainer.nodeType) === "subgraph") ;
     else if ((hoveredContainer == null ? void 0 : hoveredContainer.nodeType) === "group") {
       if (this.selectionRep && this.selectionRep.nodeType !== "group") {
-        const targetOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
+        const targetOwningSubgraphId = this.getOwningSubgraphId(
+          hoveredContainer.id
+        );
         for (const entry of selectionDrag.entries) {
           const node = this.store.get(entry.nodeId);
           if (!node) continue;
@@ -8424,12 +8456,15 @@ const _NodeEditor = class _NodeEditor {
           const oldParentId = node.parentId;
           const parentChanged = oldParentId !== hoveredContainer.id;
           if (parentChanged) {
-            const allowed = await this.events.dispatchBefore("before:nodeReparent", {
-              nodeId: node.id,
-              nodeType: node.nodeType,
-              newParentId: hoveredContainer.id,
-              newParentType: hoveredContainer.nodeType
-            });
+            const allowed = await this.events.dispatchBefore(
+              "before:nodeReparent",
+              {
+                nodeId: node.id,
+                nodeType: node.nodeType,
+                newParentId: hoveredContainer.id,
+                newParentType: hoveredContainer.nodeType
+              }
+            );
             if (!allowed) continue;
             if (!this.store.setParent(node.id, hoveredContainer.id)) continue;
             this.events.dispatch("node:reparent", {
@@ -8584,11 +8619,13 @@ const _NodeEditor = class _NodeEditor {
     const node = this.store.get(session.nodeId);
     if (!node || node.text === session.previousLabel) return;
     const nextLabel = node.text;
-    this.pushCommand(new UpdateLabelCommand({
-      nodeId: node.id,
-      previousLabel: session.previousLabel,
-      nextLabel
-    }));
+    this.pushCommand(
+      new UpdateLabelCommand({
+        nodeId: node.id,
+        previousLabel: session.previousLabel,
+        nextLabel
+      })
+    );
     this.events.dispatch("node:labelChange", {
       nodeId: node.id,
       nodeType: node.nodeType,
@@ -8872,7 +8909,9 @@ const _NodeEditor = class _NodeEditor {
       return false;
     }
     if (hoveredContainer.nodeType === "subgraph") {
-      const hoveredOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
+      const hoveredOwningSubgraphId = this.getOwningSubgraphId(
+        hoveredContainer.id
+      );
       return sourceOwningSubgraphId === hoveredContainer.id || sourceOwningSubgraphId === hoveredOwningSubgraphId;
     }
     return sourceOwningSubgraphId === this.getOwningSubgraphId(hoveredContainer.id);
@@ -8896,13 +8935,15 @@ const _NodeEditor = class _NodeEditor {
     if (parentId !== null) {
       this.refreshContainerChain(parentId);
     }
-    this.pushCommand(new DeleteNodeCommand({
-      nodeId,
-      nodeSnapshots: snapshots,
-      edgeSnapshots,
-      selectionBefore,
-      parentId
-    }));
+    this.pushCommand(
+      new DeleteNodeCommand({
+        nodeId,
+        nodeSnapshots: snapshots,
+        edgeSnapshots,
+        selectionBefore,
+        parentId
+      })
+    );
   }
   deleteEdgeWithHistory(edgeId) {
     const edge = this.edgeStore.get(edgeId);
@@ -8915,10 +8956,12 @@ const _NodeEditor = class _NodeEditor {
     this.syncHandleStates(edge.sourceNodeId);
     this.syncHandleStates(edge.targetNodeId);
     this.clearSelectionAndHideProperties();
-    this.pushCommand(new DeleteEdgeCommand({
-      edgeSnapshot: snapshot,
-      selectionBefore
-    }));
+    this.pushCommand(
+      new DeleteEdgeCommand({
+        edgeSnapshot: snapshot,
+        selectionBefore
+      })
+    );
   }
   async deleteCurrentSelectionWithHistory() {
     let nodeIds = [...this.selectedNodeIds];
@@ -8973,14 +9016,16 @@ const _NodeEditor = class _NodeEditor {
     for (const parentId of parentIds) {
       this.refreshContainerChain(parentId);
     }
-    this.pushCommand(new DeleteSelectionCommand({
-      nodeSnapshots: snapshots,
-      edgeSnapshots,
-      selectionBefore,
-      removedNodeIds: [...removedIds],
-      removedEdgeIds: [...edgeIds],
-      parentIds: [...parentIds]
-    }));
+    this.pushCommand(
+      new DeleteSelectionCommand({
+        nodeSnapshots: snapshots,
+        edgeSnapshots,
+        selectionBefore,
+        removedNodeIds: [...removedIds],
+        removedEdgeIds: [...edgeIds],
+        parentIds: [...parentIds]
+      })
+    );
   }
   async createNodeWithHistory(nodeType, worldX, worldY, parentId = null) {
     var _a2;
@@ -9007,12 +9052,14 @@ const _NodeEditor = class _NodeEditor {
       this.refreshContainerChain(parentId);
     }
     const snapshot = this.captureNodeSnapshot(node);
-    this.pushCommand(new CreateNodeCommand({
-      snapshot,
-      parentId,
-      selectionBefore,
-      selectOnRedo: false
-    }));
+    this.pushCommand(
+      new CreateNodeCommand({
+        snapshot,
+        parentId,
+        selectionBefore,
+        selectOnRedo: false
+      })
+    );
     return node;
   }
   async handleAddNode(canvas, nodeType) {
@@ -9044,12 +9091,14 @@ const _NodeEditor = class _NodeEditor {
     this.clearSelectionState();
     this.setNodeSelected(composition.id, true);
     this.controls.hideProperties();
-    this.pushCommand(new CreateNodeCommand({
-      snapshot,
-      parentId: snapshot.parentId,
-      selectionBefore,
-      selectOnRedo: true
-    }));
+    this.pushCommand(
+      new CreateNodeCommand({
+        snapshot,
+        parentId: snapshot.parentId,
+        selectionBefore,
+        selectOnRedo: true
+      })
+    );
   }
   createSubgraphFromSelection() {
     const roots = this.getSelectionDragRoots();
@@ -9064,11 +9113,15 @@ const _NodeEditor = class _NodeEditor {
       this.theme,
       "subgraph"
     );
-    const commonParent = roots.every((root) => root.parentId === roots[0].parentId) ? roots[0].parentId : null;
+    const commonParent = roots.every(
+      (root) => root.parentId === roots[0].parentId
+    ) ? roots[0].parentId : null;
     if (commonParent !== null) {
       this.store.setParent(subgraph.id, commonParent);
     }
-    const beforeSnapshots = this.captureNodeSnapshots(roots.map((root) => root.id));
+    const beforeSnapshots = this.captureNodeSnapshots(
+      roots.map((root) => root.id)
+    );
     const removedEdgeSnapshots = this.removeBoundaryEdgesForRoots(
       roots.map((root) => root.id)
     );
@@ -9078,18 +9131,22 @@ const _NodeEditor = class _NodeEditor {
     this.store.syncNodePresentation(subgraph.id);
     this.store.updateContainerBounds(subgraph.id, this.theme);
     this.refreshContainerChain(subgraph.id);
-    const afterSnapshots = this.captureNodeSnapshots(roots.map((root) => root.id));
+    const afterSnapshots = this.captureNodeSnapshots(
+      roots.map((root) => root.id)
+    );
     const subgraphSnapshot = this.captureNodeSnapshot(subgraph);
     this.clearSelectionState();
     this.setNodeSelected(subgraph.id, true);
     this.syncPropertiesPanelForSelection();
-    this.pushCommand(new CreateSubgraphCommand({
-      subgraphSnapshot,
-      childBeforeSnapshots: beforeSnapshots,
-      childAfterSnapshots: afterSnapshots,
-      removedEdgeSnapshots,
-      selectionBefore
-    }));
+    this.pushCommand(
+      new CreateSubgraphCommand({
+        subgraphSnapshot,
+        childBeforeSnapshots: beforeSnapshots,
+        childAfterSnapshots: afterSnapshots,
+        removedEdgeSnapshots,
+        selectionBefore
+      })
+    );
   }
   toggleSubgraphCollapse(subgraphId) {
     const node = this.store.get(subgraphId);
@@ -9100,10 +9157,12 @@ const _NodeEditor = class _NodeEditor {
     this.store.updateContainerBounds(node.id, this.theme);
     this.refreshContainerChain(node.parentId);
     const afterSnapshot = this.captureNodeSnapshot(node);
-    this.pushCommand(new ToggleSubgraphCollapseCommand({
-      beforeSnapshot,
-      afterSnapshot
-    }));
+    this.pushCommand(
+      new ToggleSubgraphCollapseCommand({
+        beforeSnapshot,
+        afterSnapshot
+      })
+    );
     this.events.dispatch("subgraph:collapseToggle", {
       subgraphId: node.id,
       isCollapsed: node.isCollapsed
@@ -9117,7 +9176,9 @@ const _NodeEditor = class _NodeEditor {
     const childIds = [...subgraph.childIds];
     const subgraphSnapshot = this.captureNodeSnapshot(subgraph);
     const childBeforeSnapshots = this.captureNodeSnapshots(childIds);
-    const removedEdgeSnapshots = this.captureBoundaryEdgeSnapshots([subgraphId]);
+    const removedEdgeSnapshots = this.captureBoundaryEdgeSnapshots([
+      subgraphId
+    ]);
     this.store.removeContainerOnly(subgraphId);
     for (const snapshot of removedEdgeSnapshots) {
       const removed = this.edgeStore.remove(snapshot.id);
@@ -9130,13 +9191,15 @@ const _NodeEditor = class _NodeEditor {
     this.clearSelectionState();
     this.controls.hideProperties();
     this.refreshContainerChain(subgraph.parentId);
-    this.pushCommand(new UngraphCommand({
-      subgraphSnapshot,
-      childBeforeSnapshots,
-      childAfterSnapshots,
-      removedEdgeSnapshots,
-      selectionBefore
-    }));
+    this.pushCommand(
+      new UngraphCommand({
+        subgraphSnapshot,
+        childBeforeSnapshots,
+        childAfterSnapshots,
+        removedEdgeSnapshots,
+        selectionBefore
+      })
+    );
   }
   cloneSubgraphWithHistory(subgraphId) {
     const subgraph = this.store.get(subgraphId);
@@ -9161,12 +9224,14 @@ const _NodeEditor = class _NodeEditor {
     this.setNodeSelected(clone.id, true);
     this.syncPropertiesPanelForSelection();
     this.refreshContainerChain(clone.parentId);
-    this.pushCommand(new CreateNodeCommand({
-      snapshot,
-      parentId,
-      selectionBefore,
-      selectOnRedo: true
-    }));
+    this.pushCommand(
+      new CreateNodeCommand({
+        snapshot,
+        parentId,
+        selectionBefore,
+        selectOnRedo: true
+      })
+    );
   }
   async handleDeleteSelected() {
     await this.deleteCurrentSelectionWithHistory();
@@ -9282,9 +9347,7 @@ const _NodeEditor = class _NodeEditor {
       ]);
     }
     if (node.nodeType === "composition") {
-      return baseButtons([
-        ["delete", `${DELETE}`, "Delete"]
-      ]);
+      return baseButtons([["delete", `${DELETE}`, "Delete"]]);
     }
     return [];
   }
@@ -9488,10 +9551,12 @@ const _NodeEditor = class _NodeEditor {
         const beforeSnapshot = this.captureNodeSnapshot(node);
         node.isLocked = !node.isLocked;
         const afterSnapshot = this.captureNodeSnapshot(node);
-        this.pushCommand(new ToggleLockCommand({
-          beforeSnapshot,
-          afterSnapshot
-        }));
+        this.pushCommand(
+          new ToggleLockCommand({
+            beforeSnapshot,
+            afterSnapshot
+          })
+        );
         this.hoveredHandle = null;
         return;
       }
@@ -9741,9 +9806,11 @@ const _NodeEditor = class _NodeEditor {
             this.syncHandleStates(edge.targetNodeId);
             this.applyCompositionReferenceForEdge(edge);
             const snapshot = { ...edge };
-            this.pushCommand(new ConnectCommand({
-              edgeSnapshot: snapshot
-            }));
+            this.pushCommand(
+              new ConnectCommand({
+                edgeSnapshot: snapshot
+              })
+            );
             this.events.dispatch("connect", {
               sourceId: source.sourceNodeId,
               sourceType: sourceNode.nodeType,
@@ -9778,7 +9845,9 @@ const _NodeEditor = class _NodeEditor {
       );
       const draggedNodeIds = [];
       if (this.draggingSelection) {
-        draggedNodeIds.push(...this.draggingSelection.entries.map((e2) => e2.nodeId));
+        draggedNodeIds.push(
+          ...this.draggingSelection.entries.map((e2) => e2.nodeId)
+        );
       } else if (this.draggingNode) {
         draggedNodeIds.push(this.draggingNode.id);
       }
@@ -9794,14 +9863,16 @@ const _NodeEditor = class _NodeEditor {
       this.selectionRep = null;
       this.store.clearDropTargets();
       if (dropResult.didChange) {
-        this.pushCommand(new MoveSelectionCommand({
-          beforeSnapshots: dropResult.beforeSnapshots,
-          afterSnapshots: dropResult.afterSnapshots,
-          cloneSnapshots: dropResult.cloneSnapshots,
-          removedReferenceEdgeSnapshots: dropResult.removedReferenceEdgeSnapshots,
-          selectionBefore,
-          affectedParentIds: dropResult.affectedParentIds
-        }));
+        this.pushCommand(
+          new MoveSelectionCommand({
+            beforeSnapshots: dropResult.beforeSnapshots,
+            afterSnapshots: dropResult.afterSnapshots,
+            cloneSnapshots: dropResult.cloneSnapshots,
+            removedReferenceEdgeSnapshots: dropResult.removedReferenceEdgeSnapshots,
+            selectionBefore,
+            affectedParentIds: dropResult.affectedParentIds
+          })
+        );
       }
       this.syncToolbarState();
       return;
@@ -10091,7 +10162,10 @@ const _NodeEditor = class _NodeEditor {
     if (dropTarget && dropTarget.nodeType !== "subgraph") {
       return false;
     }
-    const { x: worldX, y: worldY } = this.camera.screenToWorld(screenX, screenY);
+    const { x: worldX, y: worldY } = this.camera.screenToWorld(
+      screenX,
+      screenY
+    );
     const selectionBefore = this.captureSelectionSnapshot();
     const parentId = (dropTarget == null ? void 0 : dropTarget.nodeType) === "subgraph" ? dropTarget.id : null;
     const hub = this.store.add(
@@ -10142,12 +10216,14 @@ const _NodeEditor = class _NodeEditor {
     this.clearSelectionState();
     this.setNodeSelected(hub.id, true);
     this.refreshContainerChain(parentId);
-    this.pushCommand(new CreateHubFromConnectionDropCommand({
-      hubSnapshot,
-      edgeSnapshot,
-      selectionBefore,
-      parentId
-    }));
+    this.pushCommand(
+      new CreateHubFromConnectionDropCommand({
+        hubSnapshot,
+        edgeSnapshot,
+        selectionBefore,
+        parentId
+      })
+    );
     this.events.dispatch("hub:created", {
       hubId: hub.id
     });

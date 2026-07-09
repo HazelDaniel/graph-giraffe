@@ -14,9 +14,9 @@ import { GraphEventEmitter } from "./events.js";
 import { DEFAULT_HANDLE_STYLE, NODE_LAYOUT, isCandidateNodeType, isContainerNodeType, isNodePrimitiveType, } from "./types.js";
 import { MsdfAtlas } from "./msdf-text.js";
 import { getHandleScreenGeometry, isPointInsideHandle, } from "./handle-geometry.js";
-import { getParentFrameWorldPosition, getWorldPosition } from "./scene-graph.js";
+import { getParentFrameWorldPosition, getWorldPosition, } from "./scene-graph.js";
 import { TextureRegistry } from "./texture-registry.js";
-import { CLONE, COLLAPSE, DELETE, EDIT, EXPAND, SPOTLIGHT, UNGRAPH } from "../sprite.js";
+import { CLONE, COLLAPSE, DELETE, EDIT, EXPAND, SPOTLIGHT, UNGRAPH, } from "../sprite.js";
 const baseButtons = (items) => items.map(([action, glyph, label]) => ({ action, glyph, label }));
 /**
  * NodeEditor is the single public class exposed to the entry point.
@@ -118,7 +118,7 @@ export class NodeEditor {
         if (!gl)
             throw new Error("WebGL2 is not supported in this browser");
         this.connectionMode = options.connectionMode ?? "node";
-        this.assetsPath = options.assetsPath ?? 'assets';
+        this.assetsPath = options.assetsPath ?? "assets";
         // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
         this.camera = new Camera();
         this.store = new NodeStore(gl, this.connectionMode, options.handleStyle ?? DEFAULT_HANDLE_STYLE);
@@ -136,11 +136,16 @@ export class NodeEditor {
         this.msdfAtlas = new MsdfAtlas(gl);
         this.iconAtlas = new MsdfAtlas(gl);
         const assetsPath = this.assetsPath;
-        const basePath = assetsPath.endsWith('/') ? assetsPath : `${assetsPath}/`;
-        await Promise.all([
-            this.msdfAtlas.load(`${basePath}msdf-atlas.png`, `${basePath}msdf-atlas.json`),
-            this.iconAtlas.load(`${basePath}icon-atlas.png`, `${basePath}icon-atlas.json`)
-        ]);
+        const basePath = assetsPath.endsWith("/") ? assetsPath : `${assetsPath}/`;
+        try {
+            await Promise.all([
+                this.msdfAtlas.load(`${basePath}msdf-atlas.png`, `${basePath}msdf-atlas.json`),
+                this.iconAtlas.load(`${basePath}icon-atlas.png`, `${basePath}icon-atlas.json`),
+            ]);
+        }
+        catch (err) {
+            throw new Error("assets failed to load!");
+        }
         const locations = getShaderLocations(gl, program);
         const bgLocations = getBGShaderLocations(gl, bgProgram);
         // We instantiate Renderer here now since it needs MsdfAtlas which is loaded asynchronously
@@ -257,7 +262,7 @@ export class NodeEditor {
         const primitives = [
             ...Object.values(props.booleans || {}).flat(),
             ...Object.values(props.texts || {}).flat(),
-            ...Object.values(props.enums || {}).flat()
+            ...Object.values(props.enums || {}).flat(),
         ];
         for (const primitive of primitives) {
             if (primitive.label === targetLabel) {
@@ -595,7 +600,8 @@ export class NodeEditor {
             if (pickedNode.id !== this.selectionRep.id &&
                 isContainerNodeType(pickedNode.nodeType)) {
                 if (this.selectionRep.nodeType === "composition") {
-                    return pickedNode.nodeType === "group" || pickedNode.nodeType === "subgraph"
+                    return pickedNode.nodeType === "group" ||
+                        pickedNode.nodeType === "subgraph"
                         ? pickedNode
                         : null;
                 }
@@ -1067,7 +1073,7 @@ export class NodeEditor {
         const centerY = world.y + node.height / 2;
         const canvas = document.getElementById(this.canvasId);
         const margin = 0.8;
-        const targetZoom = Math.min(canvas.width * margin / node.width, canvas.height * margin / node.height, 2.0);
+        const targetZoom = Math.min((canvas.width * margin) / node.width, (canvas.height * margin) / node.height, 2.0);
         const targetPanX = canvas.width / 2 - centerX * targetZoom;
         const targetPanY = canvas.height / 2 - centerY * targetZoom;
         this.camera.animateTo(targetPanX, targetPanY, targetZoom);
@@ -1126,7 +1132,8 @@ export class NodeEditor {
         return outermostSubgraphId;
     }
     canEnterContainer(sourceOwningSubgraphId, hoveredContainer) {
-        if (this.draggingNode?.nodeType === "hub" && hoveredContainer.nodeType === "group") {
+        if (this.draggingNode?.nodeType === "hub" &&
+            hoveredContainer.nodeType === "group") {
             return false;
         }
         if (hoveredContainer.nodeType === "subgraph") {
@@ -1134,13 +1141,13 @@ export class NodeEditor {
             return (sourceOwningSubgraphId === hoveredContainer.id ||
                 sourceOwningSubgraphId === hoveredOwningSubgraphId);
         }
-        return sourceOwningSubgraphId === this.getOwningSubgraphId(hoveredContainer.id);
+        return (sourceOwningSubgraphId === this.getOwningSubgraphId(hoveredContainer.id));
     }
     async deleteNodeTreeWithHistory(nodeId) {
         const node = this.store.get(nodeId);
         if (!node)
             return;
-        // Notice we do NOT check before:nodeDelete here because deleteCurrentSelectionWithHistory 
+        // Notice we do NOT check before:nodeDelete here because deleteCurrentSelectionWithHistory
         // already checked it for the root selection. If this is called from outside, we should check it.
         const allowed = await this.events.dispatchBefore("before:nodeDelete", {
             nodeId: node.id,
@@ -1377,7 +1384,9 @@ export class NodeEditor {
         const childIds = [...subgraph.childIds];
         const subgraphSnapshot = this.captureNodeSnapshot(subgraph);
         const childBeforeSnapshots = this.captureNodeSnapshots(childIds);
-        const removedEdgeSnapshots = this.captureBoundaryEdgeSnapshots([subgraphId]);
+        const removedEdgeSnapshots = this.captureBoundaryEdgeSnapshots([
+            subgraphId,
+        ]);
         this.store.removeContainerOnly(subgraphId);
         for (const snapshot of removedEdgeSnapshots) {
             const removed = this.edgeStore.remove(snapshot.id);
@@ -1472,7 +1481,8 @@ export class NodeEditor {
             if (pickedNode.id !== source.id &&
                 isContainerNodeType(pickedNode.nodeType)) {
                 if (source.nodeType === "composition") {
-                    return pickedNode.nodeType === "group" || pickedNode.nodeType === "subgraph"
+                    return pickedNode.nodeType === "group" ||
+                        pickedNode.nodeType === "subgraph"
                         ? pickedNode
                         : null;
                 }
@@ -1544,9 +1554,7 @@ export class NodeEditor {
             ]);
         }
         if (node.nodeType === "composition") {
-            return baseButtons([
-                ["delete", `${DELETE}`, "Delete"],
-            ]);
+            return baseButtons([["delete", `${DELETE}`, "Delete"]]);
         }
         return [];
     }
@@ -2133,7 +2141,8 @@ export class NodeEditor {
                 else if (hoveredContainer?.nodeType === "group" &&
                     canEnterHoveredContainer) {
                     const parentChanged = source.parentId !== hoveredContainer.id;
-                    if (!parentChanged || this.store.setParent(source.id, hoveredContainer.id)) {
+                    if (!parentChanged ||
+                        this.store.setParent(source.id, hoveredContainer.id)) {
                         const afterPlacement = {
                             localX: source.localX,
                             localY: source.localY,
@@ -2222,7 +2231,8 @@ export class NodeEditor {
                 if (beforePlacement.localX !== afterPlacement.localX ||
                     beforePlacement.localY !== afterPlacement.localY) {
                     command = new MoveSelectionCommand({
-                        beforeSnapshots: snapshot.subtreeSnapshots ?? this.captureSubtreeSnapshots(source.id),
+                        beforeSnapshots: snapshot.subtreeSnapshots ??
+                            this.captureSubtreeSnapshots(source.id),
                         afterSnapshots: this.captureSubtreeSnapshots(source.id),
                         cloneSnapshots: [],
                         removedReferenceEdgeSnapshots: [],
