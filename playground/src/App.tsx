@@ -1,8 +1,8 @@
-import "@graph-giraffe/core";
 import { NodeEditor, useGraphEvent } from "@graph-giraffe/react";
 import type { NodeEditorHandle } from "@graph-giraffe/react";
 
 import "./App.css";
+import "@graph-giraffe/core/assets/index.css";
 import logoSvg from "/logo.svg";
 import { useCallback, useRef } from "react";
 
@@ -238,7 +238,7 @@ function App() {
       <main className="main">
         <section className="playground" id="playground-canvas-section">
           {/* Toolbar */}
-          <div
+          {/* <div
             className="toolbar"
             id="playground-toolbar"
             role="toolbar"
@@ -315,16 +315,15 @@ function App() {
               <span className="toolbar-status-dot" />
               <span>Ready</span>
             </div>
-          </div>
+          </div> */}
 
           {/* Canvas */}
           <div className="canvas-container" id="editor-canvas">
             <NodeEditor
               ref={editorRef}
               connectionMode="node"
-              debug
               onConnect={handleConnect}
-              style={{ width: "100%", height: "100vh", minHeight: "40rem" }}
+              style={{ width: "100%", height: "100%", minHeight: "40rem" }}
             >
               <EventLogger />
             </NodeEditor>

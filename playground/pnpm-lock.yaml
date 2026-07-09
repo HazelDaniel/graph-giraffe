@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@graph-giraffe/core':
-        specifier: ^0.2.2
-        version: 0.2.2
+        specifier: ^0.2.6
+        version: 0.2.6
       '@graph-giraffe/react':
-        specifier: ^0.0.3
-        version: 0.0.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.0.4
+        version: 0.0.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
         specifier: ^19.2.7
         version: 19.2.7
@@ -54,11 +54,11 @@ packages:
   '@emnapi/wasi-threads@1.2.2':
     resolution: {integrity: sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA==}
 
-  '@graph-giraffe/core@0.2.2':
-    resolution: {integrity: sha512-J/x5SY654frkGbmdNTngQbJA4PpcwgyKf2QZ2Yc65TvMGb5Tn1s4mYw/TbEvJqRx3BNxsCtns7RSEzU2EV1iww==}
+  '@graph-giraffe/core@0.2.6':
+    resolution: {integrity: sha512-2JFbLZGmBPZs+wVw7jGpFJrfTQU5bWksxZwUztL8NxkHQkHPWIp4aRJOWBCl4PpS1gujA92oKRuWov9i6aQRwA==}
 
-  '@graph-giraffe/react@0.0.3':
-    resolution: {integrity: sha512-MA7Jt+eIW3WL9TFvEQfVAdIch6AgCxhlVVAUbQ/hjznBtVB5Eg4oXKBrlqGlb4GM7Mu/Lt0u/p08PXA0j8wZQA==}
+  '@graph-giraffe/react@0.0.4':
+    resolution: {integrity: sha512-zw9GeJQ+G4vSzx6rorZFBFbuwgPfPwTLZ6LNzk19a5ggXn36IcepmOSWYnYhRR4DREcunBeOwnW7qEG/7iJnkg==}
     peerDependencies:
       react: ^18 || ^19
       react-dom: ^18 || ^19
@@ -522,11 +522,11 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@graph-giraffe/core@0.2.2': {}
+  '@graph-giraffe/core@0.2.6': {}
 
-  '@graph-giraffe/react@0.0.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@graph-giraffe/react@0.0.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@graph-giraffe/core': 0.2.2
+      '@graph-giraffe/core': 0.2.6
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 

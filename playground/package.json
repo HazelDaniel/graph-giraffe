@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@graph-giraffe/core": "^0.2.3",
-    "@graph-giraffe/react": "^0.0.3",
+    "@graph-giraffe/core": "^0.2.6",
+    "@graph-giraffe/react": "^0.0.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
