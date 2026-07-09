@@ -1,8 +1,1410 @@
 "use strict";
 var __defProp = Object.defineProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var _shadow, _shadow2, _shadow3, _shadow4, _a;
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const STYLE_TEMPLATE$4 = `
+  :host {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 2rem;
+    display: flex;
+    width: max-content;
+    border-radius: 0.4rem;
+    backdrop-filter: blur(2px);
+    background-color: #161616e6;
+    padding: 1px 4px;
+    padding-right: 0;
+    z-index: 10;
+
+  }
+
+  :host>.root {
+    top: inherit;
+    right: inherit;
+    bottom: inherit;
+    height: inherit;
+    width: inherit;
+    display: flex;
+    flex-direction: inherit;
+    cursor: inherit;
+  }
+
+    button,a,*[role="button"],*::-webkit-scrollbar-thumb, input[type="radio"], input[type="range"] {
+    //cursor: url("data:image/svg+xml,%3Csvg width='38' height='44' viewBox='8 8 38 44' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg filter='url(%23filter0_d_322_719)'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M12.6711 24L10.8979 21.2906C9.6871 19.4406 7.10808 18.7658 5.13534 19.78L5.595 19.5436C5.10544 19.7954 4.87068 20.4228 5.07226 20.9442L7.5268 27.2948C7.91592 28.3016 8.90972 29.7254 9.73322 30.4406C9.73322 30.4406 14.6711 34.5278 14.6711 36.06V38H22.671L24.671 34L26.671 38H28.671V36.06C28.671 34.5278 31.6888 29.7014 31.6888 29.7014C32.2442 28.7632 32.7072 27.1104 32.7072 26.0132V17.9436C32.671 16.157 31.1524 14.7091 29.2786 14.7091C28.341 14.7091 27.5818 15.433 27.5818 16.3268V16.9731C27.5818 15.1865 26.063 13.7386 24.1892 13.7386C23.2516 13.7386 22.4924 14.4626 22.4924 15.3564V16.0027C22.4924 14.2161 20.9736 12.7682 19.0998 12.7682C18.1624 12.7682 17.403 13.4921 17.403 14.3859V15.0322C17.403 14.7451 17.3724 14.5169 17.313 14.336L16.7955 6.00242C16.7255 4.87552 15.7757 4 14.6711 4C13.5588 4 12.6711 4.89526 12.6711 5.99962V14V24ZM26.7072 22H28.7072V30H26.7072V22ZM22.7072 22H24.7072V30H22.7072V22ZM18.7072 22H20.7072V30H18.7072V22Z' fill='white'/%3E%3Cmask id='mask0_322_719' style='mask-type:luminance' maskUnits='userSpaceOnUse' x='3' y='2' width='32' height='38'%3E%3Cpath d='M35 2H3V40H35V2Z' fill='white'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M12.6711 24L10.8979 21.2906C9.6871 19.4406 7.10808 18.7658 5.13534 19.78L5.595 19.5436C5.10544 19.7954 4.87068 20.4228 5.07226 20.9442L7.5268 27.2948C7.91592 28.3016 8.90972 29.7254 9.73322 30.4406C9.73322 30.4406 14.6711 34.5278 14.6711 36.06V38H22.671L24.671 34L26.671 38H28.671V36.06C28.671 34.5278 31.6888 29.7014 31.6888 29.7014C32.2442 28.7632 32.7072 27.1104 32.7072 26.0132V17.9436C32.671 16.157 31.1524 14.7091 29.2786 14.7091C28.341 14.7091 27.5818 15.433 27.5818 16.3268V16.9731C27.5818 15.1865 26.063 13.7386 24.1892 13.7386C23.2516 13.7386 22.4924 14.4626 22.4924 15.3564V16.0027C22.4924 14.2161 20.9736 12.7682 19.0998 12.7682C18.1624 12.7682 17.403 13.4921 17.403 14.3859V15.0322C17.403 14.7451 17.3724 14.5169 17.313 14.336L16.7955 6.00242C16.7255 4.87552 15.7757 4 14.6711 4C13.5588 4 12.6711 4.89526 12.6711 5.99962V14V24ZM26.7072 22H28.7072V30H26.7072V22ZM22.7072 22H24.7072V30H22.7072V22ZM18.7072 22H20.7072V30H18.7072V22Z' fill='black'/%3E%3C/mask%3E%3Cg mask='url(%23mask0_322_719)'%3E%3Cpath d='M12.6709 24L10.9975 25.0952L14.6709 30.708V24H12.6709ZM9.73306 30.4406L8.4216 31.9506L8.43952 31.9662L8.45782 31.9814L9.73306 30.4406ZM14.6709 38H12.6709V40H14.6709V38ZM22.6708 38V40H23.907L24.4598 38.8944L22.6708 38ZM24.6708 34L26.4598 33.1056L24.6708 29.5278L22.882 33.1056L24.6708 34ZM26.6708 38L24.882 38.8944L25.4348 40H26.6708V38ZM28.6708 38V40H30.6708V38H28.6708ZM31.6886 29.7014L33.3844 30.7616L33.3972 30.7412L33.4096 30.7204L31.6886 29.7014ZM32.707 17.9436H34.707V17.9234L34.7066 17.9031L32.707 17.9436ZM17.3128 14.336L15.3167 14.46L15.3326 14.7156L15.4124 14.959L17.3128 14.336ZM28.707 22H30.707V20H28.707V22ZM28.707 30V32H30.707V30H28.707ZM26.707 30H24.707V32H26.707V30ZM24.707 22H26.707V20H24.707V22ZM24.707 30V32H26.707V30H24.707ZM22.707 30H20.707V32H22.707V30ZM20.707 22H22.707V20H20.707V22ZM20.707 30V32H22.707V30H20.707ZM18.707 30H16.7071V32H18.707V30ZM14.3444 22.9048L12.5712 20.1954L9.22426 22.386L10.9975 25.0952L14.3444 22.9048ZM12.5712 20.1954C10.796 17.4831 7.09768 16.5222 4.22076 18.0012L6.04962 21.5586C7.11814 21.0094 8.5779 21.3984 9.22426 22.386L12.5712 20.1954ZM6.04962 21.5586L6.50928 21.3224L4.68042 17.7649L4.22076 18.0012L6.04962 21.5586ZM4.68042 17.7649C3.26198 18.4942 2.64426 20.2104 3.2066 21.6654L6.9376 20.2232C7.02876 20.459 7.00888 20.6792 6.94788 20.8426C6.88704 21.0054 6.75278 21.1972 6.50928 21.3224L4.68042 17.7649ZM3.2066 21.6654L5.66114 28.0158L9.39214 26.5738L6.9376 20.2232L3.2066 21.6654ZM5.66114 28.0158C6.16656 29.3236 7.34918 31.0192 8.4216 31.9506L11.0445 28.9306C10.4699 28.4316 9.66496 27.2796 9.39214 26.5738L5.66114 28.0158ZM9.73306 30.4406C8.45782 31.9814 8.45792 31.9814 8.45782 31.9814C8.45942 31.9828 8.46354 31.986 8.46744 31.9894C8.47522 31.9958 8.48746 32.006 8.5039 32.0198C8.53676 32.0474 8.58628 32.089 8.65006 32.1432C8.77772 32.2518 8.96198 32.41 9.18384 32.605C9.6296 32.997 10.2176 33.5296 10.8001 34.102C11.3914 34.6832 11.9352 35.2648 12.3173 35.759C12.5093 36.0074 12.6259 36.1896 12.6862 36.3048C12.7672 36.46 12.6709 36.3482 12.6709 36.06H16.6709C16.6709 35.3888 16.4203 34.814 16.2314 34.4524C16.0216 34.051 15.7524 33.6624 15.4815 33.3122C14.9378 32.609 14.2471 31.8814 13.6039 31.2494C12.9519 30.6084 12.3055 30.0236 11.8254 29.6014C11.5843 29.3894 11.3828 29.2162 11.2404 29.0952C11.1692 29.0348 11.1126 28.987 11.0731 28.954C11.0534 28.9374 11.0379 28.9246 11.027 28.9154C11.0216 28.911 11.0173 28.9074 11.0141 28.9048C11.0126 28.9034 11.0113 28.9024 11.0103 28.9016C11.0107 28.9018 11.0098 28.9012 11.0103 28.9016C11.0102 28.9014 11.0087 28.9002 11.0086 28.9002C11.0085 28.9 11.0083 28.9 9.73306 30.4406ZM12.6709 36.06V38H16.6709V36.06H12.6709ZM14.6709 40H22.6708V36H14.6709V40ZM24.4598 38.8944L26.4598 34.8944L22.882 33.1056L20.882 37.1056L24.4598 38.8944ZM22.882 34.8944L24.882 38.8944L28.4598 37.1056L26.4598 33.1056L22.882 34.8944ZM26.6708 40H28.6708V36H26.6708V40ZM30.6708 38V36.06H26.6708V38H30.6708ZM30.6708 36.06C30.6708 36.1316 30.6928 35.8878 30.984 35.2C31.232 34.6146 31.5762 33.9298 31.9398 33.2558C32.3002 32.5882 32.6628 31.9618 32.9368 31.5006C33.0732 31.2708 33.1866 31.0836 33.2652 30.955C33.3046 30.8906 33.3352 30.8412 33.3554 30.8082C33.3656 30.7918 33.3732 30.7794 33.3782 30.7716C33.3806 30.7678 33.3834 30.7634 33.3844 30.7616C33.3842 30.7618 33.385 30.7608 33.3844 30.7616C33.3844 30.7618 33.3844 30.7616 31.6886 29.7014C29.9928 28.641 29.9926 28.6412 29.9926 28.6414C29.993 28.641 29.9924 28.6416 29.9926 28.6414C29.992 28.6424 29.9904 28.645 29.9894 28.6464C29.9876 28.6494 29.985 28.6536 29.9816 28.6588C29.9752 28.6694 29.9658 28.6844 29.9538 28.7036C29.93 28.7422 29.8958 28.7978 29.8526 28.8684C29.7662 29.0098 29.6438 29.2118 29.4974 29.4582C29.2056 29.9498 28.8138 30.6258 28.4196 31.3564C28.0288 32.0804 27.6186 32.8896 27.3008 33.64C27.0262 34.2882 26.6708 35.2222 26.6708 36.06H30.6708ZM33.4096 30.7204C33.8052 30.0522 34.1184 29.2262 34.3334 28.4516C34.548 27.678 34.707 26.8018 34.707 26.0132H30.707C30.707 26.322 30.6348 26.8206 30.479 27.3824C30.3234 27.9428 30.1276 28.4122 29.9676 28.6824L33.4096 30.7204ZM34.707 26.0132V17.9436H30.707V26.0132H34.707ZM34.7066 17.9031C34.6472 14.9636 32.1756 12.7091 29.2784 12.7091V16.7091C30.129 16.7091 30.6946 17.3504 30.7074 17.9841L34.7066 17.9031ZM29.2784 12.7091C27.3272 12.7091 25.5816 14.2396 25.5816 16.3268H29.5816C29.5816 16.4634 29.5202 16.5715 29.4584 16.6303C29.3986 16.6875 29.3304 16.7091 29.2784 16.7091V12.7091ZM25.5816 16.3268V16.9731H29.5816V16.3268H25.5816ZM29.5816 16.9731C29.5816 13.9931 27.0764 11.7386 24.189 11.7386V15.7386C25.0492 15.7386 25.5816 16.38 25.5816 16.9731H29.5816ZM24.189 11.7386C22.238 11.7386 20.4922 13.2692 20.4922 15.3564H24.4922C24.4922 15.493 24.4308 15.6011 24.3692 15.6599C24.3092 15.717 24.241 15.7386 24.189 15.7386V11.7386ZM20.4922 15.3564V16.0027H24.4922V15.3564H20.4922ZM24.4922 16.0027C24.4922 13.0227 21.987 10.7682 19.0996 10.7682V14.7682C19.96 14.7682 20.4922 15.4095 20.4922 16.0027H24.4922ZM19.0996 10.7682C17.1486 10.7682 15.4028 12.2987 15.4028 14.3859H19.4028C19.4028 14.5225 19.3414 14.6306 19.2798 14.6894C19.2198 14.7466 19.1516 14.7682 19.0996 14.7682V10.7682ZM15.4028 14.3859V15.0322H19.4028V14.3859H15.4028ZM19.4028 15.0322C19.4028 14.6176 19.3604 14.1618 19.2134 13.713L15.4124 14.959C15.3967 14.9111 15.395 14.8887 15.3969 14.9031C15.3988 14.9175 15.4028 14.9582 15.4028 15.0322H19.4028ZM19.309 14.212L18.7914 5.87846L14.7991 6.1264L15.3167 14.46L19.309 14.212ZM18.7914 5.87846C18.6556 3.69008 16.8248 2 14.6709 2V6C14.6886 6 14.7203 6.00692 14.7542 6.03866C14.7864 6.06876 14.7975 6.09952 14.7991 6.1264L18.7914 5.87846ZM14.6709 2C12.4494 2 10.6709 3.79536 10.6709 5.99962L14.6709 6V2ZM10.6709 5.99962V14H14.6709V6L10.6709 5.99962ZM10.6709 14V24H14.6709V14H10.6709ZM26.707 24H28.707V20H26.707V24ZM26.707 22V30H30.707V22H26.707ZM28.707 28H26.707V32H28.707V28ZM28.707 30V22H24.707V30H28.707ZM22.707 24H24.707V20H22.707V24ZM22.707 22V30H26.707V22H22.707ZM24.707 28H22.707V32H24.707V28ZM24.707 30V22H20.707V30H24.707ZM18.707 24H20.707V20H18.707V24ZM18.707 22V30H22.707V22H18.707ZM20.707 28H18.707V32H20.707V28ZM20.707 30V22H16.7071V30H20.707Z' fill='black' fill-opacity='0.8'/%3E%3C/g%3E%3C/g%3E%3Cdefs%3E%3Cfilter id='filter0_d_322_719' x='0.000167847' y='0' width='37.7069' height='44' filterUnits='userSpaceOnUse' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-opacity='0' result='BackgroundImageFix'/%3E%3CfeColorMatrix in='SourceAlpha' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0' result='hardAlpha'/%3E%3CfeOffset dy='1'/%3E%3CfeGaussianBlur stdDeviation='1.5'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0'/%3E%3CfeBlend mode='normal' in2='BackgroundImageFix' result='effect1_dropShadow_322_719'/%3E%3CfeBlend mode='normal' in='SourceGraphic' in2='effect1_dropShadow_322_719' result='shape'/%3E%3C/filter%3E%3C/defs%3E%3C/svg%3E%0A"), auto !important;
+  }
+
+
+  :host .panel-right, :host .panel-left {
+    display: flex;
+    height: 2.8rem;
+    color: var(--text-main);
+    gap: 0.3rem;
+    align-items: center;
+    position: relative;
+  }
+
+  :host .panel-left {
+    flex: 1;
+    border-right: 1px solid #3f3f3f;
+  }
+  
+  :host .panel-right {
+    padding: 0 0.5rem;
+    width: max-content;
+    background-color: #ffffff25;
+    border-radius: 2px;
+  }
+
+  :host  button {
+    width: 2.4rem;
+    height: 2.4rem;
+    transform: scale(0.8);
+    padding: 0.3rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0.3rem;
+    cursor: pointer;
+    transition: background 0.2s linear;
+  }
+
+  :host button:not(.active):hover {
+    background-color: #ffffff25;
+  }
+
+  :host button svg {
+    width: 80%;
+    height: 80%;
+  }
+
+  :host button.active {
+    background-color: var(--accent);
+  }
+
+  button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+`;
+class ActionPane extends HTMLElement {
+  constructor() {
+    super(...arguments);
+    __privateAdd(this, _shadow, this.attachShadow({ mode: "open" }));
+  }
+  connectedCallback() {
+    this.render();
+  }
+  render() {
+    __privateGet(this, _shadow).innerHTML = `
+    <style>
+      ${STYLE_TEMPLATE$4}
+    </style>
+
+    ${this.getChildrenTemplate()}
+  `;
+  }
+  getChildrenTemplate() {
+    return `
+    <div class="root" part="root">
+      <div class="panel-left">
+        <span class="active">
+          <svg
+            viewBox="0 0 33 36"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="size-full scale-75"
+          >
+            <path
+              d="M12.8812 33.4262C12.6148 34.3964 11.2436 34.41 10.958 33.4453L1.5 1.5L30.8157 15.5062C31.6862 15.9221 31.5212 17.2077 30.574 17.3904L20.2034 19.3902C17.9609 19.8227 16.1583 21.4907 15.5536 23.6931L12.8812 33.4262Z"
+              stroke="currentColor"
+              stroke-width="3"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+
+        <button id="btn-add-node">
+          <svg
+            viewBox="0 0 16 16"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+          >
+            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+            <g
+              id="SVGRepo_tracerCarrier"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></g>
+            <g id="SVGRepo_iconCarrier">
+              <path
+                fill="currentColor"
+                fill-rule="evenodd"
+                d="M4 6.25A2.25 2.25 0 016.25 4h3a2.25 2.25 0 012.25 2.25V7h3.25a.75.75 0 010 1.5H11.5v.75a2.25 2.25 0 01-2.25 2.25h-3A2.25 2.25 0 014 9.25V8.5H.75a.75.75 0 010-1.5H4v-.75zm6 0a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75v3c0 .414.336.75.75.75h3a.75.75 0 00.75-.75v-3z"
+                clip-rule="evenodd"
+              ></path>
+            </g>
+          </svg>
+        </button>
+
+        <button id="btn-add-composition">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+            <g
+              id="SVGRepo_tracerCarrier"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></g>
+            <g id="SVGRepo_iconCarrier">
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M20.9999 9.88379C21.0033 9.63406 20.8823 9.3827 20.636 9.23825L13.1419 4.84334C12.4534 4.43956 11.6007 4.43847 10.9111 4.84047L3.36938 9.23727C3.12196 9.38152 3.00042 9.63347 3.00386 9.88379H2.99995V14.3148H3.00408C3.01115 14.5585 3.13674 14.7991 3.38001 14.9355L10.9431 19.1778C11.6163 19.5554 12.4378 19.5543 13.11 19.175L20.6253 14.9346C20.8675 14.7979 20.9926 14.5579 20.9996 14.3148L20.9999 9.88379ZM4.76444 10.4474C4.58407 10.3456 4.35534 10.4093 4.25357 10.5897C4.15179 10.7701 4.21551 10.9988 4.39589 11.1006L10.7548 14.6885C11.5471 15.1355 12.516 15.1331 13.306 14.6823L19.5841 11.0997C19.7639 10.997 19.8265 10.768 19.7239 10.5881C19.6212 10.4083 19.3922 10.3456 19.2123 10.4483L12.9343 14.0309C12.3735 14.3509 11.6857 14.3526 11.1234 14.0353L4.76444 10.4474Z"
+                fill="currentColor"
+              ></path>
+            </g>
+          </svg>
+        </button>
+
+        <button id="btn-add-group">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+            <g
+              id="SVGRepo_tracerCarrier"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></g>
+            <g id="SVGRepo_iconCarrier">
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M12.3106 4.81534L19.806 12.3107L12.3106 19.806L4.81531 12.3107L12.3106 4.81534ZM6.93663 12.3107L12.3106 17.6847L17.6847 12.3107L12.3106 6.93666L6.93663 12.3107Z"
+                fill="currentColor"
+              ></path>
+              <circle cx="12" cy="5.5" r="2.5" fill="currentColor"></circle>
+              <circle cx="12" cy="18.5" r="2.5" fill="currentColor"></circle>
+              <circle cx="5.5" cy="12" r="2.5" fill="currentColor"></circle>
+              <circle cx="18.5" cy="12" r="2.5" fill="currentColor"></circle>
+            </g>
+          </svg>
+        </button>
+
+        <button id="btn-delete-node">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+            <g
+              id="SVGRepo_tracerCarrier"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></g>
+            <g id="SVGRepo_iconCarrier">
+              <path
+                d="M4 7H20"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+              <path
+                d="M6 10L7.70141 19.3578C7.87432 20.3088 8.70258 21 9.66915 21H14.3308C15.2974 21 16.1257 20.3087 16.2986 19.3578L18 10"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+              <path
+                d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </g>
+          </svg>
+        </button>
+
+        <button id="btn-multi-select">
+          <svg
+            fill="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+            <g
+              id="SVGRepo_tracerCarrier"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></g>
+            <g id="SVGRepo_iconCarrier">
+              <path
+                d="M18.2848192,17.5777124 L20.8535534,20.1464466 C21.0488155,20.3417088 21.0488155,20.6582912 20.8535534,20.8535534 C20.6582912,21.0488155 20.3417088,21.0488155 20.1464466,20.8535534 L17.5777124,18.2848192 L15.9160251,20.7773501 C15.6899572,21.116452 15.1749357,21.0571624 15.0318354,20.6755617 L12.0318354,12.6755617 C11.8811067,12.2736185 12.2736185,11.8811067 12.6755617,12.0318354 L20.6755617,15.0318354 C21.0571624,15.1749357 21.116452,15.6899572 20.7773501,15.9160251 L18.2848192,17.5777124 L18.2848192,17.5777124 Z M17.2312404,17.0782479 L19.4104716,15.6254271 L13.3544004,13.3544004 L15.6254271,19.4104716 L17.0782479,17.2312404 C17.0974475,17.2011742 17.1201804,17.1727128 17.1464466,17.1464466 C17.1727128,17.1201804 17.2011742,17.0974475 17.2312404,17.0782479 L17.2312404,17.0782479 Z M5.5,3 C5.77614237,3 6,3.22385763 6,3.5 C6,3.77614237 5.77614237,4 5.5,4 C4.67157288,4 4,4.67157288 4,5.5 C4,5.77614237 3.77614237,6 3.5,6 C3.22385763,6 3,5.77614237 3,5.5 C3,4.11928813 4.11928813,3 5.5,3 Z M8.5,4 C8.22385763,4 8,3.77614237 8,3.5 C8,3.22385763 8.22385763,3 8.5,3 L10.5,3 C10.7761424,3 11,3.22385763 11,3.5 C11,3.77614237 10.7761424,4 10.5,4 L8.5,4 Z M13.5,4 C13.2238576,4 13,3.77614237 13,3.5 C13,3.22385763 13.2238576,3 13.5,3 L15.5,3 C15.7761424,3 16,3.22385763 16,3.5 C16,3.77614237 15.7761424,4 15.5,4 L13.5,4 Z M8.5,21 C8.22385763,21 8,20.7761424 8,20.5 C8,20.2238576 8.22385763,20 8.5,20 L10.5,20 C10.7761424,20 11,20.2238576 11,20.5 C11,20.7761424 10.7761424,21 10.5,21 L8.5,21 Z M3,8.5 C3,8.22385763 3.22385763,8 3.5,8 C3.77614237,8 4,8.22385763 4,8.5 L4,10.5 C4,10.7761424 3.77614237,11 3.5,11 C3.22385763,11 3,10.7761424 3,10.5 L3,8.5 Z M3,13.5 C3,13.2238576 3.22385763,13 3.5,13 C3.77614237,13 4,13.2238576 4,13.5 L4,15.5 C4,15.7761424 3.77614237,16 3.5,16 C3.22385763,16 3,15.7761424 3,15.5 L3,13.5 Z M3,18.5 C3,18.2238576 3.22385763,18 3.5,18 C3.77614237,18 4,18.2238576 4,18.5 C4,19.3284271 4.67157288,20 5.5,20 C5.77614237,20 6,20.2238576 6,20.5 C6,20.7761424 5.77614237,21 5.5,21 C4.11928813,21 3,19.8807119 3,18.5 Z M21,10.5 C21,10.7761424 20.7761424,11 20.5,11 C20.2238576,11 20,10.7761424 20,10.5 L20,8.5 C20,8.22385763 20.2238576,8 20.5,8 C20.7761424,8 21,8.22385763 21,8.5 L21,10.5 Z M21,5.5 C21,5.77614237 20.7761424,6 20.5,6 C20.2238576,6 20,5.77614237 20,5.5 C20,4.67157288 19.3284271,4 18.5,4 C18.2238576,4 18,3.77614237 18,3.5 C18,3.22385763 18.2238576,3 18.5,3 C19.8807119,3 21,4.11928813 21,5.5 Z"
+              ></path>
+            </g>
+          </svg>
+        </button>
+
+
+        <button id="btn-create-subgraph">
+        <svg width="100%" height="60%" viewBox="0 0 18 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4.11429 7.89474C4.11429 9.05744 3.19327 10 2.05714 10C0.921014 10 0 9.05744 0 7.89474C0 6.73203 0.921014 5.78947 2.05714 5.78947C3.19327 5.78947 4.11429 6.73203 4.11429 7.89474Z" fill="#D9D9D9"/>
+          <path d="M18 4.73684C18 5.89955 17.079 6.84211 15.9429 6.84211C14.8067 6.84211 13.8857 5.89955 13.8857 4.73684C13.8857 3.57414 14.8067 2.63158 15.9429 2.63158C17.079 2.63158 18 3.57414 18 4.73684Z" fill="#D9D9D9"/>
+          <path d="M9.77143 1.84211C9.77143 2.85947 8.96554 3.68421 7.97143 3.68421C6.97732 3.68421 6.17143 2.85947 6.17143 1.84211C6.17143 0.824739 6.97732 0 7.97143 0C8.96554 0 9.77143 0.824739 9.77143 1.84211Z" fill="#D9D9D9"/>
+          <path d="M0.514286 8.55963L6.61481 2.31641L7.54414 3.26749L1.44362 9.51071L0.514286 8.55963Z" fill="#D9D9D9"/>
+          <path d="M16.2689 5.85032L8.31142 2.43907L8.8192 1.19849L16.7767 4.60974L16.2689 5.85032Z" fill="#D9D9D9"/>
+        </svg>
+
+        </button>
+
+      </div>
+      <div class="panel-right">
+        <button id="btn-play-sim">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+            <g
+              id="SVGRepo_tracerCarrier"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></g>
+            <g id="SVGRepo_iconCarrier">
+              <path
+                d="M15 5V19M21 5V19M3 7.20608V16.7939C3 17.7996 3 18.3024 3.19886 18.5352C3.37141 18.7373 3.63025 18.8445 3.89512 18.8236C4.20038 18.7996 4.55593 18.4441 5.26704 17.733L10.061 12.939C10.3897 12.6103 10.554 12.446 10.6156 12.2565C10.6697 12.0898 10.6697 11.9102 10.6156 11.7435C10.554 11.554 10.3897 11.3897 10.061 11.061L5.26704 6.26704C4.55593 5.55593 4.20038 5.20038 3.89512 5.17636C3.63025 5.15551 3.37141 5.26273 3.19886 5.46476C3 5.69759 3 6.20042 3 7.20608Z"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </g>
+          </svg>
+        </button>
+      </div>
+    </div>
+    `;
+  }
+}
+_shadow = new WeakMap();
+if (!customElements.get("gg-action-pane"))
+  customElements.define("gg-action-pane", ActionPane);
+const STYLE_TEMPLATE$3 = `
+  :host {
+    position: fixed;
+    top: 0.8rem;
+    left: 2rem;
+    display: flex;
+    padding: 0.8rem 1rem;
+    gap: 0.8rem;
+    z-index: 10;
+  }
+
+  :host>.root {
+    top: inherit;
+    right: inherit;
+    left: inherit;
+    bottom: inherit;
+    height: inherit;
+    width: inherit;
+    display: flex;
+    flex-direction: inherit;
+    gap: inherit;
+  }
+
+  :host button {
+    border-radius: 1rem;
+    cursor: pointer;
+  }
+
+  :host button::selection {
+    background: transparent;
+  }
+
+  button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+`;
+class HistoryPane extends HTMLElement {
+  constructor() {
+    super(...arguments);
+    __privateAdd(this, _shadow2, this.attachShadow({ mode: "open" }));
+  }
+  connectedCallback() {
+    this.render();
+  }
+  render() {
+    __privateGet(this, _shadow2).innerHTML = `
+    <style>
+      ${STYLE_TEMPLATE$3}
+    </style>
+
+    ${this.getChildrenTemplate()}
+  `;
+  }
+  getChildrenTemplate() {
+    return `
+    <div class="root" part="root">
+      <button id="btn-undo" class="secondary" disabled>Undo</button>
+      <button id="btn-redo" class="secondary" disabled>Redo</button>
+    </div>
+    `;
+  }
+}
+_shadow2 = new WeakMap();
+if (!customElements.get("gg-history-pane"))
+  customElements.define("gg-history-pane", HistoryPane);
+const STYLE_TEMPLATE$2 = `
+  :host {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+    color: rgb(26, 29, 29);
+  }
+  
+  :host>div {
+    width: 8rem;
+    height: 8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  :host>div svg {
+    width: 100%;
+    height: 100%;
+    animation: flip 0.8s linear infinite;
+    animation-timing-function: none;
+  }
+
+  @keyframes flip {
+    0% {
+      transform: scaleX(1);
+    }
+    
+    49.9999% {
+    transform: scaleX(1)
+    }
+
+    50% {
+      transform: scaleX(-1);
+    }
+    99.9999% {
+    transform: scaleX(-1)
+    }
+
+    100% {
+      transform: scaleX(1);
+    }
+  }
+`;
+class LoadingScreen extends HTMLElement {
+  constructor() {
+    super();
+    __publicField(this, "done", true);
+    __publicField(this, "activePromiseIndex", -1);
+    __publicField(this, "promises", []);
+    this.attachShadow({ mode: "open" });
+  }
+  set promise(newPromise) {
+    this.activePromiseIndex++;
+    this.stop();
+    this.done = false;
+    this.toggleHidden(false);
+    this.promises.push(newPromise);
+    const activeIndex = this.activePromiseIndex;
+    newPromise.finally(() => {
+      if (activeIndex < this.activePromiseIndex) return;
+      this.stop();
+    });
+    Promise.allSettled(this.promises).then((el) => {
+      if (el.length && el.length < this.promises.length) return;
+      this.stop();
+    }).catch((_) => {
+      this.stop();
+    });
+  }
+  connectedCallback() {
+    if (!this.promises.length) return;
+    this.render();
+  }
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>
+        ${STYLE_TEMPLATE$2}
+      </style>
+
+      <div part="root">
+
+        <svg width="100%" height="100%" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50.6929 13.1332C46.8618 10.7433 42.5809 13.3801 39.3505 14.7219C36.1201 16.0681 35.531 15.2565 35.531 15.2565L33.272 12.5579C31.8695 11.4029 33.272 12.5579 31.8695 11.4029C31.1768 10.9722 30.4583 10.7358 29.7226 10.7358C28.7928 10.7358 27.8918 11.1093 27.0311 11.7794C26.3126 10.394 25.6831 9.11549 25.1759 8.04933C24.3927 6.41093 23.7647 5.08124 23.7202 5.10684C23.6771 5.13244 24.2821 4.50449 24.4171 3.46242C24.499 2.84953 24.4028 2.20953 24.1053 1.62073C23.3552 0.134432 21.592 -0.433283 20.1736 0.355797C18.7524 1.14488 18.2121 2.98807 18.9666 4.47738C19.264 5.06618 19.7167 5.50891 20.2455 5.78147C21.1465 6.24529 21.9843 6.07211 21.9455 6.09319C21.9067 6.11427 22.6252 7.39276 23.509 8.97394C24.3237 10.4316 25.0509 11.799 25.699 13.079C25.1342 13.7491 24.5953 14.5442 24.0794 15.4387L24.1283 15.2565C24.1283 15.2565 23.5406 16.0666 20.3102 14.7219C17.0798 13.3786 12.7989 10.7418 8.96785 13.1347C5.62967 15.2218 1.97392 16.8753 0.518229 19.89C0.160414 20.6324 0.467934 21.8115 1.14189 22.2498C1.76555 22.6548 2.64931 23.0705 3.79317 23.2301C6.30076 23.581 7.88434 25.4573 10.3905 25.8081C12.8966 26.159 17.1157 25.4769 18.3486 24.3776C19.3201 23.5132 20.4093 21.7197 21.6667 20.9261C20.211 25.1621 19.2252 30.1601 18.9062 34.7982C18.8502 35.628 19.3847 35.9683 20.1061 35.622C22.1926 34.6175 25.0408 33.7411 28.6434 33.7411C28.7224 33.7411 28.7971 33.7411 28.8762 33.7426C33.1829 33.7863 36.83 35.1837 39.3807 36.5496C40.0863 36.9291 40.6309 36.5978 40.5921 35.7665C40.3507 30.8077 39.3089 25.3353 37.7224 20.7695C39.0962 21.4562 40.2717 23.4484 41.3135 24.3776C42.5479 25.4769 46.7655 26.159 49.2717 25.8081C51.7778 25.4573 53.3628 23.581 55.869 23.2301C58.3751 22.8792 59.6325 21.3026 59.6325 21.3026C58.7617 17.3496 54.521 15.5245 50.6929 13.1332ZM26.3557 24.3324C25.7607 24.3324 25.2779 23.8264 25.2779 23.203C25.2779 22.5795 25.7607 22.0736 26.3557 22.0736C26.9506 22.0736 27.4334 22.5795 27.4334 23.203C27.4334 23.8264 26.9506 24.3324 26.3557 24.3324ZM32.7029 24.3324C32.108 24.3324 31.6252 23.8264 31.6252 23.203C31.6252 22.5795 32.108 22.0736 32.7029 22.0736C33.2979 22.0736 33.7807 22.5795 33.7807 23.203C33.7807 23.8264 33.2979 24.3324 32.7029 24.3324Z" fill="url(#paint0_linear_13_114)"/>
+        <path d="M4.52021 48.2205C6.10549 48.2205 7.52021 49.5967 7.52021 51.4578C7.51998 53.3187 6.10536 54.6941 4.52021 54.6941C2.93506 54.6941 1.52044 53.3187 1.52021 51.4578C1.52021 49.5967 2.93493 48.2205 4.52021 48.2205Z" stroke="currentColor" stroke-width="3"/>
+        <circle cx="55.5" cy="51.0263" r="3" stroke="currentColor" stroke-width="3"/>
+        <path d="M6.06371 50.0263H17.5853M17.5853 50.0263H31.0045M17.5853 50.0263L18.6916 52.6645C21.4623 59.2715 31.0045 57.227 31.0045 50.0263M17.5853 50.0263L14.5916 42.8875C12.1425 37.0473 16.2856 30.5263 22.4452 30.5263H38.1587C43.0408 30.5263 46.4888 35.4677 44.9466 40.2542L41.798 50.0263M31.0045 50.0263H41.798M31.0045 50.0263C31.0045 56.1874 39.3619 57.5873 41.2454 51.7416L41.798 50.0263M41.798 50.0263H53.4341M31.0045 50.5263V31.5263" stroke="currentColor" stroke-width="4"/>
+        <defs>
+        <linearGradient id="paint0_linear_13_114" x1="29.4977" y1="26.3158" x2="30.0493" y2="0.00103347" gradientUnits="userSpaceOnUse">
+        <stop stop-color="currentColor"/>
+        <stop offset="1" stop-color="#2C9F92"/>
+        </linearGradient>
+        </defs>
+        </svg>
+
+
+      </div>
+    `;
+  }
+  toggleHidden(hidden) {
+    this.hidden = hidden ?? !this.hidden;
+    this.render();
+  }
+  stop() {
+    if (this.done) return;
+    this.done = true;
+    this.toggleHidden(true);
+  }
+  disconnectedCallback() {
+    this.stop();
+  }
+  attributeChangedCallback(name, oldValue, newValue) {
+    switch (name) {
+      case "hidden":
+        if ((newValue === "true" || !newValue && typeof newValue === "string") && newValue !== oldValue) {
+          this.stop();
+          this.style.display = "none";
+        } else {
+          if (newValue === oldValue) return;
+          this.style.display = "flex";
+        }
+        break;
+    }
+  }
+}
+__publicField(LoadingScreen, "observedAttributes", ["hidden"]);
+if (!customElements.get("gg-loading-screen"))
+  customElements.define("gg-loading-screen", LoadingScreen);
+class GGInputPair extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: space-between;
+          margin-bottom: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          color: #e2e8f0;
+          gap: 0.4rem;
+        }
+        :host(.row) {
+          flex-direction: row;
+        }
+        label {
+          flex: 1;
+          margin-right: 12px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .control-container {
+          flex: 2;
+          display: flex;
+          justify-content: flex-end;
+        }
+        ::slotted(input[type="text"]) {
+          width: 100%;
+          background: #1e293b;
+          border: 1px solid #334155;
+          color: #f8fafc;
+          border-radius: 4px;
+          padding: 4px 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          box-sizing: border-box;
+        }
+        ::slotted(input[type="checkbox"]) {
+          accent-color: #2C9F92;
+          width: 16px;
+          height: 16px;
+          border-radius: 0.8rem;
+        }
+
+        ::slotted(input[type="range"]) {
+          min-width: 12rem;
+          accent-color: #2C9F92;
+        }
+        ::slotted(gg-select) {
+          width: 100%;
+        }
+      </style>
+      <label id="lbl"></label>
+      <div class="control-container">
+        <slot></slot>
+      </div>
+    `;
+  }
+  set label(text) {
+    this.shadowRoot.getElementById("lbl").textContent = text;
+  }
+}
+customElements.define("gg-input-pair", GGInputPair);
+class GGInputGroup extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          margin-bottom: 16px;
+        }
+        fieldset {
+          border: 1px solid #334155;
+          border-radius: 6px;
+          padding: 12px;
+          margin: 0;
+          background:rgba(44, 159, 146, 0.1);
+        }
+        legend {
+          font-family: 'Inter', sans-serif;
+          font-size: 11px;
+          font-weight: 600;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          padding: 0 4px;
+        }
+      </style>
+      <fieldset>
+        <legend id="leg"></legend>
+        <slot></slot>
+      </fieldset>
+    `;
+  }
+  set legend(text) {
+    this.shadowRoot.getElementById("leg").textContent = text;
+  }
+}
+customElements.define("gg-input-group", GGInputGroup);
+class GGPropGroup extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          padding: 16px 0;
+          max-height: 100%;
+          box-sizing: border-box;
+          width: 100%;
+          overflow: hidden;
+        }
+
+        :host>#container {
+          width: 100%;
+          overflow-y: auto;
+        }
+      </style>
+      <div id="container" part="root"></div>
+    `;
+  }
+  /**
+   * Generates the DOM based on the NodePropType data.
+   * Returns the estimated height of the WebGL node body based on the properties.
+   */
+  useProps(data) {
+    const container = this.shadowRoot.getElementById("container");
+    container.innerHTML = "";
+    let lineCount = 0;
+    const createControl = (primitive) => {
+      const { label, value, uiPrimitive, options } = primitive;
+      let control;
+      if (uiPrimitive === "select") {
+        control = document.createElement("gg-select");
+        control.setAttribute("value", value);
+        if (Array.isArray(options)) {
+          for (const option of options) {
+            const optionTemplate = `<gg-option value="${option}">${option}</gg-option>`;
+            control.insertAdjacentHTML("beforeend", optionTemplate);
+          }
+        }
+        control.addEventListener("gg-select-change", (e) => {
+          this.dispatchPropChange(label, e.target.value, uiPrimitive);
+        });
+      } else {
+        const input = document.createElement("input");
+        input.type = uiPrimitive === "checkbox" ? "checkbox" : uiPrimitive;
+        if (uiPrimitive === "checkbox") {
+          input.checked = value;
+          input.addEventListener("change", (e) => {
+            this.dispatchPropChange(label, input.checked, uiPrimitive);
+          });
+        } else {
+          input.value = value;
+          input.addEventListener("change", (e) => {
+            this.dispatchPropChange(label, input.value, uiPrimitive);
+          });
+        }
+        control = input;
+      }
+      return control;
+    };
+    const createPair = (primitive) => {
+      const pair = document.createElement("gg-input-pair");
+      if ("uiPrimitive" in primitive && primitive["uiPrimitive"] === "checkbox")
+        pair.classList.add("row");
+      pair.label = primitive.label;
+      const control = createControl(primitive);
+      pair.appendChild(control);
+      return pair;
+    };
+    const ungrouped = [
+      ...data.booleans["ungrouped"] || [],
+      ...data.texts["ungrouped"] || [],
+      ...data.enums["ungrouped"] || []
+    ];
+    for (const item of ungrouped) {
+      container.appendChild(createPair(item));
+      lineCount++;
+    }
+    for (const groupName of data.groups) {
+      const groupItems = [
+        ...data.booleans[groupName] || [],
+        ...data.texts[groupName] || [],
+        ...data.enums[groupName] || []
+      ];
+      if (groupItems.length > 0) {
+        const groupEl = document.createElement("gg-input-group");
+        groupEl.legend = groupName;
+        lineCount++;
+        for (const item of groupItems) {
+          groupEl.appendChild(createPair(item));
+          lineCount++;
+        }
+        container.appendChild(groupEl);
+      }
+    }
+    return 30 + 16 + lineCount * 20 + 16 + 8 * data.groups.length;
+  }
+  dispatchPropChange(label, value, uiPrimitive) {
+    const payload = { label, value, uiPrimitive };
+    this.dispatchEvent(
+      new CustomEvent("gg-prop-change", {
+        detail: payload,
+        bubbles: true,
+        composed: true
+      })
+    );
+  }
+}
+customElements.define("gg-prop-group", GGPropGroup);
+const STYLES$1 = (
+  /* css */
+  `
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :host {
+    display: inline-block;
+    width: 100%;
+    position: relative;
+    font-family: inherit;
+    min-width: 200px;
+    --cs-radius:        8px;
+    --cs-border:rgba(77, 77, 77, 0.25);
+    --cs-border-focus:rgba(75, 75, 75, 0.15);
+    --cs-focus-ring:    rgba(92, 92, 95, 0.22);
+    --cs-text:rgb(235, 235, 235);
+    --cs-placeholder:   #9ca3af;
+    --cs-surface: var(--material-surface);
+    --cs-hover-bg:rgba(36, 37, 39, 0.36);
+    --cs-selected-bg:   #eef2ff;
+    --cs-selected-text: #3b82f6;
+    --cs-selected-mark: #3b82f6;
+    --cs-shadow:        0 8px 24px -4px rgba(0,0,0,.12), 0 3px 8px -2px rgba(0,0,0,.07);
+    --cs-accent: #3b82f6;
+  }
+  :host([disabled]) { opacity: .45; pointer-events: none; }
+
+  /* ── Trigger ── */
+  .trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 14px;
+    background: var(--cs-surface);
+    border: 1.5px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--cs-text);
+    cursor: pointer;
+    user-select: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .trigger:hover { border-color: #9ca3af; }
+  .trigger:focus-visible {
+    outline: none;
+    border-color: var(--cs-border-focus);
+    box-shadow: 0 0 0 3px var(--cs-focus-ring);
+  }
+  .trigger[aria-expanded="true"] {
+    border-color: var(--cs-border-focus);
+    box-shadow: 0 0 0 3px var(--cs-focus-ring);
+  }
+
+  .trigger-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+  }
+  .trigger-label.is-placeholder {
+    color: var(--cs-placeholder);
+    font-weight: 400;
+  }
+
+  /* ── Chevron ── */
+  .chevron {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: #6b7280;
+    transition: transform .2s ease;
+  }
+  .trigger[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+  /* ── Dropdown ── */
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: var(--cs-surface);
+    outline: 1.5px solid rgba(109, 109, 109, 0.76);
+    border: 2px solid transparent;
+    border-radius: var(--cs-radius);
+    box-shadow: var(--cs-shadow);
+    padding: 5px;
+    margin: 0;
+    list-style: none;
+    max-height: 260px;
+    overflow-y: auto;
+    transform-origin: top center;
+    animation: pop-in .13s ease both;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    backdrop-filter: blur(8px);
+  }
+  .dropdown[hidden] { display: none; }
+
+  @keyframes pop-in {
+    from { opacity: 0; transform: scaleY(.94) translateY(-4px); }
+    to   { opacity: 1; transform: scaleY(1)  translateY(0);     }
+  }
+
+  /* ── Option rows ── */
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.3rem 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--cs-text);
+    cursor: pointer;
+    transition: background .1s linear;
+  }
+  .option:hover,
+  .option[data-active] { background: var(--cs-accent); }
+
+  .option[aria-selected="true"] {
+    background: var(--cs-selected-bg);
+    color: var(--cs-selected-text);
+    font-weight: 500;
+  }
+  .option[aria-selected="true"]:hover,
+  .option[aria-selected="true"][data-active] { background: #e0e7ff; }
+
+  .option[aria-disabled="true"] {
+    color: #d1d5db;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .option-text { flex: 1; }
+
+  /* Checkmark */
+  .check {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: var(--cs-selected-mark);
+    visibility: hidden;
+  }
+  .option[aria-selected="true"] .check { visibility: visible; }
+
+  /* Scrollbar */
+  .dropdown::-webkit-scrollbar { width: 5px; }
+  .dropdown::-webkit-scrollbar-track { background: transparent; }
+  .dropdown::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+`
+);
+const CHEVRON_SVG$1 = (
+  /* html */
+  `
+  <svg class="chevron" viewBox="0 0 16 16" fill="none"
+       xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`
+);
+const CHECK_SVG$1 = (
+  /* html */
+  `
+  <svg class="check" viewBox="0 0 14 14" fill="none"
+       xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M2.5 7l3.5 3.5 5.5-7" stroke="currentColor" stroke-width="1.75"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`
+);
+class CustomSelect extends HTMLElement {
+  // ── Lifecycle ────────────────────────────────────────────────────────────
+  constructor() {
+    super();
+    // Shadow-DOM refs (populated in connectedCallback)
+    __publicField(this, "triggerEl");
+    __publicField(this, "triggerLabelEl");
+    __publicField(this, "dropdownEl");
+    __publicField(this, "isOpen", false);
+    __publicField(this, "activeIdx", -1);
+    __publicField(this, "slotObserver", null);
+    __publicField(this, "onDocClick");
+    this.attachShadow({ mode: "open" });
+  }
+  connectedCallback() {
+    this.render();
+    this.cacheRefs();
+    this.bindEvents();
+    this.syncFromSlot();
+    this.slotObserver = new MutationObserver(() => this.syncFromSlot());
+    this.slotObserver.observe(this, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["value", "disabled", "selected"]
+    });
+  }
+  disconnectedCallback() {
+    var _a2;
+    (_a2 = this.slotObserver) == null ? void 0 : _a2.disconnect();
+    document.removeEventListener("click", this.onDocClick, true);
+  }
+  attributeChangedCallback(name, oldVal, newVal) {
+    if (oldVal === newVal || !this.triggerEl) return;
+    switch (name) {
+      case "placeholder":
+        this.updateTriggerLabel();
+        break;
+      case "value":
+        this.refreshOptionStates();
+        this.updateTriggerLabel();
+        break;
+      case "disabled":
+        this.triggerEl.disabled = this.disabled;
+        break;
+    }
+  }
+  // ── Public API ───────────────────────────────────────────────────────────
+  get value() {
+    return this.getAttribute("value") ?? "";
+  }
+  set value(v) {
+    this.setAttribute("value", v);
+  }
+  get name() {
+    return this.getAttribute("name") ?? "";
+  }
+  get placeholder() {
+    return this.getAttribute("placeholder") ?? "Select an option";
+  }
+  get disabled() {
+    return this.hasAttribute("disabled");
+  }
+  // ── Render ───────────────────────────────────────────────────────────────
+  render() {
+    this.shadowRoot.innerHTML = /* html */
+    `
+      <style>${STYLES$1}</style>
+      <button
+        class="trigger"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+        ${this.disabled ? "disabled" : ""}
+      >
+        <span class="trigger-label is-placeholder">${this.placeholder}</span>
+        ${CHEVRON_SVG$1}
+      </button>
+      <ul class="dropdown" role="listbox" hidden></ul>
+      <slot style="display:none"></slot>
+    `;
+  }
+  cacheRefs() {
+    this.triggerEl = this.shadowRoot.querySelector(".trigger");
+    this.triggerLabelEl = this.shadowRoot.querySelector(".trigger-label");
+    this.dropdownEl = this.shadowRoot.querySelector(".dropdown");
+  }
+  // ── Events ───────────────────────────────────────────────────────────────
+  bindEvents() {
+    this.triggerEl.addEventListener("click", () => this.toggleDropdown());
+    this.triggerEl.addEventListener("keydown", (e) => this.onTriggerKeydown(e));
+    this.dropdownEl.addEventListener("pointermove", (e) => {
+      const opt = e.target.closest(".option");
+      if (opt) this.setActive(Number(opt.dataset["idx"]));
+    });
+    this.dropdownEl.addEventListener("click", (e) => {
+      const opt = e.target.closest(".option");
+      if (opt && opt.getAttribute("aria-disabled") !== "true") {
+        this.selectByIdx(Number(opt.dataset["idx"]));
+        this.closeDropdown();
+        this.triggerEl.focus();
+      }
+    });
+    this.dropdownEl.addEventListener(
+      "keydown",
+      (e) => this.onDropdownKeydown(e)
+    );
+    this.onDocClick = (e) => {
+      if (!this.contains(e.target) && !this.shadowRoot.contains(e.target)) {
+        this.closeDropdown();
+      }
+    };
+    document.addEventListener("click", this.onDocClick, true);
+  }
+  syncFromSlot() {
+    const options = this.getOptions();
+    this.dropdownEl.innerHTML = options.map(
+      (opt, i) => (
+        /* html */
+        `
+          <li
+            class="option"
+            role="option"
+            data-idx="${i}"
+            data-value="${this.escAttr(opt.value)}"
+            aria-selected="${opt.value === this.value ? "true" : "false"}"
+            aria-disabled="${opt.disabled ? "true" : "false"}"
+          >
+            <span class="option-text">${opt.label}</span>
+            ${CHECK_SVG$1}
+          </li>`
+      )
+    ).join("");
+    this.updateTriggerLabel();
+  }
+  selectByIdx(idx) {
+    const options = this.getOptions();
+    const chosen = options[idx];
+    if (!chosen || chosen.disabled) return;
+    this.setAttribute("value", chosen.value);
+    this.refreshOptionStates();
+    this.updateTriggerLabel();
+    const detail = {
+      value: chosen.value,
+      label: chosen.label,
+      name: this.name
+    };
+    this.dispatchEvent(
+      new CustomEvent("gg-select-change", {
+        bubbles: true,
+        composed: true,
+        // escapes Shadow DOM
+        detail
+      })
+    );
+  }
+  refreshOptionStates() {
+    const val = this.value;
+    this.dropdownEl.querySelectorAll(".option").forEach((li) => {
+      li.setAttribute(
+        "aria-selected",
+        li.dataset["value"] === val ? "true" : "false"
+      );
+    });
+  }
+  updateTriggerLabel() {
+    const options = this.getOptions();
+    const match = options.find((o) => o.value === this.value);
+    if (match) {
+      this.triggerLabelEl.textContent = match.label;
+      this.triggerLabelEl.classList.remove("is-placeholder");
+    } else {
+      this.triggerLabelEl.textContent = this.placeholder;
+      this.triggerLabelEl.classList.add("is-placeholder");
+    }
+  }
+  toggleDropdown() {
+    this.isOpen ? this.closeDropdown() : this.openDropdown();
+  }
+  openDropdown() {
+    this.isOpen = true;
+    this.triggerEl.setAttribute("aria-expanded", "true");
+    this.dropdownEl.removeAttribute("hidden");
+    const items = this.dropdownItems();
+    let startIdx = 0;
+    items.forEach((item, i) => {
+      if (item.getAttribute("aria-selected") === "true") startIdx = i;
+    });
+    this.setActive(startIdx);
+  }
+  closeDropdown() {
+    this.isOpen = false;
+    this.triggerEl.setAttribute("aria-expanded", "false");
+    this.dropdownEl.setAttribute("hidden", "");
+    this.clearActive();
+  }
+  // ── Keyboard ─────────────────────────────────────────────────────────────
+  onTriggerKeydown(e) {
+    const handled = ["ArrowDown", "ArrowUp", "Enter", " "];
+    if (!handled.includes(e.key)) return;
+    e.preventDefault();
+    if (!this.isOpen) {
+      this.openDropdown();
+      return;
+    }
+    if (e.key === "ArrowDown") this.moveActive(1);
+    else if (e.key === "ArrowUp") this.moveActive(-1);
+    else if (e.key === "Enter" || e.key === " ") {
+      if (this.activeIdx >= 0) {
+        this.selectByIdx(this.activeIdx);
+        this.closeDropdown();
+      }
+    }
+  }
+  onDropdownKeydown(e) {
+    if (e.key === "Escape") {
+      this.closeDropdown();
+      this.triggerEl.focus();
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      this.moveActive(1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      this.moveActive(-1);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (this.activeIdx >= 0) {
+        this.selectByIdx(this.activeIdx);
+        this.closeDropdown();
+        this.triggerEl.focus();
+      }
+    } else if (e.key === "Tab") {
+      this.closeDropdown();
+    }
+  }
+  // ── Active item ──────────────────────────────────────────────────────────
+  setActive(idx) {
+    const items = this.dropdownItems();
+    this.clearActive();
+    if (idx < 0 || idx >= items.length) return;
+    this.activeIdx = idx;
+    items[idx].setAttribute("data-active", "");
+    items[idx].scrollIntoView({ block: "nearest" });
+  }
+  clearActive() {
+    this.dropdownItems().forEach((li) => li.removeAttribute("data-active"));
+    this.activeIdx = -1;
+  }
+  moveActive(dir) {
+    const items = this.dropdownItems();
+    const len = items.length;
+    if (!len) return;
+    let next = ((this.activeIdx + dir) % len + len) % len;
+    let guard = 0;
+    while (items[next].getAttribute("aria-disabled") === "true" && guard < len) {
+      next = (next + dir + len) % len;
+      guard++;
+    }
+    this.setActive(next);
+  }
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  dropdownItems() {
+    return [...this.dropdownEl.querySelectorAll(".option")];
+  }
+  getOptions() {
+    return [...this.querySelectorAll("gg-option")].map((el) => {
+      var _a2, _b;
+      return {
+        value: el.getAttribute("value") ?? ((_a2 = el.textContent) == null ? void 0 : _a2.trim()) ?? "",
+        label: ((_b = el.textContent) == null ? void 0 : _b.trim()) ?? "",
+        disabled: el.hasAttribute("disabled")
+      };
+    });
+  }
+  escAttr(str) {
+    return str.replace(/"/g, "&quot;");
+  }
+}
+__publicField(CustomSelect, "observedAttributes", [
+  "placeholder",
+  "value",
+  "disabled",
+  "name"
+]);
+if (!customElements.get("gg-select")) {
+  customElements.define("gg-select", CustomSelect);
+}
+const STYLE_TEMPLATE$1 = `
+  :host {
+    position: fixed;
+    display: none;
+    z-index: 30;
+    pointer-events: auto;
+    left: 0;
+    top: 0;
+    transform: translate(-86%, calc(-100% - 16px));
+    contain: layout style paint;
+    will-change: transform, left, top;
+  }
+
+  :host>.root {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem;
+    border-radius: 0.45rem;
+    background: rgba(18, 18, 18, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  }
+
+  button {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.35rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(248, 250, 252, 0.96);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 0.85rem/1 Inter, sans-serif;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  button:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  button:active {
+    transform: translateY(1px);
+  }
+
+  button span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+`;
+class SelectionToolbar extends HTMLElement {
+  constructor() {
+    super();
+    __privateAdd(this, _shadow3, this.attachShadow({ mode: "open" }));
+    __publicField(this, "actions", []);
+    __publicField(this, "visible", false);
+    __publicField(this, "posX", 0);
+    __publicField(this, "posY", 0);
+    __publicField(this, "actionSignature", "");
+    __privateGet(this, _shadow3).addEventListener("click", (e) => {
+      const target = e.target;
+      const button = target == null ? void 0 : target.closest(
+        "button[data-action]"
+      );
+      if (!button) return;
+      const action = button.dataset.action;
+      if (!action) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.dispatchEvent(
+        new CustomEvent("gg-selection-toolbar-action", {
+          detail: { action },
+          bubbles: true,
+          composed: true
+        })
+      );
+    });
+  }
+  connectedCallback() {
+    this.render();
+  }
+  setActions(actions) {
+    const signature = actions.map((action) => action.action).join("|");
+    if (signature === this.actionSignature) return;
+    this.actionSignature = signature;
+    this.actions = actions;
+    this.render();
+  }
+  setPosition(screenX, screenY) {
+    if (this.posX === screenX && this.posY === screenY) return;
+    this.posX = screenX;
+    this.posY = screenY;
+    this.style.left = `${Math.round(screenX)}px`;
+    this.style.top = `${Math.round(screenY)}px`;
+  }
+  show() {
+    if (this.visible) return;
+    this.visible = true;
+    this.style.display = "block";
+  }
+  hide() {
+    if (!this.visible) return;
+    this.visible = false;
+    this.style.display = "none";
+  }
+  render() {
+    __privateGet(this, _shadow3).innerHTML = `
+      <style>${STYLE_TEMPLATE$1}</style>
+      <div class="root" part="root" aria-label="Selection actions" role="toolbar">
+        ${this.actions.map(
+      (action) => `
+              <button
+                type="button"
+                data-action="${action.action}"
+                aria-label="${action.label}"
+                title="${action.label}"
+              >
+                <span aria-hidden="true">${action.glyph}</span>
+                <span class="sr-only">${action.label}</span>
+              </button>
+            `
+    ).join("")}
+      </div>
+    `;
+    this.setPosition(this.posX, this.posY);
+    if (!this.visible) {
+      this.style.display = "none";
+    }
+  }
+}
+_shadow3 = new WeakMap();
+if (!customElements.get("gg-selection-toolbar")) {
+  customElements.define("gg-selection-toolbar", SelectionToolbar);
+}
 const PI = 3.141592653589793;
 if (typeof CanvasRenderingContext2D.prototype.roundRect !== "function") {
   CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
@@ -744,6 +2146,749 @@ function slugify(label) {
   return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 const TextureRegistry = textureRegistry.instance;
+const STYLES = (
+  /* css */
+  `
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :host {
+    display: inline-block;
+    width: 100%;
+    min-width: 220px;
+    position: relative;
+    font-family: inherit;
+    --ts-radius: 8px;
+    --ts-border: rgba(77, 77, 77, 0.25);
+    --ts-border-focus: rgba(75, 75, 75, 0.15);
+    --ts-focus-ring: rgba(92, 92, 95, 0.22);
+    --ts-text: rgb(235, 235, 235);
+    --ts-muted: #9ca3af;
+    --ts-surface: var(--material-surface);
+    --ts-hover-bg: rgba(36, 37, 39, 0.36);
+    --ts-selected-bg: #ecfeff;
+    --ts-selected-text: #0f766e;
+    --ts-accent: #0d9488;
+    --ts-shadow: 0 8px 24px -4px rgba(0,0,0,.12), 0 3px 8px -2px rgba(0,0,0,.07);
+  }
+
+  :host([disabled]) { opacity: .45; pointer-events: none; }
+
+  .trigger {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 16px;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    background: var(--ts-surface);
+    border: 1.5px solid var(--ts-border);
+    border-radius: var(--ts-radius);
+    color: var(--ts-text);
+    cursor: pointer;
+    user-select: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  .trigger:hover { border-color: #9ca3af; }
+
+  .trigger:focus-visible,
+  .trigger[aria-expanded="true"] {
+    outline: none;
+    border-color: var(--ts-border-focus);
+    box-shadow: 0 0 0 3px var(--ts-focus-ring);
+  }
+
+  .preview {
+    width: 36px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .preview.is-empty {
+    display: grid;
+    place-items: center;
+    color: var(--ts-muted);
+    font-size: 12px;
+  }
+
+  .trigger-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .trigger-label.is-placeholder {
+    color: var(--ts-muted);
+    font-weight: 400;
+  }
+
+  .chevron {
+    width: 16px;
+    height: 16px;
+    color: #6b7280;
+    transition: transform .2s ease;
+  }
+
+  .trigger[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 5px;
+    margin: 0;
+    list-style: none;
+    background: var(--ts-surface);
+    border: 2px solid transparent;
+    outline: 1.5px solid rgba(109, 109, 109, 0.76);
+    border-radius: var(--ts-radius);
+    box-shadow: var(--ts-shadow);
+    backdrop-filter: blur(8px);
+    transform-origin: top center;
+    animation: pop-in .13s ease both;
+  }
+
+  .dropdown[hidden] { display: none; }
+
+  @keyframes pop-in {
+    from { opacity: 0; transform: scaleY(.94) translateY(-4px); }
+    to { opacity: 1; transform: scaleY(1) translateY(0); }
+  }
+
+  .option {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 14px;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 9px;
+    border-radius: 5px;
+    color: var(--ts-text);
+    cursor: pointer;
+    transition: background .1s linear;
+  }
+
+  .option:hover,
+  .option[data-active] { background: var(--ts-accent); }
+
+  .option[aria-selected="true"] {
+    background: var(--ts-selected-bg);
+    color: var(--ts-selected-text);
+    font-weight: 600;
+  }
+
+  .option-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .option-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.82rem;
+  }
+
+  .option-meta {
+    color: var(--ts-muted);
+    font-size: 0.68rem;
+    text-transform: capitalize;
+  }
+
+  .option[aria-selected="true"] .option-meta {
+    color: rgba(15, 118, 110, 0.72);
+  }
+
+  .check {
+    width: 14px;
+    height: 14px;
+    color: currentColor;
+    visibility: hidden;
+  }
+
+  .option[aria-selected="true"] .check { visibility: visible; }
+
+  .empty {
+    padding: 10px;
+    color: var(--ts-muted);
+    font-size: 0.8rem;
+  }
+
+  .dropdown::-webkit-scrollbar { width: 5px; }
+  .dropdown::-webkit-scrollbar-track { background: transparent; }
+  .dropdown::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+`
+);
+const CHEVRON_SVG = (
+  /* html */
+  `
+  <svg class="chevron" viewBox="0 0 16 16" fill="none"
+       xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`
+);
+const CHECK_SVG = (
+  /* html */
+  `
+  <svg class="check" viewBox="0 0 14 14" fill="none"
+       xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M2.5 7l3.5 3.5 5.5-7" stroke="currentColor" stroke-width="1.75"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`
+);
+class TextureSelect extends HTMLElement {
+  constructor() {
+    super();
+    __publicField(this, "triggerEl");
+    __publicField(this, "triggerPreviewEl");
+    __publicField(this, "triggerLabelEl");
+    __publicField(this, "dropdownEl");
+    __publicField(this, "isOpen", false);
+    __publicField(this, "activeIdx", -1);
+    __publicField(this, "onDocClick");
+    this.attachShadow({ mode: "open" });
+  }
+  connectedCallback() {
+    this.render();
+    this.cacheRefs();
+    this.bindEvents();
+    this.syncOptions();
+  }
+  disconnectedCallback() {
+    document.removeEventListener("click", this.onDocClick, true);
+  }
+  attributeChangedCallback(name, oldVal, newVal) {
+    if (oldVal === newVal || !this.triggerEl) return;
+    switch (name) {
+      case "kind":
+        this.syncOptions();
+        break;
+      case "placeholder":
+        this.updateTrigger();
+        break;
+      case "value":
+        this.refreshOptionStates();
+        this.updateTrigger();
+        break;
+      case "disabled":
+        this.triggerEl.disabled = this.disabled;
+        break;
+    }
+  }
+  get value() {
+    return this.getAttribute("value") ?? "";
+  }
+  set value(value) {
+    this.setAttribute("value", value);
+  }
+  get name() {
+    return this.getAttribute("name") ?? "";
+  }
+  get kind() {
+    return this.getAttribute("kind") ?? "";
+  }
+  get placeholder() {
+    return this.getAttribute("placeholder") ?? "Select texture";
+  }
+  get disabled() {
+    return this.hasAttribute("disabled");
+  }
+  refresh() {
+    this.syncOptions();
+  }
+  render() {
+    this.shadowRoot.innerHTML = /* html */
+    `
+      <style>${STYLES}</style>
+      <button
+        class="trigger"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+        ${this.disabled ? "disabled" : ""}
+      >
+        <span class="preview is-empty" aria-hidden="true">-</span>
+        <span class="trigger-label is-placeholder">${this.escHtml(this.placeholder)}</span>
+        ${CHEVRON_SVG}
+      </button>
+      <ul class="dropdown" role="listbox" hidden></ul>
+    `;
+  }
+  cacheRefs() {
+    this.triggerEl = this.shadowRoot.querySelector(".trigger");
+    this.triggerPreviewEl = this.shadowRoot.querySelector(".preview");
+    this.triggerLabelEl = this.shadowRoot.querySelector(".trigger-label");
+    this.dropdownEl = this.shadowRoot.querySelector(".dropdown");
+  }
+  bindEvents() {
+    this.triggerEl.addEventListener("click", () => this.toggleDropdown());
+    this.triggerEl.addEventListener("keydown", (e) => this.onTriggerKeydown(e));
+    this.dropdownEl.addEventListener("pointermove", (e) => {
+      const option = e.target.closest(".option");
+      if (option) this.setActive(Number(option.dataset["idx"]));
+    });
+    this.dropdownEl.addEventListener("click", (e) => {
+      const option = e.target.closest(".option");
+      if (!option) return;
+      this.selectByIdx(Number(option.dataset["idx"]));
+      this.closeDropdown();
+      this.triggerEl.focus();
+    });
+    this.dropdownEl.addEventListener("keydown", (e) => this.onDropdownKeydown(e));
+    this.onDocClick = (e) => {
+      if (!this.contains(e.target) && !this.shadowRoot.contains(e.target)) {
+        this.closeDropdown();
+      }
+    };
+    document.addEventListener("click", this.onDocClick, true);
+  }
+  syncOptions() {
+    const options = this.getOptions();
+    if (options.length === 0) {
+      this.dropdownEl.innerHTML = `<li class="empty">No textures available</li>`;
+      this.updateTrigger();
+      return;
+    }
+    this.dropdownEl.innerHTML = options.map(
+      (option, index) => (
+        /* html */
+        `
+        <li
+          class="option"
+          role="option"
+          data-idx="${index}"
+          data-value="${this.escAttr(option.id)}"
+          aria-selected="${option.id === this.value ? "true" : "false"}"
+        >
+          <img class="preview" src="${this.escAttr(option.previewUrl ?? "")}" alt="" />
+          <span class="option-main">
+            <span class="option-label">${this.escHtml(option.label)}</span>
+            <span class="option-meta">${this.escHtml(option.sourceType)}</span>
+          </span>
+          ${CHECK_SVG}
+        </li>`
+      )
+    ).join("");
+    this.updateTrigger();
+  }
+  selectByIdx(idx) {
+    const options = this.getOptions();
+    const selected = options[idx];
+    if (!selected) return;
+    this.setAttribute("value", selected.id);
+    this.refreshOptionStates();
+    this.updateTrigger();
+    this.dispatchEvent(
+      new CustomEvent("gg-texture-select-change", {
+        bubbles: true,
+        composed: true,
+        detail: {
+          value: selected.id,
+          label: selected.label,
+          name: this.name,
+          kind: selected.kind,
+          sourceType: selected.sourceType,
+          previewUrl: selected.previewUrl ?? ""
+        }
+      })
+    );
+  }
+  updateTrigger() {
+    const selected = this.getOptions().find((option) => option.id === this.value);
+    if (!selected) {
+      this.triggerPreviewEl.outerHTML = `<span class="preview is-empty" aria-hidden="true">-</span>`;
+      this.triggerPreviewEl = this.shadowRoot.querySelector(".preview");
+      this.triggerLabelEl.textContent = this.placeholder;
+      this.triggerLabelEl.classList.add("is-placeholder");
+      return;
+    }
+    this.triggerPreviewEl.outerHTML = `<img class="preview" src="${this.escAttr(selected.previewUrl ?? "")}" alt="" />`;
+    this.triggerPreviewEl = this.shadowRoot.querySelector(".preview");
+    this.triggerLabelEl.textContent = selected.label;
+    this.triggerLabelEl.classList.remove("is-placeholder");
+  }
+  refreshOptionStates() {
+    const value = this.value;
+    this.dropdownEl.querySelectorAll(".option").forEach((option) => {
+      option.setAttribute(
+        "aria-selected",
+        option.dataset["value"] === value ? "true" : "false"
+      );
+    });
+  }
+  toggleDropdown() {
+    this.isOpen ? this.closeDropdown() : this.openDropdown();
+  }
+  openDropdown() {
+    this.isOpen = true;
+    this.triggerEl.setAttribute("aria-expanded", "true");
+    this.dropdownEl.removeAttribute("hidden");
+    const items = this.dropdownItems();
+    let startIdx = 0;
+    items.forEach((item, index) => {
+      if (item.getAttribute("aria-selected") === "true") startIdx = index;
+    });
+    this.setActive(startIdx);
+  }
+  closeDropdown() {
+    this.isOpen = false;
+    this.triggerEl.setAttribute("aria-expanded", "false");
+    this.dropdownEl.setAttribute("hidden", "");
+    this.clearActive();
+  }
+  onTriggerKeydown(e) {
+    const handled = ["ArrowDown", "ArrowUp", "Enter", " "];
+    if (!handled.includes(e.key)) return;
+    e.preventDefault();
+    if (!this.isOpen) {
+      this.openDropdown();
+      return;
+    }
+    if (e.key === "ArrowDown") this.moveActive(1);
+    else if (e.key === "ArrowUp") this.moveActive(-1);
+    else if (e.key === "Enter" || e.key === " ") {
+      if (this.activeIdx >= 0) {
+        this.selectByIdx(this.activeIdx);
+        this.closeDropdown();
+      }
+    }
+  }
+  onDropdownKeydown(e) {
+    if (e.key === "Escape") {
+      this.closeDropdown();
+      this.triggerEl.focus();
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      this.moveActive(1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      this.moveActive(-1);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (this.activeIdx >= 0) {
+        this.selectByIdx(this.activeIdx);
+        this.closeDropdown();
+        this.triggerEl.focus();
+      }
+    } else if (e.key === "Tab") {
+      this.closeDropdown();
+    }
+  }
+  setActive(idx) {
+    const items = this.dropdownItems();
+    this.clearActive();
+    if (idx < 0 || idx >= items.length) return;
+    this.activeIdx = idx;
+    items[idx].setAttribute("data-active", "");
+    items[idx].scrollIntoView({ block: "nearest" });
+  }
+  clearActive() {
+    this.dropdownItems().forEach((item) => item.removeAttribute("data-active"));
+    this.activeIdx = -1;
+  }
+  moveActive(direction) {
+    const items = this.dropdownItems();
+    if (items.length === 0) return;
+    const next = ((this.activeIdx + direction) % items.length + items.length) % items.length;
+    this.setActive(next);
+  }
+  dropdownItems() {
+    return [...this.dropdownEl.querySelectorAll(".option")];
+  }
+  getOptions() {
+    if (!this.kind) return TextureRegistry.all();
+    return TextureRegistry.byKind(this.kind);
+  }
+  escAttr(value) {
+    return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  }
+  escHtml(value) {
+    return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+}
+__publicField(TextureSelect, "observedAttributes", [
+  "placeholder",
+  "value",
+  "disabled",
+  "name",
+  "kind"
+]);
+if (!customElements.get("gg-texture-select")) {
+  customElements.define("gg-texture-select", TextureSelect);
+}
+const STYLE_TEMPLATE = `
+      :host {
+        position: absolute;
+        top: 2.5vh;
+        right: 0;
+        height: 95vh;
+        width: 300px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-left: 1px solid var(--glass-border);
+        border: inset 2px solid transparent;
+        box-shadow: -8px 0 32px rgba(0, 0, 0, 0.3);
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 50;
+        border-radius: var(--radius-md) 0 0 var(--radius-md);
+      }
+
+      :host>.root {
+        top: 0;
+        right: inherit;
+        position: inherit;
+        height: inherit;
+        width: inherit;
+        display: flex;
+        flex-direction: inherit;
+        padding-bottom: 2rem;
+      }
+
+      .sidebar-toggle {
+        position: absolute;
+        left: -24px;
+        top: 20px;
+        width: 24px;
+        height: 48px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-right: none;
+        border-radius: 8px 0 0 8px;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 1.2rem;
+        padding: 0;
+        box-shadow: -4px 4px 12px rgba(0, 0, 0, 0.2);
+        transition: all 0.2s ease;
+      }
+
+      .sidebar-toggle svg {
+        transform: scale(-0.8, 0.8);
+      }
+
+      .sidebar-toggle:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--accent);
+      }
+
+      :host(.collapsed) {
+        transform: translateX(100%);
+      }
+
+      :host(.collapsed) .sidebar-toggle svg {
+        transform: scale(0.8, 0.8);
+      }
+
+      .sidebar-content {
+        flex: 1;
+        max-height: 100%;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        font-size: 0.8rem;
+        padding-bottom: 2rem;
+        scrollbar-width: thin;
+      }
+
+      .sidebar-content::-webkit-scrollbar {
+        // display: none;
+      }
+
+      .settings-group {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .settings-group.vertical {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        width: 100%;
+      }
+
+      .sidebar-section {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .section-header {
+        font-size: 0.6rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgb(95, 95, 95);
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 6px;
+        margin-bottom: 4px;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
+
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      button:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      button:active {
+        transform: scale(0.98);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+
+      input[type="color" i] {
+        display: block;
+        border: none;
+        outline: none;
+        width: 2rem;
+        border-radius: 50%;
+        color: transparent;
+        background-color: unset;
+        height: 2rem;
+        border-radius: 2rem;
+      }
+
+      input[type="color" i]::-webkit-color-swatch {
+        border-radius: 50%;
+        border: 1px solid var(--glass-border);
+      }
+
+      input[type="text"] {
+        width: 90%;
+        padding: 0.5rem 0.5rem;
+        background-color: var(--material-surface);
+        border: none;
+        outline: none;
+        color: white;
+        border-radius: 0.3rem;
+      }
+
+`;
+let UIControls$1 = (_a = class extends HTMLElement {
+  constructor() {
+    super(...arguments);
+    __privateAdd(this, _shadow4, this.attachShadow({ mode: "open" }));
+  }
+  connectedCallback() {
+    this.render();
+  }
+  render() {
+    __privateGet(this, _shadow4).innerHTML = `
+    <style>
+      ${STYLE_TEMPLATE}
+    </style>
+
+    ${this.getChildrenTemplate()}
+  `;
+  }
+  getChildrenTemplate() {
+    return `
+    <div class="root" part="root">
+    <button
+        id="sidebar-toggle"
+        class="sidebar-toggle"
+        aria-label="Toggle sidebar"
+      >
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M15 19L8 12L15 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+      </button>
+      <div class="sidebar-content">
+        <div class="sidebar-section">
+          <div class="section-header">Canvas</div>
+          <div class="settings-group">
+            <label for="bg-color-picker">Color</label>
+            <input type="color" id="bg-color-picker" value="#0f172a" />
+          </div>
+          <div class="settings-group">
+            <label for="font-color-picker">Font Color</label>
+            <input type="color" id="font-color-picker" value="#ffffff" />
+          </div>
+
+          <div class="settings-group vertical">
+            <label for="theme-selector">Node Theme</label>
+            <gg-select id="theme-selector">
+              <gg-option value="dark">Dark (Glass)</gg-option>
+              <gg-option value="light">Light</gg-option>
+              <gg-option value="neon">Neon</gg-option>
+            </gg-select>
+          </div>
+
+          <div class="settings-group vertical">
+            <label for="texture-selector">Texture Theme</label>
+            <gg-texture-select id="texture-selector">
+            </gg-texture-select>
+          </div>
+
+        </div>
+
+        <div id="node-properties" class="sidebar-section" style="display: none">
+          <div class="section-header">Properties</div>
+          <div class="settings-group vertical">
+            <label for="node-label-input">Label</label>
+            <input
+              type="text"
+              id="node-label-input"
+              placeholder="Node label..."
+              class="text-input"
+            />
+          </div>
+          <gg-prop-group id="node-prop-group"></gg-prop-group>
+        </div>
+      </div>
+
+    </div>
+
+    `;
+  }
+}, _shadow4 = new WeakMap(), _a);
+if (!customElements.get("gg-ui-controls"))
+  customElements.define("gg-ui-controls", UIControls$1);
 class GeometryNode {
   constructor(gl, meshType) {
     __publicField(this, "vertexBuffer", null);
@@ -2750,22 +4895,22 @@ class NodeStore {
   createHandleState(candidateId, nodeType, existingHandles = []) {
     if (nodeType === "subgraph" || isNodePrimitiveType(nodeType)) {
       return ["left", "right"].map((side) => {
-        var _a;
+        var _a2;
         return {
           candidateId,
           side,
-          isConnected: ((_a = existingHandles.find((handle) => handle.side === side)) == null ? void 0 : _a.isConnected) ?? false,
+          isConnected: ((_a2 = existingHandles.find((handle) => handle.side === side)) == null ? void 0 : _a2.isConnected) ?? false,
           style: { ...this.handleStyle }
         };
       });
     }
     if (!isCandidateNodeType(nodeType, this.connectionMode)) return [];
     return ["left", "right"].map((side) => {
-      var _a;
+      var _a2;
       return {
         candidateId,
         side,
-        isConnected: ((_a = existingHandles.find((handle) => handle.side === side)) == null ? void 0 : _a.isConnected) ?? false,
+        isConnected: ((_a2 = existingHandles.find((handle) => handle.side === side)) == null ? void 0 : _a2.isConnected) ?? false,
         style: { ...this.handleStyle }
       };
     });
@@ -2856,9 +5001,9 @@ class NodeStore {
     subgraph.height = maxY - minY + titleHeight + padding;
   }
   calculatePropHeight(props) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a2, _b, _c, _d, _e, _f;
     let lineCount = 0;
-    lineCount += ((_a = props.booleans["ungrouped"]) == null ? void 0 : _a.length) ?? 0;
+    lineCount += ((_a2 = props.booleans["ungrouped"]) == null ? void 0 : _a2.length) ?? 0;
     lineCount += ((_b = props.texts["ungrouped"]) == null ? void 0 : _b.length) ?? 0;
     lineCount += ((_c = props.enums["ungrouped"]) == null ? void 0 : _c.length) ?? 0;
     for (let i = 0; i < props.groups.length; i++) {
@@ -4060,7 +6205,7 @@ class Renderer {
    *                  (blend disabled, no texture) for the off-screen pick render pass.
    */
   drawNodes(picking) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a2, _b, _c, _d, _e, _f, _g;
     const gl = this.gl;
     gl.useProgram(this.program);
     if (picking) {
@@ -4112,7 +6257,7 @@ class Renderer {
       }
       const z = this.store.getZForNode(node.id, selectedIds);
       if (!picking) {
-        (_b = (_a = this.textRenderer)._setZ) == null ? void 0 : _b.call(_a, z);
+        (_b = (_a2 = this.textRenderer)._setZ) == null ? void 0 : _b.call(_a2, z);
         (_d = (_c = this.iconBackgroundRenderer)._setZ) == null ? void 0 : _d.call(_c, z);
         (_f = (_e = this.iconRenderer)._setZ) == null ? void 0 : _f.call(_e, z);
       }
@@ -4157,7 +6302,7 @@ class Renderer {
     gl.drawArrays(this.bgGeometry.primitiveType, 0, this.bgGeometry.length);
   }
   drawNode(node, worldX, worldY, z, picking) {
-    var _a, _b, _c, _d;
+    var _a2, _b, _c, _d;
     const gl = this.gl;
     if (picking) {
       gl.uniform1i(this.locations.u_UseTexture, 0);
@@ -4285,7 +6430,7 @@ class Renderer {
           isLocked ? 0.12 : 0.05,
           dumbGlyphWidth,
           dumbGlyphHeight,
-          ((_a = this.iconAtlas.common) == null ? void 0 : _a.base) || 0,
+          ((_a2 = this.iconAtlas.common) == null ? void 0 : _a2.base) || 0,
           ((_b = this.iconAtlas.common) == null ? void 0 : _b.lineHeight) || 0,
           16,
           "center",
@@ -4883,9 +7028,9 @@ class UIControls {
     __publicField(this, "nodeProperties");
     __publicField(this, "nodeLabelInput");
     __publicField(this, "nodePropGroup");
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+    var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
     this.sidebar = container;
-    this.addNodeButton = (_a = toolPane.shadowRoot) == null ? void 0 : _a.querySelector(
+    this.addNodeButton = (_a2 = toolPane.shadowRoot) == null ? void 0 : _a2.querySelector(
       "#btn-add-node"
     );
     this.addGroupButton = (_b = toolPane.shadowRoot) == null ? void 0 : _b.querySelector(
@@ -5582,8 +7727,8 @@ class GraphEventEmitter {
    * Remove a synchronous event listener.
    */
   off(event, handler) {
-    var _a;
-    (_a = this.syncHandlers.get(event)) == null ? void 0 : _a.delete(handler);
+    var _a2;
+    (_a2 = this.syncHandlers.get(event)) == null ? void 0 : _a2.delete(handler);
   }
   /**
    * Dispatch a standard synchronous event.
@@ -5618,8 +7763,8 @@ class GraphEventEmitter {
    * Remove an async hook listener.
    */
   offBefore(event, handler) {
-    var _a;
-    (_a = this.asyncHandlers.get(event)) == null ? void 0 : _a.delete(handler);
+    var _a2;
+    (_a2 = this.asyncHandlers.get(event)) == null ? void 0 : _a2.delete(handler);
   }
   /**
    * Dispatch an async hook. 
@@ -6551,10 +8696,10 @@ const _NodeEditor = class _NodeEditor {
     node.compositionRefId = snapshot.compositionRefId;
     node.props = cloneNodeProps(snapshot.props);
     node.handles = node.handles.map((handle) => {
-      var _a;
+      var _a2;
       return {
         ...handle,
-        isConnected: ((_a = snapshot.handleStates.find((entry) => entry.side === handle.side)) == null ? void 0 : _a.isConnected) ?? false
+        isConnected: ((_a2 = snapshot.handleStates.find((entry) => entry.side === handle.side)) == null ? void 0 : _a2.isConnected) ?? false
       };
     });
     this.store.forceRestoreNodePlacement(
@@ -6719,8 +8864,8 @@ const _NodeEditor = class _NodeEditor {
     return outermostSubgraphId;
   }
   canEnterContainer(sourceOwningSubgraphId, hoveredContainer) {
-    var _a;
-    if (((_a = this.draggingNode) == null ? void 0 : _a.nodeType) === "hub" && hoveredContainer.nodeType === "group") {
+    var _a2;
+    if (((_a2 = this.draggingNode) == null ? void 0 : _a2.nodeType) === "hub" && hoveredContainer.nodeType === "group") {
       return false;
     }
     if (hoveredContainer.nodeType === "subgraph") {
@@ -6835,10 +8980,10 @@ const _NodeEditor = class _NodeEditor {
     }));
   }
   async createNodeWithHistory(nodeType, worldX, worldY, parentId = null) {
-    var _a;
+    var _a2;
     let parentType = null;
     if (parentId !== null) {
-      parentType = ((_a = this.store.get(parentId)) == null ? void 0 : _a.nodeType) ?? null;
+      parentType = ((_a2 = this.store.get(parentId)) == null ? void 0 : _a2.nodeType) ?? null;
     }
     const allowed = await this.events.dispatchBefore("before:nodeCreate", {
       nodeType,
@@ -7546,8 +9691,8 @@ const _NodeEditor = class _NodeEditor {
     }
   }
   releasePointer(canvas, e) {
-    var _a;
-    if (!((_a = canvas.hasPointerCapture) == null ? void 0 : _a.call(canvas, e.pointerId))) return;
+    var _a2;
+    if (!((_a2 = canvas.hasPointerCapture) == null ? void 0 : _a2.call(canvas, e.pointerId))) return;
     try {
       canvas.releasePointerCapture(e.pointerId);
     } catch {
@@ -8421,15 +10566,23 @@ const SHELL = `
 
   <gg-loading-screen></gg-loading-screen>
 `;
+exports.ActionPane = ActionPane;
+exports.CustomSelect = CustomSelect;
 exports.DEFAULT_HANDLE_STYLE = DEFAULT_HANDLE_STYLE;
+exports.GGPropGroup = GGPropGroup;
 exports.GraphEventEmitter = GraphEventEmitter;
 exports.HANDLE_LAYOUT = HANDLE_LAYOUT;
+exports.HistoryPane = HistoryPane;
+exports.LoadingScreen = LoadingScreen;
 exports.Matrix4 = Matrix4;
 exports.NODE_LAYOUT = NODE_LAYOUT;
 exports.NODE_SIZE = NODE_SIZE;
 exports.NodeEditor = NodeEditor;
+exports.SelectionToolbar = SelectionToolbar;
 exports.Shell = SHELL;
 exports.TextureRegistry = TextureRegistry;
+exports.TextureSelect = TextureSelect;
+exports.UIControls = UIControls$1;
 exports.Vector3 = Vector3;
 exports.Vector4 = Vector4;
 exports.generateTetureSkinOption = generateTetureSkinOption;

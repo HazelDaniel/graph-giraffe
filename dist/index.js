@@ -5,14 +5,14 @@
  * Only intentionally public types and classes are exported here.
  */
 // ─── Components / Custom Elements ────────────────────────
-import './components/action-pane.js';
-import './components/history-pane.js';
-import './components/loading-screen.js';
-import './components/prop-group.js';
-import './components/select.js';
-import './components/selection-toolbar.js';
-import './components/texture-select.js';
-import './components/ui-controls.js';
+export * from './components/action-pane.js';
+export * from './components/history-pane.js';
+export * from './components/loading-screen.js';
+export * from './components/prop-group.js';
+export * from './components/select.js';
+export * from './components/selection-toolbar.js';
+export * from './components/texture-select.js';
+export * from './components/ui-controls.js';
 // ─── Core ────────────────────────────────────────────────
 export { NodeEditor } from './scripts/node-editor.js';
 export { NODE_LAYOUT, NODE_SIZE, HANDLE_LAYOUT, DEFAULT_HANDLE_STYLE, isContainerNodeType, isLeafNodeType, isNodePrimitiveType, isCandidateNodeType, getDefaultNodeSize, } from './scripts/types.js';
