@@ -1,5 +1,6 @@
 import './App.css'
 import logoSvg from '/logo.svg'
+import {shaders} from "@graph-giraffe/core";
 
 /* ====== Inline SVG Icons ====== */
 const icons = {

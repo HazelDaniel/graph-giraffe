@@ -20,3 +20,4 @@ export { GraphEventEmitter } from './scripts/events.js';
 export { TextureRegistry, generateTetureSkinOption, getDefaultTextureIds, getCompositionReferenceTextureIds, } from './scripts/texture-registry.js';
 export * as shaders from './shaders.js';
 export { Matrix4, Vector3, Vector4 } from './vendor/cuon-matrix.js';
+export { default as Shell } from "./shell.js";

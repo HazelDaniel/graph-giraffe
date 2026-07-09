@@ -8383,6 +8383,44 @@ const shaders = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   msdfVertexShader,
   vertexShader
 }, Symbol.toStringTag, { value: "Module" }));
+const SHELL = `
+  <!-- WebGL Canvas -->
+  <canvas id="2d-bg-canvas"></canvas>
+  <canvas id="webgl-canvas"></canvas>
+
+  <!-- Hidden 2D Canvas for Text to Texture generation -->
+  <canvas id="2d-text-canvas" class="hidden"></canvas>
+
+  <!-- Overlay 2D Canvas for crisp floating labels -->
+  <canvas
+    id="2d-label-canvas"
+    style="pointer-events: none; z-index: 5"
+  ></canvas>
+
+  <!-- Screen Reader Only Node List -->
+  <ul
+    id="sr-node-list"
+    class="sr-only"
+    aria-label="Workflow graph nodes"
+    role="list"
+  ></ul>
+
+  <!-- History Pane -->
+  <gg-history-pane id="undo-redo-wrapper"></gg-history-pane>
+
+  <!-- Sidebar Overlay -->
+  <gg-ui-controls
+    id="sidebar"
+    class="sidebar collapsed"
+    part="gg-ui-control-host"
+  >
+  </gg-ui-controls>
+
+  <!-- Action Pane -->
+  <gg-action-pane id="tool-panel"></gg-action-pane>
+
+  <gg-loading-screen></gg-loading-screen>
+`;
 exports.DEFAULT_HANDLE_STYLE = DEFAULT_HANDLE_STYLE;
 exports.GraphEventEmitter = GraphEventEmitter;
 exports.HANDLE_LAYOUT = HANDLE_LAYOUT;
@@ -8390,6 +8428,7 @@ exports.Matrix4 = Matrix4;
 exports.NODE_LAYOUT = NODE_LAYOUT;
 exports.NODE_SIZE = NODE_SIZE;
 exports.NodeEditor = NodeEditor;
+exports.Shell = SHELL;
 exports.TextureRegistry = TextureRegistry;
 exports.Vector3 = Vector3;
 exports.Vector4 = Vector4;

@@ -23,4 +23,5 @@ export { TextureRegistry, generateTetureSkinOption, getDefaultTextureIds, getCom
 export * as shaders from './shaders.js';
 // ─── Vendor (re-exported for consumers) ─────────────────
 export { Matrix4, Vector3, Vector4 } from './vendor/cuon-matrix.js';
+export { default as Shell } from "./shell.js";
 //# sourceMappingURL=index.js.map
