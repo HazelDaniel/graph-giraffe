@@ -37,7 +37,7 @@
     "url": "https://github.com/HazelDaniel/graph-giraffe"
   },
   "scripts": {
-    "build": "vite build && tsc && cp ./index.css dist/assets/style.css",
+    "build": "vite build && tsc && mkdir dist/assets && cp ./index.css dist/assets/style.css",
     "build:types": "tsc --emitDeclarationOnly",
     "dev": "tsc -w",
     "test": "vitest run",
