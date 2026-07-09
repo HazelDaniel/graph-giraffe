@@ -40,6 +40,7 @@ export declare class NodeEditor {
     private connectionMode;
     private activeConnectionDrag;
     private hoveredHandle;
+    private assetsPath;
     private selectedNodeIds;
     private selectedEdgeIds;
     private selectionKind;

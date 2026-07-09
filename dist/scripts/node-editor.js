@@ -72,6 +72,7 @@ export class NodeEditor {
     connectionMode;
     activeConnectionDrag = null;
     hoveredHandle = null;
+    assetsPath;
     selectedNodeIds = new Set();
     selectedEdgeIds = new Set();
     selectionKind = null;
@@ -117,6 +118,7 @@ export class NodeEditor {
         if (!gl)
             throw new Error("WebGL2 is not supported in this browser");
         this.connectionMode = options.connectionMode ?? "node";
+        this.assetsPath = options.assetsPath ?? 'assets';
         // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
         this.camera = new Camera();
         this.store = new NodeStore(gl, this.connectionMode, options.handleStyle ?? DEFAULT_HANDLE_STYLE);
@@ -133,9 +135,11 @@ export class NodeEditor {
         const bgProgram = createProgram(gl, this.bgVsSource, this.bgFsSource);
         this.msdfAtlas = new MsdfAtlas(gl);
         this.iconAtlas = new MsdfAtlas(gl);
+        const assetsPath = this.assetsPath;
+        const basePath = assetsPath.endsWith('/') ? assetsPath : `${assetsPath}/`;
         await Promise.all([
-            this.msdfAtlas.load('assets/msdf-atlas.png', 'assets/msdf-atlas.json'),
-            this.iconAtlas.load('assets/icon-atlas.png', 'assets/icon-atlas.json')
+            this.msdfAtlas.load(`${basePath}msdf-atlas.png`, `${basePath}msdf-atlas.json`),
+            this.iconAtlas.load(`${basePath}icon-atlas.png`, `${basePath}icon-atlas.json`)
         ]);
         const locations = getShaderLocations(gl, program);
         const bgLocations = getBGShaderLocations(gl, bgProgram);
@@ -269,6 +273,7 @@ export class NodeEditor {
         return {
             connectionMode: config.connectionMode ?? "node",
             handleStyle: config.handleStyle ?? DEFAULT_HANDLE_STYLE,
+            assetsPath: config.assetsPath ?? "assets",
         };
     }
     distance(p1, p2) {

@@ -2952,8 +2952,8 @@ class BGGeometryNode {
   }
   generateDotMesh() {
     const gl = this.gl;
-    const Vsegments = this.canvas.height / 10;
-    const Hsegments = this.canvas.width / 10;
+    const Vsegments = Math.max(900, this.canvas.height) / 10;
+    const Hsegments = Math.max(900, this.canvas.width) / 10;
     const vertices = new Float32Array((Vsegments + 1) * (Hsegments + 1) * 2);
     const stepX = 10 / this.canvas.width * 2;
     const stepY = 10 / this.canvas.height * 2;
@@ -7842,6 +7842,7 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "connectionMode");
     __publicField(this, "activeConnectionDrag", null);
     __publicField(this, "hoveredHandle", null);
+    __publicField(this, "assetsPath");
     __publicField(this, "selectedNodeIds", /* @__PURE__ */ new Set());
     __publicField(this, "selectedEdgeIds", /* @__PURE__ */ new Set());
     __publicField(this, "selectionKind", null);
@@ -7878,6 +7879,7 @@ const _NodeEditor = class _NodeEditor {
     const gl = canvas.getContext("webgl2");
     if (!gl) throw new Error("WebGL2 is not supported in this browser");
     this.connectionMode = options.connectionMode ?? "node";
+    this.assetsPath = options.assetsPath ?? "assets";
     this.camera = new Camera();
     this.store = new NodeStore(
       gl,
@@ -7922,9 +7924,11 @@ const _NodeEditor = class _NodeEditor {
     const bgProgram = createProgram(gl, this.bgVsSource, this.bgFsSource);
     this.msdfAtlas = new MsdfAtlas(gl);
     this.iconAtlas = new MsdfAtlas(gl);
+    const assetsPath = this.assetsPath;
+    const basePath = assetsPath.endsWith("/") ? assetsPath : `${assetsPath}/`;
     await Promise.all([
-      this.msdfAtlas.load("assets/msdf-atlas.png", "assets/msdf-atlas.json"),
-      this.iconAtlas.load("assets/icon-atlas.png", "assets/icon-atlas.json")
+      this.msdfAtlas.load(`${basePath}msdf-atlas.png`, `${basePath}msdf-atlas.json`),
+      this.iconAtlas.load(`${basePath}icon-atlas.png`, `${basePath}icon-atlas.json`)
     ]);
     const locations = getShaderLocations(gl, program);
     const bgLocations = getBGShaderLocations(gl, bgProgram);
@@ -8079,7 +8083,8 @@ const _NodeEditor = class _NodeEditor {
   validateConfig(config) {
     return {
       connectionMode: config.connectionMode ?? "node",
-      handleStyle: config.handleStyle ?? DEFAULT_HANDLE_STYLE
+      handleStyle: config.handleStyle ?? DEFAULT_HANDLE_STYLE,
+      assetsPath: config.assetsPath ?? "assets"
     };
   }
   distance(p1, p2) {

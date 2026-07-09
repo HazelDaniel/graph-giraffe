@@ -64,6 +64,7 @@ export interface EdgeData {
 export interface NodeEditorConfig {
     connectionMode?: ConnectionMode;
     handleStyle?: HandleStyle;
+    assetsPath?: string;
 }
 export interface ConnectionPreviewData {
     sourceNodeId: number;

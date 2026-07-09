@@ -1,7 +1,7 @@
 import { TextureSelect } from "../components/texture-select.js";
 import { GGPropGroup } from "../components/prop-group.js";
-import {ActionPane } from "../components/action-pane.js";
-import {HistoryPane } from "../components/history-pane.js";
+import { ActionPane } from "../components/action-pane.js";
+import { HistoryPane } from "../components/history-pane.js";
 import { CustomSelect } from "../components/select.js";
 import { UIControls as UIControlElement } from "../components/ui-controls.js";
 
@@ -78,7 +78,10 @@ import {
   getHandleScreenGeometry,
   isPointInsideHandle,
 } from "./handle-geometry.js";
-import { getParentFrameWorldPosition, getWorldPosition } from "./scene-graph.js";
+import {
+  getParentFrameWorldPosition,
+  getWorldPosition,
+} from "./scene-graph.js";
 import { TextureRegistry } from "./texture-registry.js";
 import { LoadingScreen } from "../components/loading-screen.js";
 import {
@@ -87,7 +90,15 @@ import {
   SelectionToolbarButtonSpec,
 } from "../components/selection-toolbar.js";
 import { WAIT } from "./globals.js";
-import { CLONE, COLLAPSE, DELETE, EDIT, EXPAND, SPOTLIGHT, UNGRAPH } from "../sprite.js";
+import {
+  CLONE,
+  COLLAPSE,
+  DELETE,
+  EDIT,
+  EXPAND,
+  SPOTLIGHT,
+  UNGRAPH,
+} from "../sprite.js";
 
 const baseButtons = (
   items: Array<[SelectionToolbarAction, string, string]>
@@ -178,6 +189,7 @@ export class NodeEditor {
   private connectionMode: ConnectionMode;
   private activeConnectionDrag: ConnectionDragState | null = null;
   private hoveredHandle: HandleHit | null = null;
+  private assetsPath: string;
   private selectedNodeIds: Set<number> = new Set();
   private selectedEdgeIds: Set<number> = new Set();
   private selectionKind: SelectionKind = null;
@@ -246,8 +258,10 @@ export class NodeEditor {
     private nodeTextureUploadList: AddUploadedTextureParams[]
   ) {
     const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-    const backgroundCanvas = document.getElementById(backgroundCanvasId) as HTMLCanvasElement;
-    
+    const backgroundCanvas = document.getElementById(
+      backgroundCanvasId
+    ) as HTMLCanvasElement;
+
     if (!canvas) throw new Error(`Canvas "${canvasId}" not found`);
     if (!backgroundCanvas)
       throw new Error(`Canvas "${backgroundCanvasId}" not found`);
@@ -256,6 +270,7 @@ export class NodeEditor {
     if (!gl) throw new Error("WebGL2 is not supported in this browser");
 
     this.connectionMode = options.connectionMode ?? "node";
+    this.assetsPath = options.assetsPath ?? "assets";
 
     // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
 
@@ -275,28 +290,61 @@ export class NodeEditor {
     const gl = canvas.getContext("webgl2") as WebGL2RenderingContext;
     const program = createProgram(gl, this.vsSource, this.fsSource);
     const msdfProgram = createProgram(gl, this.msdfVsSource, this.msdfFsSource);
-    const iconBGProgam = createProgram(gl, this.IconBGVsSource, this.IconBGFsSource);
+    const iconBGProgam = createProgram(
+      gl,
+      this.IconBGVsSource,
+      this.IconBGFsSource
+    );
     const bgProgram = createProgram(gl, this.bgVsSource, this.bgFsSource);
 
     this.msdfAtlas = new MsdfAtlas(gl);
     this.iconAtlas = new MsdfAtlas(gl);
-    await Promise.all([
-      this.msdfAtlas.load('assets/msdf-atlas.png', 'assets/msdf-atlas.json'),
-      this.iconAtlas.load('assets/icon-atlas.png', 'assets/icon-atlas.json')
-    ]);
+    const assetsPath = this.assetsPath;
+    const basePath = assetsPath.endsWith("/") ? assetsPath : `${assetsPath}/`;
+
+    try {
+      await Promise.all([
+        this.msdfAtlas.load(
+          `${basePath}msdf-atlas.png`,
+          `${basePath}msdf-atlas.json`
+        ),
+        this.iconAtlas.load(
+          `${basePath}icon-atlas.png`,
+          `${basePath}icon-atlas.json`
+        ),
+      ]);
+    } catch (err) {
+      throw new Error("assets failed to load!");
+    }
 
     const locations = getShaderLocations(gl, program);
     const bgLocations = getBGShaderLocations(gl, bgProgram);
-    
+
     // We instantiate Renderer here now since it needs MsdfAtlas which is loaded asynchronously
-    const backgroundCanvas = document.getElementById(this.backgroundCanvasId) as HTMLCanvasElement;
-    const labelCanvas = document.getElementById("2d-label-canvas") as HTMLCanvasElement;
-    
+    const backgroundCanvas = document.getElementById(
+      this.backgroundCanvasId
+    ) as HTMLCanvasElement;
+    const labelCanvas = document.getElementById(
+      "2d-label-canvas"
+    ) as HTMLCanvasElement;
+
     const geometry = new GeometryNode(gl, "rounded-square");
     const bgGeometry = new BGGeometryNode(gl, "dotted", backgroundCanvas);
 
-    this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations,
-      geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas,
+    this.renderer = new Renderer(
+      gl,
+      canvas,
+      backgroundCanvas,
+      program,
+      locations,
+      geometry,
+      bgGeometry,
+      this.store,
+      this.edgeStore,
+      this.camera,
+      bgProgram,
+      bgLocations,
+      labelCanvas,
       () => this.activeConnectionDrag,
       () => this.bgColor,
       () => this.fontColor,
@@ -323,7 +371,9 @@ export class NodeEditor {
     this.selectionToolbar.addEventListener(
       "gg-selection-toolbar-action",
       (e: Event) => {
-        const customEvent = e as CustomEvent<{ action: SelectionToolbarAction }>;
+        const customEvent = e as CustomEvent<{
+          action: SelectionToolbarAction;
+        }>;
         this.handleSelectionToolbarAction(customEvent.detail.action);
       }
     );
@@ -369,7 +419,9 @@ export class NodeEditor {
 
     window.addEventListener("resize", () => this.handleResize(canvas));
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
-    window.addEventListener("pointercancel", (e) => this.handlePointerCancel(e, canvas));
+    window.addEventListener("pointercancel", (e) =>
+      this.handlePointerCancel(e, canvas)
+    );
 
     this.setupPropGroupListener();
 
@@ -378,44 +430,49 @@ export class NodeEditor {
   }
 
   private setupPropGroupListener(): void {
-    this.controls.nodePropGroup.addEventListener("gg-prop-change", (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const { label, value } = customEvent.detail;
+    this.controls.nodePropGroup.addEventListener(
+      "gg-prop-change",
+      (e: Event) => {
+        const customEvent = e as CustomEvent;
+        const { label, value } = customEvent.detail;
 
-      if (this.selectedNodeIds.size === 1) {
-        const nodeId = Array.from(this.selectedNodeIds)[0];
-        const node = this.store.get(nodeId);
+        if (this.selectedNodeIds.size === 1) {
+          const nodeId = Array.from(this.selectedNodeIds)[0];
+          const node = this.store.get(nodeId);
 
-        if (node && node.props) {
-          const beforeSnapshot = this.captureNodeSnapshot(node);
-          const selectionBefore = this.captureSelectionSnapshot();
-          const didChange = this.updatePropValue(node.props, label, value);
-          if (!didChange) return;
+          if (node && node.props) {
+            const beforeSnapshot = this.captureNodeSnapshot(node);
+            const selectionBefore = this.captureSelectionSnapshot();
+            const didChange = this.updatePropValue(node.props, label, value);
+            if (!didChange) return;
 
-          this.store.syncNodePresentation(node.id);
-          const afterSnapshot = this.captureNodeSnapshot(node);
-          const parentId = node.parentId;
+            this.store.syncNodePresentation(node.id);
+            const afterSnapshot = this.captureNodeSnapshot(node);
+            const parentId = node.parentId;
 
-          if (parentId !== null) {
-            this.refreshContainerChain(parentId);
+            if (parentId !== null) {
+              this.refreshContainerChain(parentId);
+            }
+
+            this.pushCommand(
+              new UpdatePropCommand({
+                beforeSnapshot,
+                afterSnapshot,
+                selectionBefore,
+                parentId,
+              })
+            );
+
+            this.events.dispatch("node:propChange", {
+              nodeId: node.id,
+              nodeType: node.nodeType,
+              label,
+              value,
+            });
           }
-
-          this.pushCommand(new UpdatePropCommand({
-            beforeSnapshot,
-            afterSnapshot,
-            selectionBefore,
-            parentId,
-          }));
-
-          this.events.dispatch("node:propChange", {
-            nodeId: node.id,
-            nodeType: node.nodeType,
-            label,
-            value,
-          });
         }
       }
-    });
+    );
   }
 
   private syncPropertiesPanelForSelection(): void {
@@ -438,7 +495,7 @@ export class NodeEditor {
     const primitives = [
       ...Object.values(props.booleans || {}).flat(),
       ...Object.values(props.texts || {}).flat(),
-      ...Object.values(props.enums || {}).flat()
+      ...Object.values(props.enums || {}).flat(),
     ];
     for (const primitive of primitives) {
       if (primitive.label === targetLabel) {
@@ -455,6 +512,7 @@ export class NodeEditor {
     return {
       connectionMode: config.connectionMode ?? "node",
       handleStyle: config.handleStyle ?? DEFAULT_HANDLE_STYLE,
+      assetsPath: config.assetsPath ?? "assets",
     };
   }
 
@@ -579,8 +637,7 @@ export class NodeEditor {
       restoreNodeSnapshots: (s) => this.restoreNodeSnapshots(s),
       restoreEdgeSnapshots: (s) => this.restoreEdgeSnapshots(s),
       removeNodeAndIncidentEdges: (id) => this.removeNodeAndIncidentEdges(id),
-      removeNodesAndEdges: (nIds, eIds) =>
-        this.removeNodesAndEdges(nIds, eIds),
+      removeNodesAndEdges: (nIds, eIds) => this.removeNodesAndEdges(nIds, eIds),
       removeContainerOnly: (id) => this.removeContainerOnly(id),
       clearSelectionState: () => this.clearSelectionState(),
       setNodeSelected: (id, sel) => this.setNodeSelected(id, sel),
@@ -862,7 +919,8 @@ export class NodeEditor {
         isContainerNodeType(pickedNode.nodeType)
       ) {
         if (this.selectionRep.nodeType === "composition") {
-          return pickedNode.nodeType === "group" || pickedNode.nodeType === "subgraph"
+          return pickedNode.nodeType === "group" ||
+            pickedNode.nodeType === "subgraph"
             ? pickedNode
             : null;
         }
@@ -898,7 +956,9 @@ export class NodeEditor {
 
     if (hoveredContainer?.nodeType === "composition") {
       if (this.selectionRep && this.selectionRep.nodeType !== "group") {
-        const targetOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
+        const targetOwningSubgraphId = this.getOwningSubgraphId(
+          hoveredContainer.id
+        );
         for (const entry of selectionDrag.entries) {
           const node = this.store.get(entry.nodeId);
           if (!node || !isNodePrimitiveType(node.nodeType)) continue;
@@ -921,7 +981,9 @@ export class NodeEditor {
       // Dropping primitives onto a subgraph shell does not reparent them.
     } else if (hoveredContainer?.nodeType === "group") {
       if (this.selectionRep && this.selectionRep.nodeType !== "group") {
-        const targetOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
+        const targetOwningSubgraphId = this.getOwningSubgraphId(
+          hoveredContainer.id
+        );
         for (const entry of selectionDrag.entries) {
           const node = this.store.get(entry.nodeId);
           if (!node) continue;
@@ -931,12 +993,15 @@ export class NodeEditor {
           const oldParentId = node.parentId;
           const parentChanged = oldParentId !== hoveredContainer.id;
           if (parentChanged) {
-            const allowed = await this.events.dispatchBefore("before:nodeReparent", {
-              nodeId: node.id,
-              nodeType: node.nodeType,
-              newParentId: hoveredContainer.id,
-              newParentType: hoveredContainer.nodeType,
-            });
+            const allowed = await this.events.dispatchBefore(
+              "before:nodeReparent",
+              {
+                nodeId: node.id,
+                nodeType: node.nodeType,
+                newParentId: hoveredContainer.id,
+                newParentType: hoveredContainer.nodeType,
+              }
+            );
             if (!allowed) continue;
             if (!this.store.setParent(node.id, hoveredContainer.id)) continue;
             this.events.dispatch("node:reparent", {
@@ -1140,11 +1205,13 @@ export class NodeEditor {
     if (!node || node.text === session.previousLabel) return;
 
     const nextLabel = node.text;
-    this.pushCommand(new UpdateLabelCommand({
-      nodeId: node.id,
-      previousLabel: session.previousLabel,
-      nextLabel,
-    }));
+    this.pushCommand(
+      new UpdateLabelCommand({
+        nodeId: node.id,
+        previousLabel: session.previousLabel,
+        nextLabel,
+      })
+    );
 
     this.events.dispatch("node:labelChange", {
       nodeId: node.id,
@@ -1235,7 +1302,9 @@ export class NodeEditor {
     return snapshots;
   }
 
-  private captureBoundaryEdgeSnapshots(rootIds: Iterable<number>): EdgeHistorySnapshot[] {
+  private captureBoundaryEdgeSnapshots(
+    rootIds: Iterable<number>
+  ): EdgeHistorySnapshot[] {
     const subtreeIds = new Set(this.collectSubtreeIds(rootIds));
     const snapshots: EdgeHistorySnapshot[] = [];
 
@@ -1249,7 +1318,9 @@ export class NodeEditor {
     return snapshots;
   }
 
-  private removeBoundaryEdgesForRoots(rootIds: Iterable<number>): EdgeHistorySnapshot[] {
+  private removeBoundaryEdgesForRoots(
+    rootIds: Iterable<number>
+  ): EdgeHistorySnapshot[] {
     const snapshots = this.captureBoundaryEdgeSnapshots(rootIds);
     for (const snapshot of snapshots) {
       const removed = this.edgeStore.remove(snapshot.id);
@@ -1444,8 +1515,8 @@ export class NodeEditor {
     const canvas = document.getElementById(this.canvasId) as HTMLCanvasElement;
     const margin = 0.8;
     const targetZoom = Math.min(
-      canvas.width * margin / node.width,
-      canvas.height * margin / node.height,
+      (canvas.width * margin) / node.width,
+      (canvas.height * margin) / node.height,
       2.0
     );
     const targetPanX = canvas.width / 2 - centerX * targetZoom;
@@ -1512,26 +1583,33 @@ export class NodeEditor {
     sourceOwningSubgraphId: number | null,
     hoveredContainer: NodeData
   ): boolean {
-    if (this.draggingNode?.nodeType === "hub" && hoveredContainer.nodeType === "group") {
+    if (
+      this.draggingNode?.nodeType === "hub" &&
+      hoveredContainer.nodeType === "group"
+    ) {
       return false;
     }
 
     if (hoveredContainer.nodeType === "subgraph") {
-      const hoveredOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
+      const hoveredOwningSubgraphId = this.getOwningSubgraphId(
+        hoveredContainer.id
+      );
       return (
         sourceOwningSubgraphId === hoveredContainer.id ||
         sourceOwningSubgraphId === hoveredOwningSubgraphId
       );
     }
 
-    return sourceOwningSubgraphId === this.getOwningSubgraphId(hoveredContainer.id);
+    return (
+      sourceOwningSubgraphId === this.getOwningSubgraphId(hoveredContainer.id)
+    );
   }
 
   private async deleteNodeTreeWithHistory(nodeId: number): Promise<void> {
     const node = this.store.get(nodeId);
     if (!node) return;
 
-    // Notice we do NOT check before:nodeDelete here because deleteCurrentSelectionWithHistory 
+    // Notice we do NOT check before:nodeDelete here because deleteCurrentSelectionWithHistory
     // already checked it for the root selection. If this is called from outside, we should check it.
     const allowed = await this.events.dispatchBefore("before:nodeDelete", {
       nodeId: node.id,
@@ -1552,13 +1630,15 @@ export class NodeEditor {
       this.refreshContainerChain(parentId);
     }
 
-    this.pushCommand(new DeleteNodeCommand({
-      nodeId,
-      nodeSnapshots: snapshots,
-      edgeSnapshots,
-      selectionBefore,
-      parentId,
-    }));
+    this.pushCommand(
+      new DeleteNodeCommand({
+        nodeId,
+        nodeSnapshots: snapshots,
+        edgeSnapshots,
+        selectionBefore,
+        parentId,
+      })
+    );
   }
 
   private deleteEdgeWithHistory(edgeId: number): void {
@@ -1575,10 +1655,12 @@ export class NodeEditor {
     this.syncHandleStates(edge.targetNodeId);
     this.clearSelectionAndHideProperties();
 
-    this.pushCommand(new DeleteEdgeCommand({
-      edgeSnapshot: snapshot,
-      selectionBefore,
-    }));
+    this.pushCommand(
+      new DeleteEdgeCommand({
+        edgeSnapshot: snapshot,
+        selectionBefore,
+      })
+    );
   }
 
   private async deleteCurrentSelectionWithHistory(): Promise<void> {
@@ -1642,14 +1724,16 @@ export class NodeEditor {
       this.refreshContainerChain(parentId);
     }
 
-    this.pushCommand(new DeleteSelectionCommand({
-      nodeSnapshots: snapshots,
-      edgeSnapshots,
-      selectionBefore,
-      removedNodeIds: [...removedIds],
-      removedEdgeIds: [...edgeIds],
-      parentIds: [...parentIds],
-    }));
+    this.pushCommand(
+      new DeleteSelectionCommand({
+        nodeSnapshots: snapshots,
+        edgeSnapshots,
+        selectionBefore,
+        removedNodeIds: [...removedIds],
+        removedEdgeIds: [...edgeIds],
+        parentIds: [...parentIds],
+      })
+    );
   }
 
   private async createNodeWithHistory(
@@ -1676,7 +1760,7 @@ export class NodeEditor {
       nodeType === "group"
         ? `Group ${this.store.nextNodeId}`
         : nodeType === "hub"
-          ? `Hub ${this.store.nextNodeId}`
+        ? `Hub ${this.store.nextNodeId}`
         : `Node ${this.store.nextNodeId}`;
     const node = this.store.add(worldX, worldY, label, this.theme, nodeType);
 
@@ -1691,17 +1775,22 @@ export class NodeEditor {
 
     const snapshot = this.captureNodeSnapshot(node);
 
-    this.pushCommand(new CreateNodeCommand({
-      snapshot,
-      parentId,
-      selectionBefore,
-      selectOnRedo: false,
-    }));
+    this.pushCommand(
+      new CreateNodeCommand({
+        snapshot,
+        parentId,
+        selectionBefore,
+        selectOnRedo: false,
+      })
+    );
 
     return node;
   }
 
-  private async handleAddNode(canvas: HTMLCanvasElement, nodeType: NodeType): Promise<void> {
+  private async handleAddNode(
+    canvas: HTMLCanvasElement,
+    nodeType: NodeType
+  ): Promise<void> {
     const screenX = Math.random() * (canvas.width - 200) + 100;
     const screenY = Math.random() * (canvas.height - 200) + 100;
     const { x, y } = this.camera.screenToWorld(screenX, screenY);
@@ -1735,12 +1824,14 @@ export class NodeEditor {
     this.setNodeSelected(composition.id, true);
     this.controls.hideProperties();
 
-    this.pushCommand(new CreateNodeCommand({
-      snapshot,
-      parentId: snapshot.parentId,
-      selectionBefore,
-      selectOnRedo: true,
-    }));
+    this.pushCommand(
+      new CreateNodeCommand({
+        snapshot,
+        parentId: snapshot.parentId,
+        selectionBefore,
+        selectOnRedo: true,
+      })
+    );
   }
 
   private createSubgraphFromSelection(): void {
@@ -1758,14 +1849,18 @@ export class NodeEditor {
       "subgraph"
     );
 
-    const commonParent = roots.every((root) => root.parentId === roots[0]!.parentId)
+    const commonParent = roots.every(
+      (root) => root.parentId === roots[0]!.parentId
+    )
       ? roots[0]!.parentId
       : null;
     if (commonParent !== null) {
       this.store.setParent(subgraph.id, commonParent);
     }
 
-    const beforeSnapshots = this.captureNodeSnapshots(roots.map((root) => root.id));
+    const beforeSnapshots = this.captureNodeSnapshots(
+      roots.map((root) => root.id)
+    );
     const removedEdgeSnapshots = this.removeBoundaryEdgesForRoots(
       roots.map((root) => root.id)
     );
@@ -1778,19 +1873,23 @@ export class NodeEditor {
     this.store.updateContainerBounds(subgraph.id, this.theme);
     this.refreshContainerChain(subgraph.id);
 
-    const afterSnapshots = this.captureNodeSnapshots(roots.map((root) => root.id));
+    const afterSnapshots = this.captureNodeSnapshots(
+      roots.map((root) => root.id)
+    );
     const subgraphSnapshot = this.captureNodeSnapshot(subgraph);
 
     this.clearSelectionState();
     this.setNodeSelected(subgraph.id, true);
     this.syncPropertiesPanelForSelection();
-    this.pushCommand(new CreateSubgraphCommand({
-      subgraphSnapshot,
-      childBeforeSnapshots: beforeSnapshots,
-      childAfterSnapshots: afterSnapshots,
-      removedEdgeSnapshots,
-      selectionBefore,
-    }));
+    this.pushCommand(
+      new CreateSubgraphCommand({
+        subgraphSnapshot,
+        childBeforeSnapshots: beforeSnapshots,
+        childAfterSnapshots: afterSnapshots,
+        removedEdgeSnapshots,
+        selectionBefore,
+      })
+    );
   }
 
   private toggleSubgraphCollapse(subgraphId: number): void {
@@ -1804,10 +1903,12 @@ export class NodeEditor {
     this.refreshContainerChain(node.parentId);
     const afterSnapshot = this.captureNodeSnapshot(node);
 
-    this.pushCommand(new ToggleSubgraphCollapseCommand({
-      beforeSnapshot,
-      afterSnapshot,
-    }));
+    this.pushCommand(
+      new ToggleSubgraphCollapseCommand({
+        beforeSnapshot,
+        afterSnapshot,
+      })
+    );
     this.events.dispatch("subgraph:collapseToggle", {
       subgraphId: node.id,
       isCollapsed: node.isCollapsed,
@@ -1823,7 +1924,9 @@ export class NodeEditor {
     const childIds = [...subgraph.childIds];
     const subgraphSnapshot = this.captureNodeSnapshot(subgraph);
     const childBeforeSnapshots = this.captureNodeSnapshots(childIds);
-    const removedEdgeSnapshots = this.captureBoundaryEdgeSnapshots([subgraphId]);
+    const removedEdgeSnapshots = this.captureBoundaryEdgeSnapshots([
+      subgraphId,
+    ]);
 
     this.store.removeContainerOnly(subgraphId);
     for (const snapshot of removedEdgeSnapshots) {
@@ -1839,13 +1942,15 @@ export class NodeEditor {
     this.clearSelectionState();
     this.controls.hideProperties();
     this.refreshContainerChain(subgraph.parentId);
-    this.pushCommand(new UngraphCommand({
-      subgraphSnapshot,
-      childBeforeSnapshots,
-      childAfterSnapshots,
-      removedEdgeSnapshots,
-      selectionBefore,
-    }));
+    this.pushCommand(
+      new UngraphCommand({
+        subgraphSnapshot,
+        childBeforeSnapshots,
+        childAfterSnapshots,
+        removedEdgeSnapshots,
+        selectionBefore,
+      })
+    );
   }
 
   private cloneSubgraphWithHistory(subgraphId: number): void {
@@ -1871,12 +1976,14 @@ export class NodeEditor {
     this.setNodeSelected(clone.id, true);
     this.syncPropertiesPanelForSelection();
     this.refreshContainerChain(clone.parentId);
-    this.pushCommand(new CreateNodeCommand({
-      snapshot,
-      parentId,
-      selectionBefore,
-      selectOnRedo: true,
-    }));
+    this.pushCommand(
+      new CreateNodeCommand({
+        snapshot,
+        parentId,
+        selectionBefore,
+        selectOnRedo: true,
+      })
+    );
   }
 
   private async handleDeleteSelected(): Promise<void> {
@@ -1954,7 +2061,8 @@ export class NodeEditor {
         isContainerNodeType(pickedNode.nodeType)
       ) {
         if (source.nodeType === "composition") {
-          return pickedNode.nodeType === "group" || pickedNode.nodeType === "subgraph"
+          return pickedNode.nodeType === "group" ||
+            pickedNode.nodeType === "subgraph"
             ? pickedNode
             : null;
         }
@@ -1999,7 +2107,6 @@ export class NodeEditor {
   private getSelectionToolbarButtons(
     node: NodeData
   ): SelectionToolbarButtonSpec[] {
-
     if (node.nodeType === "subgraph") {
       return node.isCollapsed
         ? baseButtons([
@@ -2010,7 +2117,7 @@ export class NodeEditor {
           ])
         : baseButtons([
             ["collapse", `${COLLAPSE}`, "Collapse"],
-            ["ungraph", `${UNGRAPH}` , "Ungraph"],
+            ["ungraph", `${UNGRAPH}`, "Ungraph"],
             ["clone", `${CLONE}`, "Clone"],
             ["edit", `${EDIT}`, "Edit"],
             ["delete", `${DELETE}`, "Delete"],
@@ -2033,13 +2140,11 @@ export class NodeEditor {
         ["spotlight", `${SPOTLIGHT}`, "Spotlight"],
         ["edit", `${EDIT}`, "Edit"],
         ["delete", `${DELETE}`, "Delete"],
-      ])
+      ]);
     }
 
     if (node.nodeType === "composition") {
-      return baseButtons([
-        ["delete", `${DELETE}`, "Delete"],
-      ]);
+      return baseButtons([["delete", `${DELETE}`, "Delete"]]);
     }
 
     return [];
@@ -2086,8 +2191,8 @@ export class NodeEditor {
           ? world.y + node.height / 2
           : world.y + 20
         : isContainerNodeType(node.nodeType)
-          ? world.y + 20
-          : world.y + NODE_LAYOUT.headerHeight / 2;
+        ? world.y + 20
+        : world.y + NODE_LAYOUT.headerHeight / 2;
 
     const screen = this.camera.worldToScreen(anchorX, anchorY);
     this.selectionToolbar.setPosition(screen.x, screen.y);
@@ -2118,7 +2223,7 @@ export class NodeEditor {
         return;
       case "spotlight":
         if (node.nodeType !== "group") return;
-          this.spotlightGroup(node.id);
+        this.spotlightGroup(node.id);
         return;
       case "clone":
         if (node.nodeType === "subgraph") {
@@ -2296,10 +2401,12 @@ export class NodeEditor {
         const beforeSnapshot = this.captureNodeSnapshot(node);
         node.isLocked = !node.isLocked;
         const afterSnapshot = this.captureNodeSnapshot(node);
-        this.pushCommand(new ToggleLockCommand({
-          beforeSnapshot,
-          afterSnapshot,
-        }));
+        this.pushCommand(
+          new ToggleLockCommand({
+            beforeSnapshot,
+            afterSnapshot,
+          })
+        );
         this.hoveredHandle = null;
         return;
       }
@@ -2529,7 +2636,10 @@ export class NodeEditor {
     });
   }
 
-  private async handlePointerUp(e: PointerEvent, canvas: HTMLCanvasElement): Promise<void> {
+  private async handlePointerUp(
+    e: PointerEvent,
+    canvas: HTMLCanvasElement
+  ): Promise<void> {
     if (e.pointerType === "mouse") {
       await this.handleMouseUp(e, canvas);
       this.releasePointer(canvas, e);
@@ -2574,7 +2684,10 @@ export class NodeEditor {
     }
   }
 
-  private async handleMouseUp(e: MouseEvent, canvas: HTMLCanvasElement): Promise<void> {
+  private async handleMouseUp(
+    e: MouseEvent,
+    canvas: HTMLCanvasElement
+  ): Promise<void> {
     this.isPanning = false;
 
     if (this.activeConnectionDrag) {
@@ -2622,9 +2735,11 @@ export class NodeEditor {
             this.syncHandleStates(edge.targetNodeId);
             this.applyCompositionReferenceForEdge(edge);
             const snapshot: EdgeHistorySnapshot = { ...edge };
-            this.pushCommand(new ConnectCommand({
-              edgeSnapshot: snapshot,
-            }));
+            this.pushCommand(
+              new ConnectCommand({
+                edgeSnapshot: snapshot,
+              })
+            );
             this.events.dispatch("connect", {
               sourceId: source.sourceNodeId,
               sourceType: sourceNode.nodeType,
@@ -2662,7 +2777,9 @@ export class NodeEditor {
 
       const draggedNodeIds: number[] = [];
       if (this.draggingSelection) {
-        draggedNodeIds.push(...this.draggingSelection.entries.map((e) => e.nodeId));
+        draggedNodeIds.push(
+          ...this.draggingSelection.entries.map((e) => e.nodeId)
+        );
       } else if (this.draggingNode) {
         draggedNodeIds.push(this.draggingNode.id);
       }
@@ -2681,14 +2798,17 @@ export class NodeEditor {
       this.store.clearDropTargets();
 
       if (dropResult.didChange) {
-        this.pushCommand(new MoveSelectionCommand({
-          beforeSnapshots: dropResult.beforeSnapshots,
-          afterSnapshots: dropResult.afterSnapshots,
-          cloneSnapshots: dropResult.cloneSnapshots,
-          removedReferenceEdgeSnapshots: dropResult.removedReferenceEdgeSnapshots,
-          selectionBefore,
-          affectedParentIds: dropResult.affectedParentIds,
-        }));
+        this.pushCommand(
+          new MoveSelectionCommand({
+            beforeSnapshots: dropResult.beforeSnapshots,
+            afterSnapshots: dropResult.afterSnapshots,
+            cloneSnapshots: dropResult.cloneSnapshots,
+            removedReferenceEdgeSnapshots:
+              dropResult.removedReferenceEdgeSnapshots,
+            selectionBefore,
+            affectedParentIds: dropResult.affectedParentIds,
+          })
+        );
       }
 
       this.syncToolbarState();
@@ -2702,7 +2822,7 @@ export class NodeEditor {
       const source = this.draggingNode;
       const snapshot = this.dragSnapshot;
       const selectionBefore = this.captureSelectionSnapshot();
-      const sourceId = source.id;  // capture as primitive, not mutable ref
+      const sourceId = source.id; // capture as primitive, not mutable ref
       let command: Command | null = null;
       const sourceOwningSubgraphId = this.getOwningSubgraphId(source.id);
 
@@ -2759,7 +2879,10 @@ export class NodeEditor {
           canEnterHoveredContainer
         ) {
           const parentChanged = source.parentId !== hoveredContainer.id;
-          if (!parentChanged || this.store.setParent(source.id, hoveredContainer.id)) {
+          if (
+            !parentChanged ||
+            this.store.setParent(source.id, hoveredContainer.id)
+          ) {
             const afterPlacement: NodePlacementSnapshot = {
               localX: source.localX,
               localY: source.localY,
@@ -2861,7 +2984,8 @@ export class NodeEditor {
         ) {
           command = new MoveSelectionCommand({
             beforeSnapshots:
-              snapshot.subtreeSnapshots ?? this.captureSubtreeSnapshots(source.id),
+              snapshot.subtreeSnapshots ??
+              this.captureSubtreeSnapshots(source.id),
             afterSnapshots: this.captureSubtreeSnapshots(source.id),
             cloneSnapshots: [],
             removedReferenceEdgeSnapshots: [],
@@ -3045,7 +3169,10 @@ export class NodeEditor {
       return false;
     }
 
-    const { x: worldX, y: worldY } = this.camera.screenToWorld(screenX, screenY);
+    const { x: worldX, y: worldY } = this.camera.screenToWorld(
+      screenX,
+      screenY
+    );
     const selectionBefore = this.captureSelectionSnapshot();
     const parentId = dropTarget?.nodeType === "subgraph" ? dropTarget.id : null;
     const hub = this.store.add(
@@ -3109,12 +3236,14 @@ export class NodeEditor {
     this.setNodeSelected(hub.id, true);
     this.refreshContainerChain(parentId);
 
-    this.pushCommand(new CreateHubFromConnectionDropCommand({
-      hubSnapshot,
-      edgeSnapshot,
-      selectionBefore,
-      parentId,
-    }));
+    this.pushCommand(
+      new CreateHubFromConnectionDropCommand({
+        hubSnapshot,
+        edgeSnapshot,
+        selectionBefore,
+        parentId,
+      })
+    );
 
     this.events.dispatch("hub:created", {
       hubId: hub.id,

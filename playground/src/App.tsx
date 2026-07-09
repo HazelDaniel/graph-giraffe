@@ -1,8 +1,11 @@
-import './App.css'
-import logoSvg from '/logo.svg'
-import {shaders} from "@graph-giraffe/core";
+import "@graph-giraffe/core";
+import { NodeEditor, useGraphEvent } from "@graph-giraffe/react";
+import type { NodeEditorHandle } from "@graph-giraffe/react";
 
-/* ====== Inline SVG Icons ====== */
+import "./App.css";
+import logoSvg from "/logo.svg";
+import { useCallback, useRef } from "react";
+
 const icons = {
   github: (
     <svg viewBox="0 0 16 16" fill="currentColor">
@@ -10,99 +13,196 @@ const icons = {
     </svg>
   ),
   docs: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="2" y="1" width="12" height="14" rx="1.5" />
       <path d="M5 4.5h6M5 7.5h6M5 10.5h3" />
     </svg>
   ),
   nodes: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="3" y="3" width="7" height="7" rx="1.5" />
       <rect x="14" y="14" width="7" height="7" rx="1.5" />
       <path d="M10 6.5h4.5a2 2 0 012 2V14" />
     </svg>
   ),
   pointer: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M3 2l2.5 11 2.5-4 4-2.5z" />
     </svg>
   ),
   hand: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M8 1.5v7M5.5 3.5v5M10.5 3.5v5M3 7.5v3a4 4 0 004 4h2a4 4 0 004-4v-3M13 5.5v5" />
     </svg>
   ),
   edge: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    >
       <circle cx="3" cy="8" r="1.5" />
       <circle cx="13" cy="8" r="1.5" />
       <path d="M4.5 8c2 0 3-3 5-3s2 3 4 3" />
     </svg>
   ),
   zoomIn: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    >
       <circle cx="7" cy="7" r="5" />
       <path d="M11 11l3.5 3.5M7 5v4M5 7h4" />
     </svg>
   ),
   zoomOut: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    >
       <circle cx="7" cy="7" r="5" />
       <path d="M11 11l3.5 3.5M5 7h4" />
     </svg>
   ),
   fitView: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" />
       <rect x="5" y="5" width="6" height="6" rx="1" />
     </svg>
   ),
   undo: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M3 6h7a3 3 0 010 6H8" />
       <path d="M5 4L3 6l2 2" />
     </svg>
   ),
   redo: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M13 6H6a3 3 0 000 6h2" />
       <path d="M11 4l2 2-2 2" />
     </svg>
   ),
-} as const
+} as const;
+
+function EventLogger() {
+  useGraphEvent("connect", (payload) => {
+    console.log("[demo] connect", payload);
+  });
+
+  useGraphEvent("node:click", (payload) => {
+    console.log("[demo] node:click", payload.nodeId);
+  });
+
+  useGraphEvent("node:labelChange", (payload) => {
+    console.log("[demo] label changed", payload.nodeId, payload.newLabel);
+  });
+
+  return null;
+}
 
 /* ====== Feature Data ====== */
 const features = [
   {
-    icon: '⚡',
-    color: 'teal' as const,
-    title: 'WebGL Rendering',
-    description: 'GPU-accelerated rendering with custom shaders, MSDF text, and 9-slice scaling.',
+    icon: "⚡",
+    color: "teal" as const,
+    title: "WebGL Rendering",
+    description:
+      "GPU-accelerated rendering with custom shaders, MSDF text, and 9-slice scaling.",
   },
   {
-    icon: '🔗',
-    color: 'cyan' as const,
-    title: 'Edge Routing',
-    description: 'Intelligent edge geometry with smooth Bézier curves and connection handles.',
+    icon: "🔗",
+    color: "cyan" as const,
+    title: "Edge Routing",
+    description:
+      "Intelligent edge geometry with smooth Bézier curves and connection handles.",
   },
   {
-    icon: '📦',
-    color: 'indigo' as const,
-    title: 'Group Nodes',
-    description: 'Nested node hierarchies with reparenting, subgraphs, and compositions.',
+    icon: "📦",
+    color: "indigo" as const,
+    title: "Group Nodes",
+    description:
+      "Nested node hierarchies with reparenting, subgraphs, and compositions.",
   },
   {
-    icon: '↩️',
-    color: 'purple' as const,
-    title: 'Undo / Redo',
-    description: 'Command-based history with serializable snapshots and full state replay.',
+    icon: "↩️",
+    color: "purple" as const,
+    title: "Undo / Redo",
+    description:
+      "Command-based history with serializable snapshots and full state replay.",
   },
-]
+];
 
 function App() {
+  const editorRef = useRef<NodeEditorHandle>(null);
+
+  const handleConnect = useCallback(
+    (payload: { sourceId: number; targetId: number; edgeId: number }) => {
+      console.log(
+        `Connected #${payload.sourceId} → #${payload.targetId} (edge ${payload.edgeId})`
+      );
+    },
+    []
+  );
+
   return (
     <div className="app">
-      {/* ---- Header ---- */}
       <header className="header" id="playground-header">
         <div className="header-brand">
           <img
@@ -138,9 +238,18 @@ function App() {
       <main className="main">
         <section className="playground" id="playground-canvas-section">
           {/* Toolbar */}
-          <div className="toolbar" id="playground-toolbar" role="toolbar" aria-label="Editor tools">
+          <div
+            className="toolbar"
+            id="playground-toolbar"
+            role="toolbar"
+            aria-label="Editor tools"
+          >
             <div className="toolbar-group">
-              <button className="toolbar-btn active" title="Select" id="tool-select">
+              <button
+                className="toolbar-btn active"
+                title="Select"
+                id="tool-select"
+              >
                 {icons.pointer}
                 <span>Select</span>
               </button>
@@ -151,11 +260,19 @@ function App() {
             </div>
 
             <div className="toolbar-group">
-              <button className="toolbar-btn" title="Add Node" id="tool-add-node">
+              <button
+                className="toolbar-btn"
+                title="Add Node"
+                id="tool-add-node"
+              >
                 {icons.nodes}
                 <span>Add Node</span>
               </button>
-              <button className="toolbar-btn" title="Add Edge" id="tool-add-edge">
+              <button
+                className="toolbar-btn"
+                title="Add Edge"
+                id="tool-add-edge"
+              >
                 {icons.edge}
                 <span>Connect</span>
               </button>
@@ -176,10 +293,18 @@ function App() {
               <button className="toolbar-btn" title="Zoom In" id="tool-zoom-in">
                 {icons.zoomIn}
               </button>
-              <button className="toolbar-btn" title="Zoom Out" id="tool-zoom-out">
+              <button
+                className="toolbar-btn"
+                title="Zoom Out"
+                id="tool-zoom-out"
+              >
                 {icons.zoomOut}
               </button>
-              <button className="toolbar-btn" title="Fit View" id="tool-fit-view">
+              <button
+                className="toolbar-btn"
+                title="Fit View"
+                id="tool-fit-view"
+              >
                 {icons.fitView}
               </button>
             </div>
@@ -194,7 +319,15 @@ function App() {
 
           {/* Canvas */}
           <div className="canvas-container" id="editor-canvas">
-            <canvas></canvas>
+            <NodeEditor
+              ref={editorRef}
+              connectionMode="node"
+              debug
+              onConnect={handleConnect}
+              style={{ width: "100%", height: "100vh", minHeight: "40rem" }}
+            >
+              <EventLogger />
+            </NodeEditor>
           </div>
         </section>
 
@@ -228,7 +361,7 @@ function App() {
         <span>Built with React + Vite</span>
       </footer>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
