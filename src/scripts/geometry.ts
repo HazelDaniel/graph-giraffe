@@ -67,8 +67,8 @@ export class BGGeometryNode {
 
   private generateDotMesh(): void {
     const gl = this.gl;
-    const Vsegments = this.canvas.height / 10;
-    const Hsegments = this.canvas.width / 10;
+    const Vsegments = Math.max(900, this.canvas.height) / 10;
+    const Hsegments = Math.max(900, this.canvas.width) / 10;
     //prettier-ignore
     const vertices = new Float32Array((Vsegments + 1) * (Hsegments + 1) * 2);
 
