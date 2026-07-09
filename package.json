@@ -1,6 +1,6 @@
 {
   "name": "@graph-giraffe/core",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "A GPU-accelerated, WebGL-powered node-editor library with custom texture and plugin-based custom node type support",
   "license": "MIT",
   "type": "module",
@@ -37,7 +37,7 @@
     "url": "https://github.com/HazelDaniel/graph-giraffe"
   },
   "scripts": {
-    "build": "vite build && tsc && cp ./index.css dist/style.css",
+    "build": "vite build && tsc && cp ./index.css dist/assets/style.css",
     "build:types": "tsc --emitDeclarationOnly",
     "dev": "tsc -w",
     "test": "vitest run",
