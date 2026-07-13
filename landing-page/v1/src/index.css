@@ -133,7 +133,7 @@
       1.0165 42.36%,
       1.0024,
       0.9915,
-      0.9837,
+      0.9837
     );
     animation-delay: calc((var(--delay)) * 1s);
     animation-iteration-count: 1;
@@ -167,13 +167,8 @@ header {
 
   left: 50%;
   transform: translateX(-50%);
-  top: 25px;
 
-  background: rgba(255, 255, 255, 0.1);
-  outline: 10px solid #fafafa;
-  outline-offset: -0.3rem;
-  box-shadow: inset 1px 4px 70px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(57px);
+  @apply bg-primary-50;
   border-radius: 0.8rem;
 }
 

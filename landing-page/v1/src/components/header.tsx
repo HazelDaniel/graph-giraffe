@@ -2,7 +2,8 @@ import { Button } from "./button"
 import { Logo } from "./logo"
 
 export const Header: React.FC = ()=> {
-  return <header className="flex justify-between items-center z-9">
+  return <>
+  <header className="flex justify-between items-center z-9 bg-primary-50 top-[25px]" style={{backgroundImage:"url(/icons/cross-stroke-bg.svg)", backgroundRepeat: "no-repeat", backgroundSize: "contain 100%", backgroundPosition: "10%, -10%"}}>
     <div className="logo-div">
       <Logo className="w-[1.8rem] h-[1.8rem]" variant="secondary"/>
     </div>
@@ -14,4 +15,6 @@ export const Header: React.FC = ()=> {
     </ul>
     <Button text="Github" variant="primary" />
   </header>
+  
+  </>
 }
