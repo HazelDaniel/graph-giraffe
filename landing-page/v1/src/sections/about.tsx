@@ -1,24 +1,27 @@
 import { SectionAccessoryIcon } from "../components/section-accessory-icon";
-
 import {
   useRef,
   useState,
   useEffect,
-  useCallback,
   useLayoutEffect,
 } from "react";
-import { interpolate } from "flubber";
-
 import gsap from "gsap";
 import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
+import GLAnimatedFrame from "../components/gl-animated-frame";
 
 type TabListItemProps = {
   iconUrl: string;
   heading: string;
   content: string;
+  activeIndex: number;
+  setActiveIndex: React.Dispatch<React.SetStateAction<number>>;
+  id: number;
 };
 
-const tabListData: (TabListItemProps & {})[] = [
+const tabListData: (Omit<
+  TabListItemProps,
+  "activeIndex" | "setActiveIndex" | "id"
+> & {})[] = [
   {
     content: "Answers questions instantly using knowledge you already have.",
     heading: "Custom Primitive Texture",
@@ -38,36 +41,72 @@ const tabListData: (TabListItemProps & {})[] = [
 
 gsap.registerPlugin(MorphSVGPlugin);
 
-const SectionTabListItem: React.FC<TabListItemProps> = ({
+export const SectionTabListItem: React.FC<TabListItemProps> = ({
   heading,
   iconUrl,
   content,
+  activeIndex,
+  id,
+  setActiveIndex,
 }) => {
+  const active = activeIndex === id;
   return (
-    <li className="w-full p-4 flex gap-6 items-center border-b-2 border-b-primary-400">
+    <li
+      className="w-[95%] p-4 flex gap-6 items-center border-b-2 border-b-primary-400 cursor-pointer"
+      onClick={() => {
+        setActiveIndex(id);
+      }}
+    >
       <span className="flex size-12 rounded-full items-center justify-center bg-dark pb-2">
         <svg className="size-full scale-60 origin-bottom text-primary-50">
           <use xlinkHref={`#${iconUrl}`}></use>
         </svg>
       </span>
       <div className="flex-1">
-        <h4 className="font-geist-bold text-xl">{heading}</h4>
-        <p className="text-dark/60 text-sm">{content}</p>
+        <h4
+          className={
+            `font-geist-bold text-l pb-2` +
+            ` ${active ? "decoration-wavy underline underline-offset-2" : ""}`
+          }
+        >
+          {heading}
+        </h4>
+        <p className="text-dark/60 text-xs max-w-[90%]">{content}</p>
       </div>
     </li>
   );
 };
 
 export const About: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<number>(0);
+  const parentRef = useRef<HTMLElement>(null);
+  const [renderCount, setRenderCount] = useState<number>(0);
+
+  useEffect(() => {
+    const intervalID = setInterval(() => {
+      setActiveTab((current) => {
+        const next = (current + 1) % 3;
+        return next;
+      });
+    }, 5000);
+
+    return () => clearInterval(intervalID);
+  }, []);
+
   return (
     <section className="w-full min-h-[30rem] pt-[18rem] relative bg-primary-100">
-      <SectionAccessoryIcon className="left-[25vw] top-16" />
+      <SectionAccessoryIcon
+        className="left-[25vw] top-32 size-14"
+        innerClassName="-right-[3.6rem]"
+        innerImageUrl="/icons/scribble-text-1.svg"
+        imageUrl="/images/hero-emoji-1.png"
+      />
       <h2 className="font-gasoek text-[3.2rem] leading-[3.8rem] mb-14">
         The "Everything"
         <br /> Node Library
       </h2>
-      <div className="bg-[#ADF845] rounded-[3.2rem] p-4 pb-0 flex items-end min-h-[40rem]">
-        <div className="px-8 py-8 flex flex-col gap-6 bg-primary-50 rounded-l-[inherit]">
+      <div className="bg-[#ADF845] rounded-[3.2rem] p-4 pb-0 flex items-end h-[38rem]">
+        <div className="px-8 py-8 flex flex-col gap-6 bg-primary-50 rounded-l-[inherit] h-full max-w-[28rem]">
           <h4 className="text-tertiary-700">Library Features</h4>
           <div className="flex items-center w-full gap-4">
             <p className="font-geist-bold text-[1.38rem] text-tertiary-700 max-w-[17.8rem]">
@@ -90,11 +129,39 @@ export const About: React.FC = () => {
               </svg>
             </span>
           </div>
-          <ul className="mt-[8rem] flex flex-col w-[clamp(8rem,30rem,95vw)] mb-16">
+          <ul className="mt-auto flex flex-col w-[clamp(8rem,30rem,95vw)] mb-16 pr-4 w-full">
             {tabListData.map((item, index) => (
-              <SectionTabListItem key={index} {...item} />
+              <SectionTabListItem
+                key={index}
+                {...item}
+                id={index}
+                activeIndex={activeTab}
+                setActiveIndex={setActiveTab}
+              />
             ))}
           </ul>
+        </div>
+        <div
+          className="w-[clamp(8rem,44.2rem,95vw)] bg-primary-700 h-full rounded-r-[inherit]"
+          onClick={() => {
+            setActiveTab((current) => {
+              const next = (current + 1) % 3;
+              return next;
+            });
+          }}
+          //@ts-ignore
+          ref={parentRef}
+        >
+          <GLAnimatedFrame
+            images={[
+              "/images/about-section-image-nodes.png",
+              "/images/all-you-need-image-install.png",
+            ]}
+            activeIndex={activeTab}
+            parentRef={parentRef}
+            setRenderCount={setRenderCount}
+            renderCount={renderCount}
+          />
         </div>
       </div>
       <CardsSection />
@@ -107,34 +174,57 @@ const CardsSection: React.FC = () => {
     <div className="py-48 flex flex-col gap-16">
       <h3 className="font-gasoek text-3xl">More Than Just A Node Editor...</h3>
       <ul className="flex gap-[2%] flex-wrap">
-        <AboutSectionCardItem color="#D100D4" iconUrl="puzzle" title="First Class Plugin support" />
-        <AboutSectionCardItem color="#D40004" iconUrl="bolt" title="lightning fast rendering engine" />
-        <AboutSectionCardItem color="#00D47F" iconUrl="subgraph" title="Reusable subgraphs" />
+        <AboutSectionCardItem
+          className="bg-[#D100D4]"
+          iconUrl="puzzle"
+          title="First Class Plugin support"
+        />
+        <AboutSectionCardItem
+          className="bg-[#D40004]"
+          iconUrl="bolt"
+          title="lightning fast rendering engine"
+        />
+        <AboutSectionCardItem
+          className="bg-[#00D47F]"
+          iconUrl="subgraph"
+          title="Reusable subgraphs"
+        />
 
         <li className="py-14 px-6 flex flex-col gap-6 justify-center items-center text-primary-100  rounded-[1rem] shadow-[0px_4px_4px_-1px_rgba(0,0,0,0.07)] bg-[#ADF845] relative z-0">
           <div className="size-full absolute top-[-1rem] right-[-1rem] rounded-[inherit] bg-dark -z-1"></div>
-        <div className="flex gap-4">
-          <p className="text-primary-100  max-w-[10rem] font-geist-medium text-sm pl-2">Check Out More Features In <span className="underline underline-offset-2 decoration-wavy"><a href="" className="text-inherit">The Docs</a></span></p>
-        </div>
-      </li>
-
+          <div className="flex gap-4">
+            <p className="text-primary-100  max-w-[10rem] font-geist-medium text-sm pl-2">
+              Check Out More Features In{" "}
+              <span className="underline underline-offset-2 decoration-wavy">
+                <a href="" className="text-inherit">
+                  The Docs
+                </a>
+              </span>
+            </p>
+          </div>
+        </li>
       </ul>
     </div>
   );
 };
 
-
 type IconBGProps = {
   iconUrl: string;
-  color: string;
-}
-const CardIconBG: React.FC<IconBGProps> = ({color, iconUrl}) => {
-  return <span className={`flex items-center justify-center bg-[${color}] size-12 rounded-full shadow-[0px_4px_4px_-1px_rgba(0,0,0,0.15)]`}>
-    <svg className="size-full scale-60">
-      <use xlinkHref={`#${iconUrl}`}></use>
-    </svg>
-  </span>
-}
+  className: string;
+};
+const CardIconBG: React.FC<IconBGProps> = ({ className, iconUrl }) => {
+  return (
+    <span
+      className={`flex items-center justify-center ${
+        className || ""
+      } size-12 rounded-full shadow-[0px_4px_4px_-1px_rgba(0,0,0,0.15)]`}
+    >
+      <svg className="size-full scale-60">
+        <use xlinkHref={`#${iconUrl}`}></use>
+      </svg>
+    </span>
+  );
+};
 
 type SectionCardItemProp = {
   width: number;
@@ -148,9 +238,9 @@ const BLOB_PATH =
 const DURATION = 0.4;
 
 const AboutSectionCardItem: React.FC<SectionCardItemProp & IconBGProps> = ({
-  color,
+  className,
   iconUrl,
-  title
+  title,
 }) => {
   const blobRef = useRef<SVGPathElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
@@ -163,8 +253,8 @@ const AboutSectionCardItem: React.FC<SectionCardItemProp & IconBGProps> = ({
     const side = Math.min(w, h);
     const cx = x + w / 2;
     const cy = y + h / 2;
-    const x0 = cx - (side) / 2;
-    const y0 = cy - (side) / 2;
+    const x0 = cx - side / 2;
+    const y0 = cy - side / 2;
     const x1 = cx + (side + 1200) / 2;
     const y1 = cy + (side + 1200) / 2;
 
@@ -183,15 +273,16 @@ const AboutSectionCardItem: React.FC<SectionCardItemProp & IconBGProps> = ({
 
   return (
     <li className="flex flex-col justify-center text-primary-100 bg-primary-50 rounded-[1rem] shadow-[0px_4px_4px_-1px_rgba(0,0,0,0.07)] relative overflow-hidden group/section-card mb-8">
-      <div className="flex flex-col gap-6 p-8 px-12 rounded-[1rem] relative z-4"
-          onMouseEnter={() => squarePath && morphTo(squarePath)}
-          onMouseLeave={() => morphTo(BLOB_PATH)}
+      <div
+        className="flex flex-col gap-6 p-8 px-12 rounded-[1rem] relative z-4"
+        onMouseEnter={() => squarePath && morphTo(squarePath)}
+        onMouseLeave={() => morphTo(BLOB_PATH)}
       >
-        <CardIconBG color={color} iconUrl={iconUrl} />
+        <CardIconBG className={className} iconUrl={iconUrl} />
 
         <div className="flex gap-4">
           <p className="text-dark text-md w-[9.6rem] font-geist-medium">
-          {title}
+            {title}
           </p>
           <span className="inline-flex size-8 text-dark">
             <svg className="size-full scale-60 duration-[0.3s] group-hover/section-card:rotate-[-45deg] transition-transform">

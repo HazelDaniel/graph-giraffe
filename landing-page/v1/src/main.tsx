@@ -4,7 +4,7 @@ import "./index.css";
 import App from "./App.tsx";
 
 createRoot(document.body!).render(
-  <StrictMode>
+  // <StrictMode>
     <>
       <svg id="sprite" style={{ display: "none" }}>
         <symbol id="subgraph">
@@ -131,5 +131,5 @@ createRoot(document.body!).render(
       </svg>
       <App />
     </>
-  </StrictMode>
+  // </StrictMode>
 );

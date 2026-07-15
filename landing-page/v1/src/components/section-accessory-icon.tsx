@@ -7,17 +7,32 @@ type AccessoryIconProps = {
   ease: CSSProperties["animationTimingFunction"];
   className?: string;
   innerClassName?: string;
+  innerImageUrl: string;
 };
 
-export const SectionAccessoryIcon: React.FC<
-  Partial<AccessoryIconProps>
-> = ({className}) => {
-  return <div className={`absolute flex items-center justify-center ${className || ""}`}>
-    <span className="relative flex overflow-visible">
-      <img src="/public/images/hero-emoji-1.png" alt="" />
-      <span className="absolute top-0 right-[-2rem] size-[3rem] flex items-center justify-center">
-        <img src="/public/icons/scribble-text-1.svg" alt="" />
+export const SectionAccessoryIcon: React.FC<Partial<AccessoryIconProps>> = ({
+  className,
+  innerImageUrl,
+  imageUrl,
+  steps,
+  duration,
+  ease,
+  innerClassName,
+}) => {
+  return (
+    <div
+      className={`absolute flex items-center justify-center ${className || ""}`}
+    >
+      <span className="relative flex overflow-visible">
+        <img src={imageUrl} alt="" />
+        <span
+          className={`absolute top-0 size-[3rem] flex items-center justify-center ${
+            innerClassName || ""
+          }`}
+        >
+          <img src={innerImageUrl} alt="" />
+        </span>
       </span>
-    </span>
-  </div>
+    </div>
+  );
 };
