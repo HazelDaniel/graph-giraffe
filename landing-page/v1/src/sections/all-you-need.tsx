@@ -35,9 +35,7 @@ const tabListData: (Omit<
   },
 ];
 
-
 gsap.registerPlugin(MorphSVGPlugin);
-
 
 export const AllYouNeed: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(0);
@@ -58,10 +56,10 @@ export const AllYouNeed: React.FC = () => {
   return (
     <section className="w-full min-h-[30rem] pt-[18rem] pb-[8rem] relative bg-primary-200">
       <SectionAccessoryIcon
-        className="left-[25vw] top-32 size-14"
-        innerClassName="-right-[3.6rem]"
-        innerImageUrl="/icons/scribble-text-1.svg"
-        imageUrl="/images/hero-emoji-1.png"
+        className="right-[8vw] top-16 size-16 scale-x-[-1]"
+        innerClassName="left-[-3rem] scale-x-[-1]"
+        innerImageUrl="/icons/scribble-text-2.svg"
+        imageUrl="/images/hero-emoji-2.svg"
       />
       <h2 className="font-gasoek text-[3.2rem] leading-[3.8rem] mb-14">
         The "Everything"
@@ -128,4 +126,3 @@ export const AllYouNeed: React.FC = () => {
     </section>
   );
 };
-

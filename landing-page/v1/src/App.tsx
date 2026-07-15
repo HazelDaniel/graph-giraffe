@@ -1,3 +1,4 @@
+import { Copyright } from "./components/copyright";
 import { Footer } from "./components/footer";
 import { Header } from "./components/header";
 import { Hero } from "./components/hero";
@@ -17,6 +18,7 @@ function App() {
       <Testimonials />
       <Partners />
       <Footer />
+      <Copyright />
     </>
   );
 }
