@@ -142,7 +142,7 @@ export const About: React.FC = () => {
           </ul>
         </div>
         <div
-          className="w-full md:w-[clamp(8rem,44.2rem,95vw)] bg-primary-700 h-full rounded-[inherit] md:rounded-l-[unset] max-h-[40rem]"
+          className="w-full md:w-[clamp(8rem,44.2rem,95vw)] bg-primary-700 h-full rounded-[inherit] md:rounded-l-[unset] max-h-[30rem] md:max-h-[40rem]"
           onClick={() => {
             setActiveTab((current) => {
               const next = (current + 1) % 3;
@@ -172,7 +172,7 @@ export const About: React.FC = () => {
 const CardsSection: React.FC = () => {
   return (
     <div className="py-48 flex flex-col gap-16">
-      <h3 className="font-gasoek text-3xl">More Than Just A Node Editor...</h3>
+      <h3 className="font-gasoek text-3xl text-center md:text-start">More Than Just A Node Editor...</h3>
       <ul className="flex gap-[2%] flex-wrap z-2">
         <AboutSectionCardItem
           className="bg-[#D100D4]"
@@ -190,7 +190,7 @@ const CardsSection: React.FC = () => {
           title="Reusable subgraphs"
         />
 
-        <li className="py-14 px-6 flex flex-col gap-6 justify-center items-center text-primary-100  rounded-[1rem] shadow-[0px_4px_4px_-1px_rgba(0,0,0,0.07)] bg-[#ADF845] relative z-0">
+        <li className="py-14 px-6 flex flex-col gap-6 justify-center items-center text-primary-100  rounded-[1rem] shadow-[0px_4px_4px_-1px_rgba(0,0,0,0.07)] bg-[#ADF845] relative z-0 w-[clamp(8rem,28rem,95vw)] md:w-max md:min-w-[48rem] mx-auto md:mx-[unset] mt-16 md:mt-2">
           <div className="size-full absolute top-[-1rem] right-[-1rem] rounded-[inherit] bg-dark -z-1"></div>
           <div className="flex gap-4">
             <p className="text-primary-100  max-w-[10rem] font-geist-medium text-sm pl-2">
@@ -272,7 +272,7 @@ const AboutSectionCardItem: React.FC<SectionCardItemProp & IconBGProps> = ({
   };
 
   return (
-    <li className="flex flex-col justify-center text-primary-100 bg-primary-50 rounded-[1rem] shadow-[0px_4px_4px_-1px_rgba(0,0,0,0.07)] relative overflow-hidden group/section-card mb-8">
+    <li className="flex flex-col justify-center text-primary-100 bg-primary-50 rounded-[1rem] shadow-[0px_4px_4px_-1px_rgba(0,0,0,0.07)] relative overflow-hidden group/section-card mb-8 w-[28rem] md:w-max h-[18rem] md:h-[unset] mx-auto md:mx-[unset]">
       <div
         className="flex flex-col gap-6 p-8 px-12 rounded-[1rem] relative z-4"
         onMouseEnter={() => squarePath && morphTo(squarePath)}

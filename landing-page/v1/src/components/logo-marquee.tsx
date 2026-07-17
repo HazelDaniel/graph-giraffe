@@ -71,16 +71,16 @@ export const LogoMarquee: React.FC<LogoMarqueeProps> = function({
         <div className="lm-group">
           {!imageUrls.length ? logos.map((logo, i) => (
             <LogoChip key={`a-${i}`} {...logo} />
-          )) : imageUrls.map((url, i) => (
-            <img src={url} alt={`logo chip image ${i + 1}`} className="" />
-          ))
+          )) : imageUrls.map((url, i) => {
+            return <img src={url} alt={`logo chip image ${i + 1}`} className="h-12" key={i}/>
+          })
           }
         </div>
         <div className="lm-group" aria-hidden="true">
           {!imageUrls.length ? logos.map((logo, i) => (
             <LogoChip key={`a-${i}`} {...logo} />
           )) : imageUrls.map((url, i) => (
-            <img src={url} alt={`logo chip image ${i + 1}`} className="" />
+            <img src={url} alt={`logo chip image ${i + 1}`} className="h-12" key={i}/>
           ))
           }
         </div>

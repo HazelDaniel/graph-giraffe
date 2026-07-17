@@ -101,7 +101,7 @@ export const AllYouNeed: React.FC = () => {
           </ul>
         </div>
         <div
-          className="w-full md:w-[clamp(8rem,44.2rem,95vw)] h-full rounded-[inherit] md:rounded-l-[unset] max-h-[40rem]"
+          className="w-full md:w-[clamp(8rem,44.2rem,95vw)] h-full rounded-[inherit] md:rounded-l-[unset] max-h-[30rem] md:max-h-[40rem]"
             onClick={() => {
             setActiveTab((current) => {
               const next = (current + 1) % 3;

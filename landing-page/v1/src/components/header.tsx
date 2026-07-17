@@ -53,7 +53,7 @@ export const Header: React.FC = () => {
 
       <ul
         className={
-          `flex flex-col fixed top-0 left-0 w-full gap-[10%] md:hidden z-4 bg-primary-50 pt-[15rem] text-2xl px-8 cursor-pointer transition-all duration-150` +
+          `flex flex-col fixed top-0 left-0 w-full gap-[10%] md:hidden z-4 bg-primary-50 pt-[15rem] text-2xl px-8 cursor-pointer transition-all duration-150 text-dark` +
           ` ${expanded ? "h-screen" : "h-0 scale-y-0"}`
         }
         role="navigation"
