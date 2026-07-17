@@ -151,23 +151,40 @@ function buildParticleVAO(
 
 function loadTexture(
   gl: WebGL2RenderingContext,
-  src: string
+  src: string,
+  canvas: HTMLCanvasElement
 ): Promise<WebGLTexture> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    // img.style.width = `${canvasref.current.width}px`;
-    // img.style.height = `${canvasref.current.height}px`;
-    // img.style.objectFit = "contain";
+    img.style.objectFit = "cover";
+    const tmpCanvas: HTMLCanvasElement = document.createElement("canvas");
 
     img.crossOrigin = "anonymous";
     img.onload = () => {
+      (tmpCanvas.width = canvas.width), (tmpCanvas.height = canvas.height);
+      const tmpCtx = tmpCanvas.getContext("2d")!;
+      // console.log("===========");
+      // console.log(tmpCanvas.width, tmpCanvas.height);
+      // console.log(canvas.width, canvas.height);
+      // console.log("===========\n");
+      tmpCtx.drawImage(img, 0, 0, tmpCanvas.width, tmpCanvas.height);
+
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+
       const tex = gl.createTexture()!;
       gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        tmpCanvas
+      );
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       resolve(tex);
     };
     img.onerror = reject;
@@ -226,6 +243,7 @@ export default function GLAnimatedFrame({
       1
     )
       return;
+
     window.addEventListener("resize", () => {
       if (!canvasRef?.current) return;
       canvasRef.current.width = canvasRef.current.clientWidth;
@@ -330,8 +348,15 @@ export default function GLAnimatedFrame({
       glRefUpdateCount: prev.glRefUpdateCount + 1,
     }));
     programRef.current = program;
+
+    // canvas-viewport sync
+    if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+
     vaoRef.current = buildParticleVAO(gl, width, height);
-    gl.viewport(0, 0, canvas.width, canvas.height);
 
     [
       "uResolution",
@@ -346,10 +371,12 @@ export default function GLAnimatedFrame({
         (uniformLocsRef.current[name] = gl.getUniformLocation(program, name))
     );
 
-    Promise.all(images.map((src) => loadTexture(gl, src))).then((textures) => {
-      texturesRef.current = textures;
-      render(null, activeIndexRef.current, 1);
-    });
+    Promise.all(images.map((src) => loadTexture(gl, src, canvas))).then(
+      (textures) => {
+        texturesRef.current = textures;
+        render(null, activeIndexRef.current, 1);
+      }
+    );
 
     return () => {
       tweenRef.current?.kill();
