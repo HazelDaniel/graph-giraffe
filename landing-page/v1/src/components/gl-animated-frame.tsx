@@ -151,7 +151,7 @@ function buildParticleVAO(
 
 function loadTexture(
   gl: WebGL2RenderingContext,
-  src: string,
+  src: string
 ): Promise<WebGLTexture> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -265,11 +265,15 @@ export default function GLAnimatedFrame({
       let width = parseInt(width_),
         height = parseInt(height_);
 
+      if (
+        canvasRef.current.width !== canvasRef.current.clientWidth ||
+        canvasRef.current.height !== canvasRef.current.clientHeight
+      ) {
+        canvasRef.current.width = canvasRef.current.clientWidth;
+        canvasRef.current.height = canvasRef.current.clientHeight;
+        gl.viewport(0, 0, width, height);
+      }
 
-      canvasRef.current.width = canvasRef.current.clientWidth;
-      canvasRef.current.height = canvasRef.current.clientHeight;
-
-      gl.viewport(0, 0, width, height);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.enable(gl.BLEND);
@@ -342,12 +346,10 @@ export default function GLAnimatedFrame({
         (uniformLocsRef.current[name] = gl.getUniformLocation(program, name))
     );
 
-    Promise.all(images.map((src) => loadTexture(gl, src))).then(
-      (textures) => {
-        texturesRef.current = textures;
-        render(null, activeIndexRef.current, 1);
-      }
-    );
+    Promise.all(images.map((src) => loadTexture(gl, src))).then((textures) => {
+      texturesRef.current = textures;
+      render(null, activeIndexRef.current, 1);
+    });
 
     return () => {
       tweenRef.current?.kill();
@@ -376,5 +378,10 @@ export default function GLAnimatedFrame({
     });
   }, [activeIndex, render, parentRef]);
 
-  return <canvas ref={canvasRef} className="rounded-[inherit] size-full" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="rounded-[inherit] size-full max-h-[inherit]"
+    />
+  );
 }

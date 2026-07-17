@@ -3,7 +3,7 @@ import { Logo } from "./logo";
 
 export const Footer: React.FC = () => {
   return (
-    <footer id="footer" className="w-full bottom-0 h-[28rem] bg-dark relative flex flex-col items-center justify-center">
+    <footer id="footer" className="w-full bottom-0 h-[28rem] bg-dark relative flex flex-col items-center justify-center overflow-hidden">
       <div className="absolute flex justify-between items-center size-full">
         <span className="block h-full">
           <svg height="100%" viewBox="0 0 590 921" fill="none" xmlns="http://www.w3.org/2000/svg">

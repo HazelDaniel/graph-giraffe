@@ -101,7 +101,7 @@ export const About: React.FC = () => {
         innerImageUrl="/icons/scribble-text-1.svg"
         imageUrl="/images/hero-emoji-1.png"
       />
-      <h2 className="font-gasoek text-[3.2rem] leading-[3.8rem] mb-14">
+      <h2 className="font-gasoek text-[3.2rem] leading-[3.8rem] mb-14 text-dark">
         The "Everything"
         <br /> Node Library
       </h2>
@@ -142,7 +142,7 @@ export const About: React.FC = () => {
           </ul>
         </div>
         <div
-          className="w-full md:w-[clamp(8rem,44.2rem,95vw)] bg-primary-700 h-full rounded-[inherit] md:rounded-l-[unset]"
+          className="w-full md:w-[clamp(8rem,44.2rem,95vw)] bg-primary-700 h-full rounded-[inherit] md:rounded-l-[unset] max-h-[40rem]"
           onClick={() => {
             setActiveTab((current) => {
               const next = (current + 1) % 3;

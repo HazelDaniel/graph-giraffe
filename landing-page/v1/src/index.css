@@ -233,6 +233,19 @@
       animation: none;
     }
   }
+
+  @media screen and (max-width: 900px) {
+    section {
+      @apply px-8;
+    }
+  }
+
+  @media screen and (max-width: 576px) {
+    section {
+      @apply px-2;
+    }
+
+  }
 }
 
 @layer utilities {
@@ -249,7 +262,7 @@ header {
   left: 50%;
   transform: translateX(-50%);
 
-  @apply bg-primary-50;
+  @apply bg-primary-50 w-[98vw] md:w-[95vw];
   border-radius: 0.8rem;
 }
 
