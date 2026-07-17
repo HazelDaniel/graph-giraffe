@@ -105,8 +105,8 @@ export const About: React.FC = () => {
         The "Everything"
         <br /> Node Library
       </h2>
-      <div className="bg-[#ADF845] rounded-[3.2rem] p-4 pb-0 flex items-end h-[38rem]">
-        <div className="px-8 py-8 flex flex-col gap-6 bg-primary-50 rounded-l-[inherit] h-full max-w-[28rem]">
+      <div className="bg-[#ADF845] rounded-[3.2rem] p-4 pb-0 flex flex-col md:flex-row items-center md:items-end md:h-[38rem]">
+        <div className="px-8 py-8 flex flex-col gap-6 shadow-2xl md:shadow-[unset] -translate-y-32 md:translate-y-0 bg-primary-50 rounded-r-[inherit] md:rounded-r-[unset] rounded-l-[inherit] h-full w-[95%] md:w-max md:max-w-[28rem] order-2 md:order-0">
           <h4 className="text-tertiary-700">Library Features</h4>
           <div className="flex items-center w-full gap-4">
             <p className="font-geist-bold text-[1.38rem] text-tertiary-700 max-w-[17.8rem]">
@@ -142,7 +142,7 @@ export const About: React.FC = () => {
           </ul>
         </div>
         <div
-          className="w-[clamp(8rem,44.2rem,95vw)] bg-primary-700 h-full rounded-r-[inherit]"
+          className="w-full md:w-[clamp(8rem,44.2rem,95vw)] bg-primary-700 h-full rounded-[inherit] md:rounded-l-[unset]"
           onClick={() => {
             setActiveTab((current) => {
               const next = (current + 1) % 3;
@@ -173,7 +173,7 @@ const CardsSection: React.FC = () => {
   return (
     <div className="py-48 flex flex-col gap-16">
       <h3 className="font-gasoek text-3xl">More Than Just A Node Editor...</h3>
-      <ul className="flex gap-[2%] flex-wrap">
+      <ul className="flex gap-[2%] flex-wrap z-2">
         <AboutSectionCardItem
           className="bg-[#D100D4]"
           iconUrl="puzzle"

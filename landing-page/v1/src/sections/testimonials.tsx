@@ -30,7 +30,7 @@ export const Testimonials: React.FC = () => {
           </svg>
         </span>
       </h2>
-      <div className="w-full flex justify-center gap-8 h-[32rem] my-auto flex-wrap">
+      <div className="w-full flex flex-col items-center md:flex-row justify-center gap-8 md:min-h-[32rem] my-auto flex-wrap">
         <div className="w-[clamp(20rem,25rem,95vw)] relative h-[25rem] flex items-center justify-center">
           <div className="absolute size-full top-0 left-0 flex z-2">
             <svg width="100%" height="100%" viewBox="0 0 656 723" fill="none" xmlns="http://www.w3.org/2000/svg" className="size-full scale-120 scale-x-120">

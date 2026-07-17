@@ -377,5 +377,5 @@ export default function GLAnimatedFrame({
     });
   }, [activeIndex, render, parentRef]);
 
-  return <canvas ref={canvasRef} className="rounded-r-[inherit] size-full" />;
+  return <canvas ref={canvasRef} className="rounded-[inherit] size-full" />;
 }

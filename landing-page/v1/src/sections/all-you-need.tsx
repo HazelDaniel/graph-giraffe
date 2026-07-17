@@ -62,11 +62,11 @@ export const AllYouNeed: React.FC = () => {
         imageUrl="/images/hero-emoji-2.svg"
       />
       <h2 className="font-gasoek text-[3.2rem] leading-[3.8rem] mb-14">
-        The "Everything"
-        <br /> Node Library
+        All You Need
+        <br /> To Get Started
       </h2>
-      <div className="bg-[#F8F245] rounded-[3.2rem] p-4 pb-0 flex items-end h-[38rem]">
-        <div className="px-8 py-8 flex flex-col gap-6 bg-primary-50 rounded-l-[inherit] h-full max-w-[28rem]">
+      <div className="bg-[#F8F245] rounded-[3.2rem] p-4 pb-0 flex flex-col md:flex-row items-center md:items-end md:h-[38rem]">
+        <div className="px-8 py-8 flex flex-col gap-6 shadow-2xl md:shadow-[unset] -translate-y-32 md:translate-y-0 bg-primary-50 rounded-r-[inherit] md:rounded-r-[unset] rounded-l-[inherit] h-full w-[95%] md:w-max md:max-w-[28rem] order-2 md:order-0">
           <div className="flex items-center w-full gap-4">
             <p className="font-geist-bold text-[1.38rem] text-tertiary-700 max-w-[17.8rem]">
               Bringing All The Goodies To You
@@ -101,7 +101,7 @@ export const AllYouNeed: React.FC = () => {
           </ul>
         </div>
         <div
-          className="w-[clamp(8rem,44.2rem,95vw)] h-full rounded-r-[inherit]"
+          className="w-full md:w-[clamp(8rem,44.2rem,95vw)] h-full rounded-[inherit] md:rounded-l-[unset]"
           onClick={() => {
             setActiveTab((current) => {
               const next = (current + 1) % 3;

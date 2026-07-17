@@ -127,7 +127,7 @@
       1.1552,
       1.1533,
       1.1466,
-      1.1361,
+      1.1361
     );
     animation-delay: calc((var(--delay)) * 1s);
     animation-iteration-count: 1;
@@ -215,8 +215,7 @@
   }
 
   .lm-name {
-    font: 500 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI",
-      sans-serif;
+    font: 500 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: #e5e7eb;
   }
 
@@ -234,8 +233,9 @@
       animation: none;
     }
   }
-
 }
+
+@layer utilities {
 
 header {
   width: 95vw;
@@ -260,5 +260,18 @@ header {
   padding: 0.6rem;
 
   border-radius: 8px;
-  @apply bg-tertiary-400 border-4 border-tertiary-100;
+  @apply bg-tertiary-400 border-4 border-dark/40;
+}
+
+  @media screen and (max-width: 900px) {
+    html {
+      font-size: 12px;
+    }
+  }
+
+  @media screen and (max-width: 300px) {
+    html {
+      font-size: 10px;
+    }
+  }
 }
