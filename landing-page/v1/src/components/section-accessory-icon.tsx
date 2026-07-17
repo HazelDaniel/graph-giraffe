@@ -14,9 +14,6 @@ export const SectionAccessoryIcon: React.FC<Partial<AccessoryIconProps>> = ({
   className,
   innerImageUrl,
   imageUrl,
-  steps,
-  duration,
-  ease,
   innerClassName,
 }) => {
   return (

@@ -26,7 +26,7 @@ export const HeroFloaterIcon: React.FC<FloaterIconProps> = ({
       if (!animation) return;
       const DURATION = 400;
       const targetTime = DURATION * 0.99 + delay * 1000;
-      let rafID = null;
+      let rafID: number | null = null;
 
       const stop = () => {
         if ((animation.currentTime as number) >= targetTime) {

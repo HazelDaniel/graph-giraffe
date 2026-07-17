@@ -1,41 +1,88 @@
-import { Button } from "./button"
-import { Logo } from "./logo"
-import React, { useRef, useState, useMemo, useCallback, useEffect } from "react";
+import { Button } from "./button";
+import { Logo } from "./logo";
+import React, {
+  useRef,
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+} from "react";
+//@ts-ignore
 import { interpolate } from "flubber";
 
-export const Header: React.FC = ()=> {
+export const Header: React.FC = () => {
   const [expanded, setExpanded] = useState<boolean>(false);
 
-  return <>
-    <header className="flex outline-dark ring-4 justify-between items-center z-10 bg-primary-50 top-[25px]" style={{backgroundImage:"url(/icons/cross-stroke-bg.svg)", backgroundRepeat: "no-repeat", backgroundSize: "contain 100%", backgroundPosition: "10%, -10%"}}>
-      <div className="logo-div">
-        <Logo className="w-[1.8rem] h-[1.8rem]" variant="secondary"/>
-      </div>
-      <ul className="flex-1 gap-[10%] text-lg  hidden md:flex" role="navigation" aria-label="navigation menu, desktop" >
-        <li className="underline font-geist-bold decoration-wavy underline-offset-4">Docs</li>
-        <li>Faq</li>
-        <li>Community</li>
-        <li>Demo</li>
+  return (
+    <>
+      <header
+        className="flex outline-dark ring-4 justify-between items-center z-10 bg-primary-50 top-[25px]"
+        style={{
+          backgroundImage: "url(/icons/cross-stroke-bg.svg)",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "contain 100%",
+          backgroundPosition: "10%, -10%",
+        }}
+      >
+        <div className="logo-div">
+          <Logo className="w-[1.8rem] h-[1.8rem]" variant="secondary" />
+        </div>
+        <ul
+          className="flex-1 gap-[10%] text-lg  hidden md:flex"
+          role="navigation"
+          aria-label="navigation menu, desktop"
+        >
+          <li className="underline font-geist-bold decoration-wavy underline-offset-4">
+            Docs
+          </li>
+          <li>Faq</li>
+          <li>Community</li>
+          <li>Demo</li>
+        </ul>
+        <Button text="Github" variant="primary" className="hidden md:flex" />
+        <span className="flex md:hidden items-center justify-center text-primary-50 bg-dark p-2 size-12 rounded-md">
+          <MorphToggleButton
+            toggled={!expanded}
+            className={"scale-50"}
+            onToggle={() => setExpanded((prev) => !prev)}
+            style={{}}
+            aria-label={"toggle menu"}
+          />
+        </span>
+      </header>
+
+      <ul
+        className={
+          `flex flex-col fixed top-0 left-0 w-full gap-[10%] md:hidden z-4 bg-primary-50 pt-[15rem] text-2xl px-8 cursor-pointer transition-all duration-150` +
+          ` ${expanded ? "h-screen" : "h-0 scale-y-0"}`
+        }
+        role="navigation"
+        aria-label="navigation menu, mobile"
+      >
+        <li
+          className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25 underline font-geist-bold decoration-wavy underline-offset-4`}
+        >
+          Docs
+        </li>
+        <li
+          className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25`}
+        >
+          Faq
+        </li>
+        <li
+          className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25`}
+        >
+          Community
+        </li>
+        <li
+          className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25`}
+        >
+          Demo
+        </li>
       </ul>
-      <Button text="Github" variant="primary" className="hidden md:flex" />
-      <span className="flex md:hidden items-center justify-center text-primary-50 bg-dark p-2 size-12 rounded-md">
-        <MorphToggleButton toggled={!expanded} className={"scale-50"} onToggle={() => setExpanded((prev) => !prev)} style={{}} aria-label={"toggle menu"} />
-      </span>
-    </header>
-
-    <ul className={`flex flex-col fixed top-0 left-0 w-full gap-[10%] md:hidden z-4 bg-primary-50 pt-[15rem] text-2xl px-8 cursor-pointer transition-all duration-150` + ` ${expanded ? "h-screen" : "h-0 scale-y-0"}`} role="navigation" aria-label="navigation menu, mobile" >
-      <li className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25 underline font-geist-bold decoration-wavy underline-offset-4`}>Docs</li>
-      <li className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25`}>Faq</li>
-      <li className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25`}>Community</li>
-      <li className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25`}>Demo</li>
-    </ul>
-  
-  </>
-}
-
-
-
-
+    </>
+  );
+};
 
 const VIEW_BOX = "0 0 249 249";
 
@@ -46,16 +93,29 @@ const X_PATH =
 const BARS_PATH =
   "M244.239 146.489C245.895 146.489 247.238 147.832 247.238 149.489V163.752C247.237 165.409 245.895 166.752 244.239 166.752H4.76C3.103 166.752 1.761 165.409 1.761 163.752V149.489C1.761 147.832 3.103 146.489 4.76 146.489H244.239ZM5.76 150.489V162.752H243.239V150.489H5.76ZM244.239 82.248C245.843 82.248 247.154 83.508 247.235 85.093L247.239 85.248V99.511C247.238 101.168 245.895 102.511 244.239 102.511H4.76C3.103 102.511 1.761 101.168 1.761 99.511V85.248C1.761 83.642 3.022 82.332 4.607 82.251L4.76 82.248H244.239ZM5.76 98.511H243.239V86.248H5.76V98.511Z";
 
-function easeInOutCubic(t) {
+function easeInOutCubic(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-export default function MorphToggleButton({
+type MorphToggleButtonProp = {
+  size?: number;
+  duration?: number;
+  color?: string;
+  defaultToggled?: boolean;
+  toggled?: boolean;
+  onToggle?: (toggled: boolean) => void;
+  easing?: (t: number) => number;
+  className?: string;
+  style?: React.CSSProperties;
+  "aria-label"?: string;
+};
+
+export const MorphToggleButton: React.FC<MorphToggleButtonProp> = function ({
   size = 48,
   duration = 350,
   color = "currentColor",
   defaultToggled = false,
-  toggled: controlledToggled,
+  toggled: controlledToggled = false,
   onToggle,
   easing = easeInOutCubic,
   className,
@@ -63,7 +123,8 @@ export default function MorphToggleButton({
   "aria-label": ariaLabel,
 }) {
   const isControlled = controlledToggled !== undefined;
-  const [uncontrolledToggled, setUncontrolledToggled] = useState(defaultToggled);
+  const [uncontrolledToggled, setUncontrolledToggled] =
+    useState(defaultToggled);
   const toggled = isControlled ? controlledToggled : uncontrolledToggled;
 
   const pathRef = useRef(null);
@@ -76,9 +137,9 @@ export default function MorphToggleButton({
   );
 
   const applyProgress = useCallback(
-    (t) => {
+    (t: number) => {
       if (pathRef.current) {
-        pathRef.current.setAttribute("d", morph(t));
+        (pathRef.current as HTMLElement).setAttribute("d", morph(t));
       }
     },
     [morph]
@@ -88,12 +149,12 @@ export default function MorphToggleButton({
     animateTo(toggled ? 1 : 0);
   }, [toggled]);
 
-  function animateTo(target) {
+  function animateTo(target: number) {
     const prefersReducedMotion =
       typeof window !== "undefined" &&
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-    cancelAnimationFrame(rafRef.current);
+    cancelAnimationFrame(rafRef?.current ?? 0);
 
     const start = progressRef.current;
     if (prefersReducedMotion || start === target) {
@@ -105,7 +166,7 @@ export default function MorphToggleButton({
     const startTime = performance.now();
     const distance = target - start;
 
-    const tick = (now) => {
+    const tick = (now: number) => {
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
       const eased = easing(t);
@@ -114,13 +175,16 @@ export default function MorphToggleButton({
       applyProgress(current);
 
       if (t < 1) {
+        // @ts-ignore
         rafRef.current = requestAnimationFrame(tick);
       }
     };
 
+    // @ts-ignore
     rafRef.current = requestAnimationFrame(tick);
   }
 
+  // @ts-ignore
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 
   function handleClick() {
@@ -159,8 +223,13 @@ export default function MorphToggleButton({
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <path ref={pathRef} d={toggled ? BARS_PATH : X_PATH} stroke={color} fill="white" />
+        <path
+          ref={pathRef}
+          d={toggled ? BARS_PATH : X_PATH}
+          stroke={color}
+          fill="white"
+        />
       </svg>
     </button>
   );
-}
+};

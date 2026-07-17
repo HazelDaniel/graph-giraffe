@@ -227,8 +227,8 @@ const CardIconBG: React.FC<IconBGProps> = ({ className, iconUrl }) => {
 };
 
 type SectionCardItemProp = {
-  width: number;
-  height: number;
+  // width: number;
+  // height: number;
   title: string;
 };
 

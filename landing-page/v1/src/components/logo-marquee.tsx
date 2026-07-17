@@ -21,13 +21,14 @@ const DEFAULT_LOGOS = [
   { name: "Next.js", color: "#a1a1aa" },
 ];
 
+//@ts-ignore
 function LogoChip({ name, color }) {
   const initials = name
     .replace(".js", "")
     .split(/[\s.]+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((w) => w[0])
+    .map((w: string[]) => w[0])
     .join("")
     .toUpperCase();
 
@@ -71,7 +72,7 @@ export const LogoMarquee: React.FC<LogoMarqueeProps> = function({
           {!imageUrls.length ? logos.map((logo, i) => (
             <LogoChip key={`a-${i}`} {...logo} />
           )) : imageUrls.map((url, i) => (
-            <img src={url} alt="" className="" />
+            <img src={url} alt={`logo chip image ${i + 1}`} className="" />
           ))
           }
         </div>
@@ -79,7 +80,7 @@ export const LogoMarquee: React.FC<LogoMarqueeProps> = function({
           {!imageUrls.length ? logos.map((logo, i) => (
             <LogoChip key={`a-${i}`} {...logo} />
           )) : imageUrls.map((url, i) => (
-            <img src={url} alt="" className="" />
+            <img src={url} alt={`logo chip image ${i + 1}`} className="" />
           ))
           }
         </div>

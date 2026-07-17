@@ -152,7 +152,6 @@ function buildParticleVAO(
 function loadTexture(
   gl: WebGL2RenderingContext,
   src: string,
-  canvasref: React.RefObject<HTMLCanvasElement>
 ): Promise<WebGLTexture> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -179,7 +178,7 @@ function loadTexture(
 interface Props {
   images: string[];
   activeIndex: number;
-  parentRef: React.RefObject<HTMLElement>;
+  parentRef: React.RefObject<HTMLElement | null>;
   width?: number;
   height?: number;
   renderCount: number;
@@ -228,6 +227,7 @@ export default function GLAnimatedFrame({
     )
       return;
     window.addEventListener("resize", () => {
+      if (!canvasRef?.current) return;
       canvasRef.current.width = canvasRef.current.clientWidth;
       canvasRef.current.height = canvasRef.current.clientHeight;
 
@@ -252,7 +252,7 @@ export default function GLAnimatedFrame({
 
   const render = useCallback(
     (fromIdx: number | null, toIdx: number, progress: number) => {
-      if (!parentRef.current) return;
+      if (!parentRef?.current || !canvasRef?.current) return;
 
       const gl = glRef.current!;
       const program = programRef.current!;
@@ -265,7 +265,6 @@ export default function GLAnimatedFrame({
       let width = parseInt(width_),
         height = parseInt(height_);
 
-      // console.log(width, height);
 
       canvasRef.current.width = canvasRef.current.clientWidth;
       canvasRef.current.height = canvasRef.current.clientHeight;
@@ -343,7 +342,7 @@ export default function GLAnimatedFrame({
         (uniformLocsRef.current[name] = gl.getUniformLocation(program, name))
     );
 
-    Promise.all(images.map((src) => loadTexture(gl, src, canvasRef))).then(
+    Promise.all(images.map((src) => loadTexture(gl, src))).then(
       (textures) => {
         texturesRef.current = textures;
         render(null, activeIndexRef.current, 1);
