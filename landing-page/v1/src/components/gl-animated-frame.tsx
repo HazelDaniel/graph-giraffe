@@ -285,9 +285,9 @@ export default function GLAnimatedFrame({
       ) {
         canvasRef.current.width = canvasRef.current.clientWidth;
         canvasRef.current.height = canvasRef.current.clientHeight;
-        gl.viewport(0, 0, width, height);
       }
 
+      gl.viewport(0, 0, width, height);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.enable(gl.BLEND);
