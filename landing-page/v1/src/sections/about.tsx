@@ -65,7 +65,7 @@ export const SectionTabListItem: React.FC<TabListItemProps> = ({
       <div className="flex-1">
         <h4
           className={
-            `font-geist-bold text-l pb-2` +
+            `font-geist-bold text-l pb-2 text-dark` +
             ` ${active ? "decoration-wavy underline underline-offset-2" : ""}`
           }
         >

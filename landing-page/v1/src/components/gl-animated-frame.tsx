@@ -163,10 +163,6 @@ function loadTexture(
     img.onload = () => {
       (tmpCanvas.width = canvas.width), (tmpCanvas.height = canvas.height);
       const tmpCtx = tmpCanvas.getContext("2d")!;
-      // console.log("===========");
-      // console.log(tmpCanvas.width, tmpCanvas.height);
-      // console.log(canvas.width, canvas.height);
-      // console.log("===========\n");
       tmpCtx.drawImage(img, 0, 0, tmpCanvas.width, tmpCanvas.height);
 
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
