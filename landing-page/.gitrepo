@@ -6,7 +6,7 @@
 [subrepo]
 	remote = git@github.com:HazelDaniel/landing.graph-giraffe.git
 	branch = master
-	commit = e7d9999757b01131abeaa726a7973c1c07683980
-	parent = 789a313e2990343ae00ce627f31c673754c98809
+	commit = 9225e85275f39d876cca56b8aff58308e32e4b09
+	parent = a8bc64c54a136ecac11f98b8d4052cdebee33350
 	method = merge
 	cmdver = 0.4.9
