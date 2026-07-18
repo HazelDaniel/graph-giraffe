@@ -189,7 +189,7 @@ function loadTexture(
 }
 
 interface Props {
-  images: string[];
+  images: {mobile: string; desktop: string}[];
   activeIndex: number;
   parentRef: React.RefObject<HTMLElement | null>;
   width?: number;
@@ -367,7 +367,15 @@ export default function GLAnimatedFrame({
         (uniformLocsRef.current[name] = gl.getUniformLocation(program, name))
     );
 
-    Promise.all(images.map((src) => loadTexture(gl, src, canvas))).then(
+    if (canvas.width > 800)
+    Promise.all(images.map(({desktop: src}) => loadTexture(gl, src, canvas))).then(
+      (textures) => {
+        texturesRef.current = textures;
+        render(null, activeIndexRef.current, 1);
+      }
+    );
+    else
+    Promise.all(images.map(({mobile: src}) => loadTexture(gl, src, canvas))).then(
       (textures) => {
         texturesRef.current = textures;
         render(null, activeIndexRef.current, 1);

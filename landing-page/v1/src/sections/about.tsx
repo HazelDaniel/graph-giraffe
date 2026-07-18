@@ -154,8 +154,14 @@ export const About: React.FC = () => {
         >
           <GLAnimatedFrame
             images={[
-              "/images/about-section-image-nodes.png",
-              "/images/all-you-need-image-install.png",
+              {
+                desktop: "/images/about-section-image-nodes.png",
+                mobile: "/images/about-section-image-nodes-mobile.png"
+              },
+              {
+                desktop: "/images/all-you-need-image-install.png",
+                mobile: "/images/all-you-need-image-install-mobile.png"
+              }
             ]}
             activeIndex={activeTab}
             parentRef={parentRef}
@@ -172,7 +178,7 @@ export const About: React.FC = () => {
 const CardsSection: React.FC = () => {
   return (
     <div className="py-48 flex flex-col gap-16">
-      <h3 className="font-gasoek text-3xl text-center md:text-start">More Than Just A Node Editor...</h3>
+      <h3 className="font-gasoek text-3xl text-center md:text-start text-dark">More Than Just A Node Editor...</h3>
       <ul className="flex gap-[2%] flex-wrap z-2">
         <AboutSectionCardItem
           className="bg-[#D100D4]"
@@ -190,12 +196,12 @@ const CardsSection: React.FC = () => {
           title="Reusable subgraphs"
         />
 
-        <li className="py-14 px-6 flex flex-col gap-6 justify-center items-center text-primary-100  rounded-[1rem] shadow-[0px_4px_4px_-1px_rgba(0,0,0,0.07)] bg-[#ADF845] relative z-0 w-[clamp(8rem,28rem,95vw)] md:w-max md:min-w-[48rem] mx-auto md:mx-[unset] mt-16 md:mt-2">
+        <li className="py-14 px-6 flex flex-col gap-6 justify-center items-center text-primary-100  rounded-[1rem] shadow-[0px_4px_4px_-1px_rgba(0,0,0,0.07)] bg-[#ADF845] relative z-0 w-[clamp(8rem,28rem,95vw)] md:w-max mx-auto md:mx-[unset] mt-16 md:mt-2">
           <div className="size-full absolute top-[-1rem] right-[-1rem] rounded-[inherit] bg-dark -z-1"></div>
           <div className="flex gap-4">
-            <p className="text-primary-100  max-w-[10rem] font-geist-medium text-sm pl-2">
-              Check Out More Features In{" "}
-              <span className="underline underline-offset-2 decoration-wavy">
+            <p className="text-primary-100 max-w-max md:max-w-[10rem] font-geist-medium text-lg md:text-sm pl-2">
+              Check Out More Features In
+              <span className="block md:inline underline underline-offset-2 decoration-wavy">
                 <a href="" className="text-inherit">
                   The Docs
                 </a>
@@ -285,7 +291,7 @@ const AboutSectionCardItem: React.FC<SectionCardItemProp & IconBGProps> = ({
             {title}
           </p>
           <span className="inline-flex size-8 text-dark">
-            <svg className="size-full scale-60 duration-[0.3s] group-hover/section-card:rotate-[-45deg] transition-transform">
+            <svg className="size-full scale-60 duration-300 group-hover/section-card:-rotate-45 transition-transform">
               <use xlinkHref="#arrow-right"></use>
             </svg>
           </span>

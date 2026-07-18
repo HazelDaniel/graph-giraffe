@@ -113,8 +113,14 @@ export const AllYouNeed: React.FC = () => {
         >
           <GLAnimatedFrame
             images={[
-              "/images/about-section-image-nodes.png",
-              "/images/all-you-need-image-install.png",
+              {
+                desktop: "/images/about-section-image-nodes.png",
+                mobile: "/images/about-section-image-nodes-mobile.png"
+              },
+              {
+                desktop: "/images/all-you-need-image-install.png",
+                mobile: "/images/all-you-need-image-install-mobile.png"
+              }
             ]}
             activeIndex={activeTab}
             parentRef={parentRef}

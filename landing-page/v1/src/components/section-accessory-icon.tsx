@@ -20,8 +20,8 @@ export const SectionAccessoryIcon: React.FC<Partial<AccessoryIconProps>> = ({
     <div
       className={`absolute flex items-center justify-center ${className || ""}`}
     >
-      <span className="relative flex overflow-visible">
-        <img src={imageUrl} alt="" />
+      <span className="relative flex overflow-visible bounce">
+        <img src={imageUrl} alt="" className="" />
         <span
           className={`absolute top-0 size-[3rem] flex items-center justify-center ${
             innerClassName || ""
