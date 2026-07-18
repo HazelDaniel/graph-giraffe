@@ -99,6 +99,8 @@ export class Renderer {
         this.gl.viewport(0, 0, width, height);
         // Origin top-left, y-axis pointing down — matches screen and 2D canvas convention
         this.projMatrix.setOrtho(0, width, height, 0, -2, 2);
+        this.bgCanvas.width = width;
+        this.bgCanvas.height = height;
         this.labelCanvas.width = width;
         this.labelCanvas.height = height;
     }

@@ -83,6 +83,7 @@ export class NodeEditor {
     selectionToolbar = null;
     selectionToolbarNodeId = null;
     selectionToolbarActionSignature = "";
+    resizeObserver;
     activeTouches = new Map();
     gestureMode = false;
     pinchDistance = null;
@@ -206,7 +207,8 @@ export class NodeEditor {
             onWheel: (e) => this.handleWheel(e, canvas),
         });
         this.controls.setMultiSelectActive(this.isMultiSelectMode);
-        window.addEventListener("resize", () => this.handleResize(canvas));
+        this.resizeObserver = new ResizeObserver(() => this.handleResize(canvas));
+        this.resizeObserver.observe(canvas.parentElement ?? canvas);
         window.addEventListener("keydown", (e) => this.handleKeyDown(e));
         window.addEventListener("pointercancel", (e) => this.handlePointerCancel(e, canvas));
         this.setupPropGroupListener();
@@ -360,8 +362,11 @@ export class NodeEditor {
         this.syncToolbarState();
     }
     handleResize(canvas) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        const container = canvas.parentElement;
+        const width = container ? container.clientWidth : window.innerWidth;
+        const height = container ? container.clientHeight : window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
         this.renderer.resize(canvas.width, canvas.height);
         this.pickFBO.resize(canvas.width, canvas.height);
     }
@@ -1595,7 +1600,9 @@ export class NodeEditor {
                 ? world.y + 20
                 : world.y + NODE_LAYOUT.headerHeight / 2;
         const screen = this.camera.worldToScreen(anchorX, anchorY);
-        this.selectionToolbar.setPosition(screen.x, screen.y);
+        const canvas = document.getElementById(this.canvasId);
+        const rect = canvas.getBoundingClientRect();
+        this.selectionToolbar.setPosition(screen.x + rect.left, screen.y + rect.top);
     }
     handleSelectionToolbarAction(action) {
         const node = this.getSingleSelectedNode();

@@ -51,6 +51,7 @@ export declare class NodeEditor {
     private selectionToolbar;
     private selectionToolbarNodeId;
     private selectionToolbarActionSignature;
+    private resizeObserver;
     private activeTouches;
     private gestureMode;
     private pinchDistance;

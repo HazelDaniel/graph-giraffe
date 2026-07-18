@@ -201,6 +201,8 @@ export class NodeEditor {
   private selectionToolbarNodeId: number | null = null;
   private selectionToolbarActionSignature: string = "";
 
+  private resizeObserver!: ResizeObserver;
+
   private activeTouches = new Map<number, PointerEvent>();
   private gestureMode = false;
   private pinchDistance: number | null = null;
@@ -417,7 +419,8 @@ export class NodeEditor {
     });
     this.controls.setMultiSelectActive(this.isMultiSelectMode);
 
-    window.addEventListener("resize", () => this.handleResize(canvas));
+    this.resizeObserver = new ResizeObserver(() => this.handleResize(canvas));
+    this.resizeObserver.observe(canvas.parentElement ?? canvas);
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
     window.addEventListener("pointercancel", (e) =>
       this.handlePointerCancel(e, canvas)
@@ -616,8 +619,11 @@ export class NodeEditor {
   }
 
   private handleResize(canvas: HTMLCanvasElement): void {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const container = canvas.parentElement;
+    const width = container ? container.clientWidth : window.innerWidth;
+    const height = container ? container.clientHeight : window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
     this.renderer.resize(canvas.width, canvas.height);
     this.pickFBO.resize(canvas.width, canvas.height);
   }
@@ -2195,7 +2201,9 @@ export class NodeEditor {
         : world.y + NODE_LAYOUT.headerHeight / 2;
 
     const screen = this.camera.worldToScreen(anchorX, anchorY);
-    this.selectionToolbar.setPosition(screen.x, screen.y);
+    const canvas = document.getElementById(this.canvasId) as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    this.selectionToolbar.setPosition(screen.x + rect.left, screen.y + rect.top);
   }
 
   private handleSelectionToolbarAction(action: SelectionToolbarAction): void {
