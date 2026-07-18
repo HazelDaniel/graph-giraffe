@@ -37,7 +37,7 @@ export const Header: React.FC = () => {
           </li>
           <li><a href="#faq">Faq</a></li>
           <li><a href="#">Community</a></li>
-          <li><a href="">Demo</a></li>
+          <li><a href="https://playground-graph-giraffe.vercel.app/">Demo</a></li>
         </ul>
         <Button text="Github" variant="primary" className="hidden md:flex" />
         <span className="flex md:hidden items-center justify-center text-primary-50 bg-dark p-2 size-12 rounded-md">
@@ -78,7 +78,7 @@ export const Header: React.FC = () => {
         <li
           className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25`}
         >
-          <a href="">Demo</a>
+          <a href="https://playground-graph-giraffe.vercel.app/">Demo</a>
         </li>
       </ul>
     </>
