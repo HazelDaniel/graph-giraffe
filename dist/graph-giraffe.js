@@ -5778,6 +5778,8 @@ class Renderer {
   resize(width, height) {
     this.gl.viewport(0, 0, width, height);
     this.projMatrix.setOrtho(0, width, height, 0, -2, 2);
+    this.bgCanvas.width = width;
+    this.bgCanvas.height = height;
     this.labelCanvas.width = width;
     this.labelCanvas.height = height;
   }
@@ -7853,6 +7855,7 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "selectionToolbar", null);
     __publicField(this, "selectionToolbarNodeId", null);
     __publicField(this, "selectionToolbarActionSignature", "");
+    __publicField(this, "resizeObserver");
     __publicField(this, "activeTouches", /* @__PURE__ */ new Map());
     __publicField(this, "gestureMode", false);
     __publicField(this, "pinchDistance", null);
@@ -8035,7 +8038,8 @@ const _NodeEditor = class _NodeEditor {
       onWheel: (e) => this.handleWheel(e, canvas)
     });
     this.controls.setMultiSelectActive(this.isMultiSelectMode);
-    window.addEventListener("resize", () => this.handleResize(canvas));
+    this.resizeObserver = new ResizeObserver(() => this.handleResize(canvas));
+    this.resizeObserver.observe(canvas.parentElement ?? canvas);
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
     window.addEventListener(
       "pointercancel",
@@ -8170,8 +8174,9 @@ const _NodeEditor = class _NodeEditor {
     this.syncToolbarState();
   }
   handleResize(canvas) {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
     this.renderer.resize(canvas.width, canvas.height);
     this.pickFBO.resize(canvas.width, canvas.height);
   }
@@ -9378,7 +9383,9 @@ const _NodeEditor = class _NodeEditor {
     const anchorX = world.x + node.width - 12;
     const anchorY = node.nodeType === "subgraph" ? node.isCollapsed ? world.y + node.height / 2 : world.y + 20 : isContainerNodeType(node.nodeType) ? world.y + 20 : world.y + NODE_LAYOUT.headerHeight / 2;
     const screen = this.camera.worldToScreen(anchorX, anchorY);
-    this.selectionToolbar.setPosition(screen.x, screen.y);
+    const canvas = document.getElementById(this.canvasId);
+    const rect = canvas.getBoundingClientRect();
+    this.selectionToolbar.setPosition(screen.x + rect.left, screen.y + rect.top);
   }
   handleSelectionToolbarAction(action) {
     const node = this.getSingleSelectedNode();

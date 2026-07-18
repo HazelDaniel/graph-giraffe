@@ -619,11 +619,9 @@ export class NodeEditor {
   }
 
   private handleResize(canvas: HTMLCanvasElement): void {
-    const container = canvas.parentElement;
-    const width = container ? container.clientWidth : window.innerWidth;
-    const height = container ? container.clientHeight : window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
     this.renderer.resize(canvas.width, canvas.height);
     this.pickFBO.resize(canvas.width, canvas.height);
   }
