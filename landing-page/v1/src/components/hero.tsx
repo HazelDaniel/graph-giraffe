@@ -7,7 +7,7 @@ export const Hero: React.FC = () => {
       role="hero"
       className="relative flex flex-col mt-48 md:mt-32 min-h-[35rem] justify-end items-center pb-32"
     >
-      <p className="absolute top-0 right-4 text-md w-[clamp(8rem,20vw,40rem)] z-1 text-dark">
+      <p className="absolute top-0 right-4 text-md w-[clamp(8rem,32vw,40rem)] md:w-[clamp(8rem,20vw,40rem)] z-1 text-dark">
         <span className="font-geist-bold">Graph Giraffe </span>
         is a flexible TypeScript library for creating customizable node-based
         interfaces with smooth interactions, powerful APIs, and complete control
