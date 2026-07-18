@@ -16,7 +16,7 @@ export const Header: React.FC = () => {
   return (
     <>
       <header
-        className="fixed flex outline-dark ring-4 justify-between items-center z-10 bg-primary-50 top-[25px]"
+        className="fixed flex outline-dark ring-dark ring-4 justify-between items-center z-10 bg-primary-50 top-[25px]"
         style={{
           backgroundImage: "url(/icons/cross-stroke-bg.svg)",
           backgroundRepeat: "no-repeat",
@@ -24,7 +24,7 @@ export const Header: React.FC = () => {
           backgroundPosition: "10%, -10%",
         }}
       >
-        <div className="logo-div  scale-75">
+        <div className="logo-div scale-75">
           <Logo className="w-[1.8rem] h-[1.8rem]" variant="secondary" />
         </div>
         <ul
