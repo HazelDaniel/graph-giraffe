@@ -24,8 +24,8 @@ export const Header: React.FC = () => {
           backgroundPosition: "10%, -10%",
         }}
       >
-        <div className="logo-div">
-          <Logo className="w-[1.8rem] h-[1.8rem] scale-80" variant="secondary" />
+        <div className="logo-div  scale-75">
+          <Logo className="w-[1.8rem] h-[1.8rem]" variant="secondary" />
         </div>
         <ul
           className="flex-1 gap-[10%] text-lg  hidden md:flex"
