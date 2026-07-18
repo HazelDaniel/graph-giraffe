@@ -1,7 +1,7 @@
 export const Testimonials: React.FC = () => {
   return (
     <section id="testimonials" className="py-18">
-      <h2 className="mx-auto text-4xl font-gasoek text-center relative max-w-[20rem] md:max-w-[unset] md:w-max mb-48">
+      <h2 className="mx-auto text-4xl font-gasoek text-center relative max-w-[20rem] md:max-w-[unset] md:w-max mb-48 text-dark">
         Trusted by teams that rock
         <span className="absolute -left-[5rem] -bottom-[4rem] size-18">
           <svg
