@@ -33,8 +33,8 @@ const tabListData: (Omit<
     iconUrl: "chat",
   },
   {
-    content: "Answers questions instantly using knowledge you already have.",
-    heading: "Integrable with CRDT libraries",
+    content: "Custom texture skins, adjustable theme and typography",
+    heading: "Highly Configurable",
     iconUrl: "gear",
   },
 ];
@@ -177,7 +177,7 @@ export const About: React.FC = () => {
 
 const CardsSection: React.FC = () => {
   return (
-    <div className="py-48 flex flex-col gap-16">
+    <div className="py-48 flex flex-col gap-16" id="feature-cards">
       <h3 className="font-gasoek text-3xl text-center md:text-start text-dark">More Than Just A Node Editor...</h3>
       <ul className="flex gap-[2%] flex-wrap z-2">
         <AboutSectionCardItem

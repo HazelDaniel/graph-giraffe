@@ -19,18 +19,18 @@ const tabListData: (Omit<
   "activeIndex" | "setActiveIndex" | "id"
 > & {})[] = [
   {
-    content: "Answers questions instantly using knowledge you already have.",
-    heading: "Custom Primitive Texture",
+    content: "One package, zero required peer dependencies. Add Graph Giraffe to any TypeScript or JavaScript project.",
+    heading: "Install & Configure",
     iconUrl: "stack",
   },
   {
-    content: "Answers questions instantly using knowledge you already have.",
-    heading: "Integrable with CRDT libraries",
+    content: "Define nodes and edges with a simple declarative API, then let Graph Giraffe handle layout and interactions.",
+    heading: "Declare Your Graph",
     iconUrl: "chat",
   },
   {
-    content: "Answers questions instantly using knowledge you already have.",
-    heading: "Integrable with CRDT libraries",
+    content: "Add plugins, customize behaviors, and deploy — Graph Giraffe stays out of your way.",
+    heading: "Extend & Ship",
     iconUrl: "gear",
   },
 ];

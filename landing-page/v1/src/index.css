@@ -253,6 +253,9 @@
 }
 
 @layer utilities {
+html {
+  scroll-behavior: smooth;
+}
 
 header {
   width: 95vw;

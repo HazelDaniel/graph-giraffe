@@ -5,6 +5,7 @@ import { Hero } from "./components/hero";
 import { Partners } from "./components/partners";
 import { About } from "./sections/about";
 import { AllYouNeed } from "./sections/all-you-need";
+import { Faq } from "./sections/faq";
 import { Testimonials } from "./sections/testimonials";
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
       <About />
       <AllYouNeed />
       <Testimonials />
+      <Faq />
       <Partners />
       <Footer />
       <Copyright />

@@ -32,12 +32,12 @@ export const Header: React.FC = () => {
           role="navigation"
           aria-label="navigation menu, desktop"
         >
-          <li className="underline font-geist-bold decoration-wavy underline-offset-4">
-            Docs
+          <li className="underline *:font-geist-bold decoration-wavy underline-offset-4">
+          <a href="#feature-cards">Docs</a>
           </li>
-          <li>Faq</li>
-          <li>Community</li>
-          <li>Demo</li>
+          <li><a href="#faq">Faq</a></li>
+          <li><a href="#">Community</a></li>
+          <li><a href="">Demo</a></li>
         </ul>
         <Button text="Github" variant="primary" className="hidden md:flex" />
         <span className="flex md:hidden items-center justify-center text-primary-50 bg-dark p-2 size-12 rounded-md">
@@ -59,25 +59,26 @@ export const Header: React.FC = () => {
         role="navigation"
         aria-label="navigation menu, mobile"
       >
+      
         <li
-          className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25 underline font-geist-bold decoration-wavy underline-offset-4`}
+          className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25 underline *:font-geist-bold decoration-wavy underline-offset-4`}
         >
-          Docs
+          <a href="#feature-cards">Docs</a>
         </li>
         <li
           className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25`}
         >
-          Faq
+          <a href="#faq">Faq</a>
         </li>
         <li
           className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25`}
         >
-          Community
+          <a href="#">Community</a>
         </li>
         <li
           className={`hover:translate-x-4 hover:text-dark hover:underline hover:underline-offset-8 decoration-tertiary-700 hover:decoration-double duration-150 delay-25`}
         >
-          Demo
+          <a href="">Demo</a>
         </li>
       </ul>
     </>
