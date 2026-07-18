@@ -47,11 +47,16 @@
     @apply text-dark;
   }
 
+  html {
+    overflow-x: hidden;
+  }
+
   body {
-    width: 100%;
+    width: 100vw;
     height: max-content;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
+    position: relative;
     @apply bg-primary-50;
   }
 
