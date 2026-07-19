@@ -83,6 +83,8 @@ import {
   getWorldPosition,
 } from "./scene-graph.js";
 import { TextureRegistry } from "./texture-registry.js";
+import { NodeTypeRegistry } from "./node-type-registry.js";
+import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import { LoadingScreen } from "../components/loading-screen.js";
 import {
   SelectionToolbar,
@@ -149,6 +151,7 @@ interface SelectionDragState {
  */
 export class NodeEditor {
   public readonly events = new GraphEventEmitter();
+  public readonly typeRegistry = new NodeTypeRegistry();
 
   public get debug(): boolean | null {
     return this.events.debug;
@@ -274,13 +277,18 @@ export class NodeEditor {
     this.connectionMode = options.connectionMode ?? "node";
     this.assetsPath = options.assetsPath ?? "assets";
 
+    for (const descriptor of BUILTIN_DESCRIPTORS) {
+      this.typeRegistry.register(descriptor);
+    }
+
     // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
 
     this.camera = new Camera();
     this.store = new NodeStore(
       gl,
       this.connectionMode,
-      options.handleStyle ?? DEFAULT_HANDLE_STYLE
+      options.handleStyle ?? DEFAULT_HANDLE_STYLE,
+      this.typeRegistry
     );
     this.edgeStore = new EdgeStore();
     this.history = new HistoryStack();
