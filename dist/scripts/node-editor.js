@@ -16,6 +16,8 @@ import { MsdfAtlas } from "./msdf-text.js";
 import { getHandleScreenGeometry, isPointInsideHandle, } from "./handle-geometry.js";
 import { getParentFrameWorldPosition, getWorldPosition, } from "./scene-graph.js";
 import { TextureRegistry } from "./texture-registry.js";
+import { NodeTypeRegistry } from "./node-type-registry.js";
+import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import { CLONE, COLLAPSE, DELETE, EDIT, EXPAND, SPOTLIGHT, UNGRAPH, } from "../sprite.js";
 const baseButtons = (items) => items.map(([action, glyph, label]) => ({ action, glyph, label }));
 /**
@@ -36,6 +38,7 @@ export class NodeEditor {
     IconBGFsSource;
     nodeTextureUploadList;
     events = new GraphEventEmitter();
+    typeRegistry = new NodeTypeRegistry();
     get debug() {
         return this.events.debug;
     }
@@ -120,9 +123,12 @@ export class NodeEditor {
             throw new Error("WebGL2 is not supported in this browser");
         this.connectionMode = options.connectionMode ?? "node";
         this.assetsPath = options.assetsPath ?? "assets";
+        for (const descriptor of BUILTIN_DESCRIPTORS) {
+            this.typeRegistry.register(descriptor);
+        }
         // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
         this.camera = new Camera();
-        this.store = new NodeStore(gl, this.connectionMode, options.handleStyle ?? DEFAULT_HANDLE_STYLE);
+        this.store = new NodeStore(gl, this.connectionMode, options.handleStyle ?? DEFAULT_HANDLE_STYLE, this.typeRegistry);
         this.edgeStore = new EdgeStore();
         this.history = new HistoryStack();
         this.pickFBO = new PickFBO(gl, canvas.width, canvas.height);

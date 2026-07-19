@@ -339,7 +339,7 @@ if (!customElements.get("gg-action-pane"))
   customElements.define("gg-action-pane", ActionPane);
 const STYLE_TEMPLATE$3 = `
   :host {
-    position: fixed;
+    position: absolute;
     top: 0.8rem;
     left: 2rem;
     display: flex;
@@ -1251,7 +1251,7 @@ if (!customElements.get("gg-select")) {
 }
 const STYLE_TEMPLATE$1 = `
   :host {
-    position: fixed;
+    position: absolute;
     display: none;
     z-index: 30;
     pointer-events: auto;
@@ -1602,27 +1602,27 @@ const C_NODE_THEMES = {
 };
 const CR_NODE_THEMES = {
   dark: {
-    bgFill: "rgb(9, 9, 10)",
+    bgFill: "rgba(0, 0, 0, 0)",
     borderStroke: "rgba(255, 255, 255, 0.95)",
     headerFill: "rgba(22, 20, 20, 0.79)",
     titleFill: "#f8fafc",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
+    bodyFill: "rgba(0, 0, 0, 0)",
     borderWidth: 1
   },
   light: {
-    bgFill: "rgba(248, 250, 252, 0.9)",
-    borderStroke: "rgba(0, 0, 0, 0.4)",
+    bgFill: "rgba(0, 0, 0, 0)",
+    borderStroke: "rgba(0, 0, 0, 0.5)",
     headerFill: "rgba(226, 232, 240, 1)",
     titleFill: "#0f172a",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
+    bodyFill: "rgba(0, 0, 0, 0)",
     borderWidth: 1
   },
   neon: {
-    bgFill: "rgba(10, 10, 20, 0.9)",
+    bgFill: "rgba(0, 0, 0, 0)",
     borderStroke: "#06b6d4",
     headerFill: "rgba(6, 182, 212, 0.2)",
     titleFill: "#cffafe",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
+    bodyFill: "rgba(0, 0, 0, 0)",
     borderWidth: 2
   }
 };
@@ -3981,7 +3981,7 @@ function isPointInsideHandle(screenX, screenY, geometry) {
   const halfSize = geometry.size / 2;
   return Math.abs(screenX - geometry.centerX) <= halfSize && Math.abs(screenY - geometry.centerY) <= halfSize;
 }
-function getWorldPosition(nodeId, nodes) {
+function getWorldPosition(nodeId, nodes, registry) {
   const node = nodes.get(nodeId);
   if (!node) return { x: 0, y: 0 };
   let x = node.localX;
@@ -3990,7 +3990,8 @@ function getWorldPosition(nodeId, nodes) {
   while (currentParentId !== null) {
     const parent = nodes.get(currentParentId);
     if (!parent) break;
-    if (parent.nodeType !== "subgraph") {
+    const contributes = registry ? registry.contributesToChildWorldPosition(parent.nodeType) : parent.nodeType !== "subgraph";
+    if (contributes) {
       x += parent.localX;
       y += parent.localY;
     }
@@ -3998,50 +3999,67 @@ function getWorldPosition(nodeId, nodes) {
   }
   return { x, y };
 }
-function getParentFrameWorldPosition(parentId, nodes) {
+function getParentFrameWorldPosition(parentId, nodes, registry) {
   if (parentId === null) return { x: 0, y: 0 };
   const parent = nodes.get(parentId);
   if (!parent) return { x: 0, y: 0 };
-  if (parent.nodeType === "subgraph") {
-    return getParentFrameWorldPosition(parent.parentId, nodes);
+  const contributes = registry ? registry.contributesToChildWorldPosition(parent.nodeType) : parent.nodeType !== "subgraph";
+  if (!contributes) {
+    return getParentFrameWorldPosition(parent.parentId, nodes, registry);
   }
-  return getWorldPosition(parentId, nodes);
+  return getWorldPosition(parentId, nodes, registry);
 }
-function reparent(childId, newParentId, nodes) {
+function reparent(childId, newParentId, nodes, registry) {
+  var _a2, _b;
   const child = nodes.get(childId);
   if (!child) return false;
   if (child.parentId === newParentId) {
     return true;
   }
-  if (newParentId === null) {
-    if (child.nodeType === "composition" || child.nodeType === "composition-child") {
+  if (registry) {
+    if (!registry.canReparentTo(child.nodeType, newParentId !== null ? ((_a2 = nodes.get(newParentId)) == null ? void 0 : _a2.nodeType) ?? null : null)) {
+      return false;
+    }
+    if (newParentId === null && !((_b = registry.get(child.nodeType)) == null ? void 0 : _b.canBeRoot)) {
       return false;
     }
   } else {
-    const newParent = nodes.get(newParentId);
-    if (!newParent) return false;
-    if (!isContainerNodeType(newParent.nodeType)) return false;
-    if (child.nodeType === "group") {
-      if (newParent.nodeType !== "subgraph") return false;
-    }
-    if (child.nodeType === "hub") {
-      if (newParent.nodeType === "group") return false;
-    }
-    if (child.nodeType === "composition") {
-      if (newParent.nodeType !== "group" && newParent.nodeType !== "subgraph") return false;
-    }
-    if (child.nodeType === "composition-child") {
-      if (newParent.nodeType !== "composition") return false;
-    }
-    if (child.nodeType === "node") {
-      if (newParent.nodeType === "composition") return false;
-    }
-    if (child.nodeType === "subgraph") {
-      if (newParent.nodeType === "composition") return false;
+    if (newParentId === null) {
+      if (child.nodeType === "composition" || child.nodeType === "composition-child") {
+        return false;
+      }
+    } else {
+      const newParent = nodes.get(newParentId);
+      if (!newParent) return false;
+      if (!isContainerNodeType(newParent.nodeType)) return false;
+      if (child.nodeType === "group") {
+        if (newParent.nodeType !== "subgraph") return false;
+      }
+      if (child.nodeType === "hub") {
+        if (newParent.nodeType === "group") return false;
+      }
+      if (child.nodeType === "composition") {
+        if (newParent.nodeType !== "group" && newParent.nodeType !== "subgraph") return false;
+      }
+      if (child.nodeType === "composition-child") {
+        if (newParent.nodeType !== "composition") return false;
+      }
+      if (child.nodeType === "node") {
+        if (newParent.nodeType === "composition") return false;
+      }
+      if (child.nodeType === "subgraph") {
+        if (newParent.nodeType === "composition") return false;
+      }
     }
   }
+  if (newParentId !== null) {
+    const newParent = nodes.get(newParentId);
+    if (!newParent) return false;
+    if (!registry && !isContainerNodeType(newParent.nodeType)) return false;
+    if (registry && !registry.isContainer(newParent.nodeType)) return false;
+  }
   if (newParentId !== null && isAncestor(newParentId, childId, nodes)) return false;
-  const childWorld = getWorldPosition(childId, nodes);
+  const childWorld = getWorldPosition(childId, nodes, registry);
   if (child.parentId !== null) {
     const oldParent = nodes.get(child.parentId);
     if (oldParent) {
@@ -4051,7 +4069,7 @@ function reparent(childId, newParentId, nodes) {
   if (newParentId !== null) {
     const newParent = nodes.get(newParentId);
     if (!newParent) return false;
-    const newParentWorld = getParentFrameWorldPosition(newParentId, nodes);
+    const newParentWorld = getParentFrameWorldPosition(newParentId, nodes, registry);
     child.localX = childWorld.x - newParentWorld.x;
     child.localY = childWorld.y - newParentWorld.y;
     if (newParent && !newParent.childIds.includes(childId)) {
@@ -4334,7 +4352,7 @@ class AccessibilityTree {
   }
 }
 class NodeStore {
-  constructor(gl, connectionMode = "node", handleStyle = DEFAULT_HANDLE_STYLE) {
+  constructor(gl, connectionMode = "node", handleStyle = DEFAULT_HANDLE_STYLE, registry) {
     /** Group nodes — drawn first (behind compositions and leaves). */
     __publicField(this, "groups", /* @__PURE__ */ new Map());
     /** Leaf nodes — drawn last (in front of groups and compositions). */
@@ -4352,6 +4370,7 @@ class NodeStore {
     __publicField(this, "handleStyle");
     __publicField(this, "currentTheme", "dark");
     this.gl = gl;
+    this.registry = registry;
     this.a11yTree = new AccessibilityTree();
     this.connectionMode = connectionMode;
     this.handleStyle = { ...handleStyle };
@@ -4398,21 +4417,20 @@ class NodeStore {
   }
   /** Create a new node at world coordinates (localX, localY). */
   add(localX, localY, text, theme, nodeType = "node", idOverride) {
+    var _a2;
     const id = idOverride ?? ++this._nextId;
     this._nextId = Math.max(this._nextId, id);
-    switch (nodeType) {
-      case "group":
-      case "subgraph":
-        this._groupOrder.set(id, this._nextGroupOrder++);
-        break;
-      case "composition":
-        this._compositionOrder.set(id, this._nextCompositionOrder++);
-        break;
-      default:
-        this._leafOrder.set(id, this._nextLeafOrder++);
-        break;
+    const desc = (_a2 = this.registry) == null ? void 0 : _a2.get(nodeType);
+    const zTier = (desc == null ? void 0 : desc.zTier) ?? 0.4;
+    if (zTier < 0.1) {
+      this._groupOrder.set(id, this._nextGroupOrder++);
+    } else if (zTier >= 0.1 && zTier < 0.3) {
+      this._compositionOrder.set(id, this._nextCompositionOrder++);
+    } else {
+      this._leafOrder.set(id, this._nextLeafOrder++);
     }
-    const { width, height } = getDefaultNodeSize(nodeType);
+    const defaultSize = desc ? desc.defaultSize : getDefaultNodeSize(nodeType);
+    const { width, height } = defaultSize;
     const node = this.createNodeRecord({
       id,
       localX,
@@ -4451,7 +4469,7 @@ class NodeStore {
     if (!source || !composition) return null;
     if (!isNodePrimitiveType(source.nodeType)) return null;
     if (composition.nodeType !== "composition") return null;
-    const world = getWorldPosition(source.id, this.allNodesMap);
+    const world = getWorldPosition(source.id, this.allNodesMap, this.registry);
     const clone = this.add(world.x, world.y, source.text, theme, "composition-child");
     if (!this.setParent(clone.id, composition.id)) {
       this.remove(clone.id);
@@ -4477,7 +4495,7 @@ class NodeStore {
       const allNodes = this.allNodesMap;
       const childrenToReparent = [...node.childIds];
       for (const childId of childrenToReparent) {
-        reparent(childId, node.parentId, allNodes);
+        reparent(childId, node.parentId, allNodes, this.registry);
         const child = allNodes.get(childId);
         if (child) {
           this.syncNodePresentation(childId);
@@ -4517,7 +4535,7 @@ class NodeStore {
     const parentId = node.parentId;
     const allNodes = this.allNodesMap;
     for (const childId of [...node.childIds]) {
-      reparent(childId, parentId, allNodes);
+      reparent(childId, parentId, allNodes, this.registry);
       const child = allNodes.get(childId);
       if (child) {
         this.syncNodePresentation(childId);
@@ -4552,28 +4570,43 @@ class NodeStore {
    * get Z_SELECTION_BOOST to render on top of everything.
    */
   getZForNode(nodeId, selectedNodeIds) {
+    var _a2;
     const Z_STEP = 1e-3;
-    const Z_COMP_TIER = 0.2;
-    const Z_LEAF_TIER = 0.4;
     const Z_SELECTION_BOOST = 0.5;
     const node = this.get(nodeId);
     if (!node) return 0;
     let baseZ;
-    switch (node.nodeType) {
-      case "subgraph":
-        baseZ = -0.05 - (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
-        break;
-      case "group":
+    const zTier = (_a2 = this.registry) == null ? void 0 : _a2.getZTier(node.nodeType);
+    if (zTier !== void 0) {
+      if (zTier < 0) {
+        baseZ = zTier - (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
+      } else if (zTier < 0.1) {
         baseZ = (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
-        break;
-      case "composition":
-        baseZ = Z_COMP_TIER + (this._compositionOrder.get(nodeId) ?? 0) * Z_STEP;
-        break;
-      default:
-        baseZ = Z_LEAF_TIER + (this._leafOrder.get(nodeId) ?? 0) * Z_STEP;
-        break;
+      } else if (zTier < 0.3) {
+        baseZ = zTier + (this._compositionOrder.get(nodeId) ?? 0) * Z_STEP;
+      } else {
+        baseZ = zTier + (this._leafOrder.get(nodeId) ?? 0) * Z_STEP;
+      }
+    } else {
+      const Z_COMP_TIER = 0.2;
+      const Z_LEAF_TIER = 0.4;
+      switch (node.nodeType) {
+        case "subgraph":
+          baseZ = -0.05 - (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
+          break;
+        case "group":
+          baseZ = (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
+          break;
+        case "composition":
+          baseZ = Z_COMP_TIER + (this._compositionOrder.get(nodeId) ?? 0) * Z_STEP;
+          break;
+        default:
+          baseZ = Z_LEAF_TIER + (this._leafOrder.get(nodeId) ?? 0) * Z_STEP;
+          break;
+      }
     }
-    if (selectedNodeIds.has(nodeId) && !isContainerNodeType(node.nodeType)) {
+    const isContainer = this.registry ? this.registry.isContainer(node.nodeType) : isContainerNodeType(node.nodeType);
+    if (selectedNodeIds.has(nodeId) && !isContainer) {
       return baseZ + Z_SELECTION_BOOST;
     }
     let currentId = node.parentId;
@@ -4665,7 +4698,7 @@ class NodeStore {
   }
   /** Assign a new parent to a child node, preserving world position. */
   setParent(childId, newParentId) {
-    const changed = reparent(childId, newParentId, this.allNodesMap);
+    const changed = reparent(childId, newParentId, this.allNodesMap, this.registry);
     if (!changed) return false;
     this.syncNodePresentation(childId);
     return true;
@@ -4828,7 +4861,8 @@ class NodeStore {
   }
   /** Ensure a node is stored in the correct map based on its nodeType. */
   syncToMap(node) {
-    if (isContainerNodeType(node.nodeType)) {
+    const isContainer = this.registry ? this.registry.isContainer(node.nodeType) : isContainerNodeType(node.nodeType);
+    if (isContainer) {
       this.groups.set(node.id, node);
     } else {
       this.nodes.set(node.id, node);
@@ -4891,6 +4925,19 @@ class NodeStore {
     }));
   }
   createHandleState(candidateId, nodeType, existingHandles = []) {
+    if (this.registry) {
+      if (!this.registry.hasHandles(nodeType, this.connectionMode)) return [];
+      const desc = this.registry.get(nodeType);
+      return desc.handles.sides.map((side) => {
+        var _a2;
+        return {
+          candidateId,
+          side,
+          isConnected: ((_a2 = existingHandles.find((handle) => handle.side === side)) == null ? void 0 : _a2.isConnected) ?? false,
+          style: { ...this.handleStyle }
+        };
+      });
+    }
     if (nodeType === "subgraph" || isNodePrimitiveType(nodeType)) {
       return ["left", "right"].map((side) => {
         var _a2;
@@ -4914,6 +4961,7 @@ class NodeStore {
     });
   }
   createNodeRecord(params) {
+    var _a2, _b;
     const {
       id,
       localX,
@@ -4934,6 +4982,9 @@ class NodeStore {
     const g = id >> 8 & 255;
     const b = id >> 16 & 255;
     const handles = this.createHandleState(id, nodeType);
+    const desc = (_a2 = this.registry) == null ? void 0 : _a2.get(nodeType);
+    const textureIds = desc ? { ...desc.defaultTextureIds } : getDefaultTextureIds(nodeType);
+    const props = (desc == null ? void 0 : desc.createDefaultProps) ? desc.createDefaultProps() : nodeType === "node" ? this.createDefaultProps() : void 0;
     const result = {
       id,
       localX,
@@ -4941,7 +4992,7 @@ class NodeStore {
       width,
       height,
       text,
-      textureIds: getDefaultTextureIds(nodeType),
+      textureIds,
       pickColor: [r / 255, g / 255, b / 255],
       isSelected,
       visible,
@@ -4953,10 +5004,15 @@ class NodeStore {
       isLocked,
       isCollapsed,
       handles,
-      props: nodeType === "node" ? this.createDefaultProps() : void 0
+      props
     };
-    if (nodeType === "node" && result.props) {
-      result.height = this.calculatePropHeight(result.props);
+    if (result.props) {
+      const desc2 = (_b = this.registry) == null ? void 0 : _b.get(nodeType);
+      if (desc2 == null ? void 0 : desc2.calculateHeight) {
+        result.height = desc2.calculateHeight(result);
+      } else if (nodeType === "node") {
+        result.height = this.calculatePropHeight(result.props);
+      }
     }
     return result;
   }
@@ -4972,7 +5028,8 @@ class NodeStore {
     const titleHeight = 42;
     const parentWorld = getParentFrameWorldPosition(
       subgraph.parentId,
-      this.allNodesMap
+      this.allNodesMap,
+      this.registry
     );
     const children = subgraph.childIds.map((id) => this.get(id)).filter((node) => Boolean(node));
     if (children.length === 0) {
@@ -7789,6 +7846,239 @@ class GraphEventEmitter {
     return true;
   }
 }
+class NodeTypeRegistry {
+  constructor() {
+    __publicField(this, "descriptors", /* @__PURE__ */ new Map());
+    __publicField(this, "containerTypes", /* @__PURE__ */ new Set());
+    __publicField(this, "leafTypes", /* @__PURE__ */ new Set());
+  }
+  register(descriptor) {
+    if (this.descriptors.has(descriptor.type)) {
+      throw new Error(
+        `NodeTypeRegistry: type "${descriptor.type}" is already registered`
+      );
+    }
+    this.descriptors.set(descriptor.type, descriptor);
+    if (descriptor.category === "container") {
+      this.containerTypes.add(descriptor.type);
+    } else {
+      this.leafTypes.add(descriptor.type);
+    }
+  }
+  get(type) {
+    return this.descriptors.get(type);
+  }
+  has(type) {
+    return this.descriptors.has(type);
+  }
+  getAll() {
+    return this.descriptors.values();
+  }
+  isContainer(type) {
+    return this.containerTypes.has(type);
+  }
+  isLeaf(type) {
+    return this.leafTypes.has(type);
+  }
+  getZTier(type) {
+    var _a2;
+    return ((_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.zTier) ?? 0.4;
+  }
+  getDefaultSize(type, collapsed) {
+    const desc = this.descriptors.get(type);
+    if (!desc) return { width: 190, height: 150 };
+    if (collapsed && desc.collapsedSize) return { ...desc.collapsedSize };
+    return { ...desc.defaultSize };
+  }
+  canReparentTo(childType, parentType) {
+    const desc = this.descriptors.get(childType);
+    if (!desc) return false;
+    if (parentType === null) {
+      return desc.canBeRoot;
+    }
+    if (!this.isContainer(parentType)) return false;
+    if (desc.allowedParents === null) {
+      return true;
+    }
+    return desc.allowedParents.includes(parentType);
+  }
+  isConnectionCandidate(type, connectionMode) {
+    const desc = this.descriptors.get(type);
+    if (!desc) return false;
+    return desc.isConnectionCandidate(connectionMode);
+  }
+  hasHandles(type, connectionMode) {
+    const desc = this.descriptors.get(type);
+    if (!desc) return false;
+    if (desc.handles.always) return true;
+    return desc.isConnectionCandidate(connectionMode);
+  }
+  allowsMultiConnect(type) {
+    var _a2;
+    return ((_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.handles.multiConnect) ?? false;
+  }
+  contributesToChildWorldPosition(type) {
+    const desc = this.descriptors.get(type);
+    if (!desc) return true;
+    return desc.contributesToChildWorldPosition ?? true;
+  }
+}
+function createDefaultProps() {
+  return {
+    groups: ["Appearance", "Data", "Meta"],
+    booleans: {
+      "ungrouped": [
+        { label: "Visible", value: true, uiPrimitive: "checkbox" },
+        { label: "Primary", value: false, uiPrimitive: "checkbox" }
+      ],
+      "Appearance": [{ label: "Shadow", value: true, uiPrimitive: "checkbox" }]
+    },
+    texts: {
+      "Data": [
+        { label: "Value", value: "0", uiPrimitive: "range" },
+        { label: "default", value: "0", uiPrimitive: "range" }
+      ]
+    },
+    enums: {
+      "Appearance": [
+        { label: "Size", value: "Medium", uiPrimitive: "select", options: ["Medium", "Large", "ExtraLarge"] }
+      ],
+      "Meta": [
+        { label: "Depth", value: "Deep", uiPrimitive: "select", options: ["Shallow", "Steep", "Deep"] }
+      ]
+    }
+  };
+}
+const nodeDescriptor = {
+  type: "node",
+  category: "leaf",
+  zTier: 0.4,
+  defaultSize: { width: 190, height: 150 },
+  collapsedSize: { width: 190, height: NODE_LAYOUT.headerHeight },
+  handles: { always: true, sides: ["left", "right"], multiConnect: false },
+  isConnectionCandidate: () => true,
+  allowedParents: ["group", "subgraph"],
+  canBeRoot: true,
+  defaultTextureIds: { body: "gg-node-body-default", head: "gg-node-head-default" },
+  textureKinds: ["node-body", "node-head"],
+  createDefaultProps,
+  calculateHeight: (node) => {
+    if (!node.props) return 150;
+    let lineCount = 0;
+    for (const items of Object.values(node.props.booleans)) lineCount += items.length;
+    for (const items of Object.values(node.props.texts)) lineCount += items.length;
+    for (const items of Object.values(node.props.enums)) lineCount += items.length;
+    lineCount += node.props.groups.length;
+    return NODE_LAYOUT.headerHeight + 16 + lineCount * 20 + 16;
+  },
+  renderMode: "textured",
+  toolbarActions: ["edit", "delete"],
+  collapsible: false,
+  lockable: false
+};
+const hubDescriptor = {
+  type: "hub",
+  category: "leaf",
+  zTier: 0.4,
+  defaultSize: { width: 240, height: 100 },
+  handles: { always: true, sides: ["left", "right"], multiConnect: true },
+  isConnectionCandidate: () => true,
+  allowedParents: ["subgraph"],
+  canBeRoot: true,
+  defaultTextureIds: { body: "gg-node-body-default", head: "gg-node-head-default" },
+  textureKinds: ["node-body", "node-head"],
+  renderMode: "rounded-rect",
+  renderConfig: {
+    fillColor: [0.12, 0.13, 0.14, 1],
+    borderColor: [0.25, 0.27, 0.29, 1],
+    borderWidth: 1.5,
+    radius: 16
+  },
+  toolbarActions: ["edit", "delete"],
+  collapsible: false,
+  lockable: false
+};
+const groupDescriptor = {
+  type: "group",
+  category: "container",
+  zTier: 0,
+  defaultSize: { width: 220, height: 200 },
+  handles: { always: false, sides: ["left", "right"], multiConnect: false },
+  isConnectionCandidate: (mode) => mode === "group",
+  allowedParents: ["subgraph"],
+  canBeRoot: true,
+  defaultTextureIds: { body: "gg-group-body-default", head: "gg-group-head-default" },
+  textureKinds: ["group-body", "group-head"],
+  renderMode: "textured",
+  toolbarActions: ["spotlight", "edit", "delete"],
+  collapsible: false,
+  lockable: true,
+  contributesToChildWorldPosition: true
+};
+const compositionDescriptor = {
+  type: "composition",
+  category: "container",
+  zTier: 0.2,
+  defaultSize: { width: 140, height: 200 },
+  handles: { always: false, sides: ["left", "right"], multiConnect: false },
+  isConnectionCandidate: (mode) => mode === "node",
+  allowedParents: ["group", "subgraph"],
+  canBeRoot: false,
+  defaultTextureIds: { body: "gg-composition-body-default", head: "gg-composition-head-default" },
+  textureKinds: ["composition-body", "composition-head"],
+  renderMode: "textured",
+  toolbarActions: ["delete"],
+  collapsible: false,
+  lockable: false,
+  contributesToChildWorldPosition: true
+};
+const compositionChildDescriptor = {
+  type: "composition-child",
+  category: "leaf",
+  zTier: 0.4,
+  defaultSize: { width: 160, height: NODE_LAYOUT.headerHeight },
+  handles: { always: false, sides: [], multiConnect: false },
+  isConnectionCandidate: () => false,
+  allowedParents: ["composition"],
+  canBeRoot: false,
+  defaultTextureIds: { body: "gg-node-body-default", head: "gg-composition-child-head-default" },
+  textureKinds: ["composition-child-head"],
+  renderMode: "textured",
+  toolbarActions: ["edit", "delete"],
+  collapsible: false,
+  lockable: false
+};
+const subgraphDescriptor = {
+  type: "subgraph",
+  category: "container",
+  zTier: -0.05,
+  defaultSize: { width: 220, height: 160 },
+  collapsedSize: { width: 190, height: NODE_LAYOUT.headerHeight },
+  handles: { always: true, sides: ["left", "right"], multiConnect: false },
+  isConnectionCandidate: (mode) => mode === "node",
+  allowedParents: ["subgraph"],
+  canBeRoot: true,
+  defaultTextureIds: { body: "", head: "" },
+  renderMode: "rounded-rect",
+  renderConfig: {
+    fillColor: [0.11, 0.12, 0.13, 0.95],
+    borderColor: [0.22, 0.24, 0.26, 1],
+    borderWidth: 1.5,
+    radius: 12
+  },
+  toolbarActions: ["collapse", "ungraph", "clone", "edit", "delete"],
+  collapsible: true,
+  lockable: false,
+  contributesToChildWorldPosition: false
+};
+const BUILTIN_DESCRIPTORS = [
+  nodeDescriptor,
+  hubDescriptor,
+  groupDescriptor,
+  compositionDescriptor,
+  compositionChildDescriptor,
+  subgraphDescriptor
+];
 const EDIT = `
 <svg style="transform: scale(0.5);"  viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M18.9445 9.1875L14.9445 5.1875M18.9445 9.1875L13.946 14.1859C13.2873 14.8446 12.4878 15.3646 11.5699 15.5229C10.6431 15.6828 9.49294 15.736 8.94444 15.1875C8.39595 14.639 8.44915 13.4888 8.609 12.562C8.76731 11.6441 9.28735 10.8446 9.946 10.1859L14.9445 5.1875M18.9445 9.1875C18.9445 9.1875 21.9444 6.1875 19.9444 4.1875C17.9444 2.1875 14.9445 5.1875 14.9445 5.1875M20.5 12C20.5 18.5 18.5 20.5 12 20.5C5.5 20.5 3.5 18.5 3.5 12C3.5 5.5 5.5 3.5 12 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
 `;
@@ -7814,6 +8104,7 @@ const baseButtons = (items) => items.map(([action, glyph, label]) => ({ action, 
 const _NodeEditor = class _NodeEditor {
   constructor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, IconBGVsSource, IconBGFsSource, options = {}, nodeTextureUploadList) {
     __publicField(this, "events", new GraphEventEmitter());
+    __publicField(this, "typeRegistry", new NodeTypeRegistry());
     __publicField(this, "camera");
     __publicField(this, "store");
     __publicField(this, "edgeStore");
@@ -7885,11 +8176,15 @@ const _NodeEditor = class _NodeEditor {
     if (!gl) throw new Error("WebGL2 is not supported in this browser");
     this.connectionMode = options.connectionMode ?? "node";
     this.assetsPath = options.assetsPath ?? "assets";
+    for (const descriptor of BUILTIN_DESCRIPTORS) {
+      this.typeRegistry.register(descriptor);
+    }
     this.camera = new Camera();
     this.store = new NodeStore(
       gl,
       this.connectionMode,
-      options.handleStyle ?? DEFAULT_HANDLE_STYLE
+      options.handleStyle ?? DEFAULT_HANDLE_STYLE,
+      this.typeRegistry
     );
     this.edgeStore = new EdgeStore();
     this.history = new HistoryStack();

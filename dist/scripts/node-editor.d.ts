@@ -1,5 +1,6 @@
 import { GraphEventEmitter } from "./events.js";
 import { ConnectionMode, NodeEditorConfig, AddUploadedTextureParams } from "./types.js";
+import { NodeTypeRegistry } from "./node-type-registry.js";
 /**
  * NodeEditor is the single public class exposed to the entry point.
  * It owns every internal module and wires them together via callbacks.
@@ -18,6 +19,7 @@ export declare class NodeEditor {
     private IconBGFsSource;
     private nodeTextureUploadList;
     readonly events: GraphEventEmitter;
+    readonly typeRegistry: NodeTypeRegistry;
     get debug(): boolean | null;
     set debug(value: boolean | null);
     private camera;

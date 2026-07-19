@@ -9,6 +9,7 @@ import { AccessibilityTree } from './accessibility.js';
  */
 export class NodeStore {
     gl;
+    registry;
     /** Group nodes — drawn first (behind compositions and leaves). */
     groups = new Map();
     /** Leaf nodes — drawn last (in front of groups and compositions). */
@@ -25,8 +26,9 @@ export class NodeStore {
     connectionMode;
     handleStyle;
     currentTheme = 'dark';
-    constructor(gl, connectionMode = 'node', handleStyle = DEFAULT_HANDLE_STYLE) {
+    constructor(gl, connectionMode = 'node', handleStyle = DEFAULT_HANDLE_STYLE, registry) {
         this.gl = gl;
+        this.registry = registry;
         this.a11yTree = new AccessibilityTree();
         this.connectionMode = connectionMode;
         this.handleStyle = { ...handleStyle };
@@ -76,20 +78,21 @@ export class NodeStore {
     add(localX, localY, text, theme, nodeType = 'node', idOverride) {
         const id = idOverride ?? ++this._nextId;
         this._nextId = Math.max(this._nextId, id);
-        // Record per-type creation order for tiered z-ordering
-        switch (nodeType) {
-            case 'group':
-            case 'subgraph':
-                this._groupOrder.set(id, this._nextGroupOrder++);
-                break;
-            case 'composition':
-                this._compositionOrder.set(id, this._nextCompositionOrder++);
-                break;
-            default:
-                this._leafOrder.set(id, this._nextLeafOrder++);
-                break;
+        const desc = this.registry?.get(nodeType);
+        const zTier = desc?.zTier ?? 0.4;
+        if (zTier < 0.1) {
+            this._groupOrder.set(id, this._nextGroupOrder++);
         }
-        const { width, height } = getDefaultNodeSize(nodeType);
+        else if (zTier >= 0.1 && zTier < 0.3) {
+            this._compositionOrder.set(id, this._nextCompositionOrder++);
+        }
+        else {
+            this._leafOrder.set(id, this._nextLeafOrder++);
+        }
+        const defaultSize = desc
+            ? desc.defaultSize
+            : getDefaultNodeSize(nodeType);
+        const { width, height } = defaultSize;
         const node = this.createNodeRecord({
             id,
             localX,
@@ -132,7 +135,7 @@ export class NodeStore {
             return null;
         if (composition.nodeType !== 'composition')
             return null;
-        const world = getWorldPosition(source.id, this.allNodesMap);
+        const world = getWorldPosition(source.id, this.allNodesMap, this.registry);
         const clone = this.add(world.x, world.y, source.text, theme, 'composition-child');
         if (!this.setParent(clone.id, composition.id)) {
             this.remove(clone.id);
@@ -160,7 +163,7 @@ export class NodeStore {
             const allNodes = this.allNodesMap;
             const childrenToReparent = [...node.childIds];
             for (const childId of childrenToReparent) {
-                reparent(childId, node.parentId, allNodes);
+                reparent(childId, node.parentId, allNodes, this.registry);
                 const child = allNodes.get(childId);
                 if (child) {
                     this.syncNodePresentation(childId);
@@ -201,7 +204,7 @@ export class NodeStore {
         const parentId = node.parentId;
         const allNodes = this.allNodesMap;
         for (const childId of [...node.childIds]) {
-            reparent(childId, parentId, allNodes);
+            reparent(childId, parentId, allNodes, this.registry);
             const child = allNodes.get(childId);
             if (child) {
                 this.syncNodePresentation(childId);
@@ -237,28 +240,48 @@ export class NodeStore {
      */
     getZForNode(nodeId, selectedNodeIds) {
         const Z_STEP = 0.001;
-        const Z_COMP_TIER = 0.2;
-        const Z_LEAF_TIER = 0.4;
         const Z_SELECTION_BOOST = 0.5;
         const node = this.get(nodeId);
         if (!node)
             return 0;
         let baseZ;
-        switch (node.nodeType) {
-            case 'subgraph':
-                baseZ = -0.05 - (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
-                break;
-            case 'group':
+        const zTier = this.registry?.getZTier(node.nodeType);
+        if (zTier !== undefined) {
+            if (zTier < 0) {
+                baseZ = zTier - (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
+            }
+            else if (zTier < 0.1) {
                 baseZ = (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
-                break;
-            case 'composition':
-                baseZ = Z_COMP_TIER + (this._compositionOrder.get(nodeId) ?? 0) * Z_STEP;
-                break;
-            default:
-                baseZ = Z_LEAF_TIER + (this._leafOrder.get(nodeId) ?? 0) * Z_STEP;
-                break;
+            }
+            else if (zTier < 0.3) {
+                baseZ = zTier + (this._compositionOrder.get(nodeId) ?? 0) * Z_STEP;
+            }
+            else {
+                baseZ = zTier + (this._leafOrder.get(nodeId) ?? 0) * Z_STEP;
+            }
         }
-        if (selectedNodeIds.has(nodeId) && !isContainerNodeType(node.nodeType)) {
+        else {
+            const Z_COMP_TIER = 0.2;
+            const Z_LEAF_TIER = 0.4;
+            switch (node.nodeType) {
+                case 'subgraph':
+                    baseZ = -0.05 - (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
+                    break;
+                case 'group':
+                    baseZ = (this._groupOrder.get(nodeId) ?? 0) * Z_STEP;
+                    break;
+                case 'composition':
+                    baseZ = Z_COMP_TIER + (this._compositionOrder.get(nodeId) ?? 0) * Z_STEP;
+                    break;
+                default:
+                    baseZ = Z_LEAF_TIER + (this._leafOrder.get(nodeId) ?? 0) * Z_STEP;
+                    break;
+            }
+        }
+        const isContainer = this.registry
+            ? this.registry.isContainer(node.nodeType)
+            : isContainerNodeType(node.nodeType);
+        if (selectedNodeIds.has(nodeId) && !isContainer) {
             return baseZ + Z_SELECTION_BOOST;
         }
         // Child of selected container: boost so it renders above parent
@@ -362,7 +385,7 @@ export class NodeStore {
     }
     /** Assign a new parent to a child node, preserving world position. */
     setParent(childId, newParentId) {
-        const changed = reparent(childId, newParentId, this.allNodesMap);
+        const changed = reparent(childId, newParentId, this.allNodesMap, this.registry);
         if (!changed)
             return false;
         this.syncNodePresentation(childId);
@@ -538,7 +561,10 @@ export class NodeStore {
     }
     /** Ensure a node is stored in the correct map based on its nodeType. */
     syncToMap(node) {
-        if (isContainerNodeType(node.nodeType)) {
+        const isContainer = this.registry
+            ? this.registry.isContainer(node.nodeType)
+            : isContainerNodeType(node.nodeType);
+        if (isContainer) {
             this.groups.set(node.id, node);
         }
         else {
@@ -613,6 +639,17 @@ export class NodeStore {
         }));
     }
     createHandleState(candidateId, nodeType, existingHandles = []) {
+        if (this.registry) {
+            if (!this.registry.hasHandles(nodeType, this.connectionMode))
+                return [];
+            const desc = this.registry.get(nodeType);
+            return desc.handles.sides.map((side) => ({
+                candidateId,
+                side,
+                isConnected: existingHandles.find((handle) => handle.side === side)?.isConnected ?? false,
+                style: { ...this.handleStyle },
+            }));
+        }
         if (nodeType === 'subgraph' || isNodePrimitiveType(nodeType)) {
             return ['left', 'right'].map((side) => ({
                 candidateId,
@@ -636,6 +673,13 @@ export class NodeStore {
         const g = (id >> 8) & 0xff;
         const b = (id >> 16) & 0xff;
         const handles = this.createHandleState(id, nodeType);
+        const desc = this.registry?.get(nodeType);
+        const textureIds = desc
+            ? { ...desc.defaultTextureIds }
+            : getDefaultTextureIds(nodeType);
+        const props = desc?.createDefaultProps
+            ? desc.createDefaultProps()
+            : nodeType === 'node' ? this.createDefaultProps() : undefined;
         const result = {
             id,
             localX,
@@ -643,7 +687,7 @@ export class NodeStore {
             width,
             height,
             text,
-            textureIds: getDefaultTextureIds(nodeType),
+            textureIds,
             pickColor: [r / 255, g / 255, b / 255],
             isSelected,
             visible,
@@ -655,10 +699,16 @@ export class NodeStore {
             isLocked,
             isCollapsed,
             handles,
-            props: nodeType === 'node' ? this.createDefaultProps() : undefined,
+            props,
         };
-        if (nodeType === 'node' && result.props) {
-            result.height = this.calculatePropHeight(result.props);
+        if (result.props) {
+            const desc = this.registry?.get(nodeType);
+            if (desc?.calculateHeight) {
+                result.height = desc.calculateHeight(result);
+            }
+            else if (nodeType === 'node') {
+                result.height = this.calculatePropHeight(result.props);
+            }
         }
         return result;
     }
@@ -672,7 +722,7 @@ export class NodeStore {
         }
         const padding = 24;
         const titleHeight = 42;
-        const parentWorld = getParentFrameWorldPosition(subgraph.parentId, this.allNodesMap);
+        const parentWorld = getParentFrameWorldPosition(subgraph.parentId, this.allNodesMap, this.registry);
         const children = subgraph.childIds
             .map((id) => this.get(id))
             .filter((node) => Boolean(node));

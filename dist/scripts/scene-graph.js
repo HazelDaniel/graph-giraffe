@@ -7,7 +7,7 @@ import { isContainerNodeType } from './types.js';
  * This is intentionally a pure function — it has no side effects and does
  * not mutate any node. Renderers and drag handlers call it on demand.
  */
-export function getWorldPosition(nodeId, nodes) {
+export function getWorldPosition(nodeId, nodes, registry) {
     const node = nodes.get(nodeId);
     if (!node)
         return { x: 0, y: 0 };
@@ -18,7 +18,10 @@ export function getWorldPosition(nodeId, nodes) {
         const parent = nodes.get(currentParentId);
         if (!parent)
             break;
-        if (parent.nodeType !== 'subgraph') {
+        const contributes = registry
+            ? registry.contributesToChildWorldPosition(parent.nodeType)
+            : parent.nodeType !== 'subgraph';
+        if (contributes) {
             x += parent.localX;
             y += parent.localY;
         }
@@ -26,16 +29,19 @@ export function getWorldPosition(nodeId, nodes) {
     }
     return { x, y };
 }
-export function getParentFrameWorldPosition(parentId, nodes) {
+export function getParentFrameWorldPosition(parentId, nodes, registry) {
     if (parentId === null)
         return { x: 0, y: 0 };
     const parent = nodes.get(parentId);
     if (!parent)
         return { x: 0, y: 0 };
-    if (parent.nodeType === 'subgraph') {
-        return getParentFrameWorldPosition(parent.parentId, nodes);
+    const contributes = registry
+        ? registry.contributesToChildWorldPosition(parent.nodeType)
+        : parent.nodeType !== 'subgraph';
+    if (!contributes) {
+        return getParentFrameWorldPosition(parent.parentId, nodes, registry);
     }
-    return getWorldPosition(parentId, nodes);
+    return getWorldPosition(parentId, nodes, registry);
 }
 export function getOwningSubgraphId(nodeId, nodes) {
     const node = nodes.get(nodeId);
@@ -60,67 +66,82 @@ export function getOwningSubgraphId(nodeId, nodes) {
  * the same world position under the new parent. This prevents the node
  * from "jumping" when it is re-parented.
  */
-export function reparent(childId, newParentId, nodes) {
+export function reparent(childId, newParentId, nodes, registry) {
     const child = nodes.get(childId);
     if (!child)
         return false;
     if (child.parentId === newParentId) {
         return true;
     }
-    if (newParentId === null) {
-        if (child.nodeType === 'composition' || child.nodeType === 'composition-child') {
+    if (registry) {
+        if (!registry.canReparentTo(child.nodeType, newParentId !== null ? nodes.get(newParentId)?.nodeType ?? null : null)) {
+            return false;
+        }
+        if (newParentId === null && !registry.get(child.nodeType)?.canBeRoot) {
             return false;
         }
     }
     else {
+        if (newParentId === null) {
+            if (child.nodeType === 'composition' || child.nodeType === 'composition-child') {
+                return false;
+            }
+        }
+        else {
+            const newParent = nodes.get(newParentId);
+            if (!newParent)
+                return false;
+            if (!isContainerNodeType(newParent.nodeType))
+                return false;
+            if (child.nodeType === 'group') {
+                if (newParent.nodeType !== 'subgraph')
+                    return false;
+            }
+            if (child.nodeType === 'hub') {
+                if (newParent.nodeType === 'group')
+                    return false;
+            }
+            if (child.nodeType === 'composition') {
+                if (newParent.nodeType !== 'group' && newParent.nodeType !== 'subgraph')
+                    return false;
+            }
+            if (child.nodeType === 'composition-child') {
+                if (newParent.nodeType !== 'composition')
+                    return false;
+            }
+            if (child.nodeType === 'node') {
+                if (newParent.nodeType === 'composition')
+                    return false;
+            }
+            if (child.nodeType === 'subgraph') {
+                if (newParent.nodeType === 'composition')
+                    return false;
+            }
+        }
+    }
+    if (newParentId !== null) {
         const newParent = nodes.get(newParentId);
         if (!newParent)
             return false;
-        if (!isContainerNodeType(newParent.nodeType))
+        if (!registry && !isContainerNodeType(newParent.nodeType))
             return false;
-        if (child.nodeType === 'group') {
-            if (newParent.nodeType !== 'subgraph')
-                return false;
-        }
-        if (child.nodeType === 'hub') {
-            if (newParent.nodeType === 'group')
-                return false;
-        }
-        if (child.nodeType === 'composition') {
-            if (newParent.nodeType !== 'group' && newParent.nodeType !== 'subgraph')
-                return false;
-        }
-        if (child.nodeType === 'composition-child') {
-            if (newParent.nodeType !== 'composition')
-                return false;
-        }
-        if (child.nodeType === 'node') {
-            if (newParent.nodeType === 'composition')
-                return false;
-        }
-        if (child.nodeType === 'subgraph') {
-            if (newParent.nodeType === 'composition')
-                return false;
-        }
+        if (registry && !registry.isContainer(newParent.nodeType))
+            return false;
     }
-    // Prevent a node from being its own ancestor (cycle guard)
     if (newParentId !== null && isAncestor(newParentId, childId, nodes))
         return false;
-    // Snapshot the child's current world position before anything changes
-    const childWorld = getWorldPosition(childId, nodes);
-    // Detach from the old parent
+    const childWorld = getWorldPosition(childId, nodes, registry);
     if (child.parentId !== null) {
         const oldParent = nodes.get(child.parentId);
         if (oldParent) {
             oldParent.childIds = oldParent.childIds.filter((id) => id !== childId);
         }
     }
-    // Compute and assign the new local offset
     if (newParentId !== null) {
         const newParent = nodes.get(newParentId);
         if (!newParent)
             return false;
-        const newParentWorld = getParentFrameWorldPosition(newParentId, nodes);
+        const newParentWorld = getParentFrameWorldPosition(newParentId, nodes, registry);
         child.localX = childWorld.x - newParentWorld.x;
         child.localY = childWorld.y - newParentWorld.y;
         if (newParent && !newParent.childIds.includes(childId)) {
@@ -128,7 +149,6 @@ export function reparent(childId, newParentId, nodes) {
         }
     }
     else {
-        // Promoted to root: local coords become world coords
         child.localX = childWorld.x;
         child.localY = childWorld.y;
     }

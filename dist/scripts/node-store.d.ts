@@ -1,4 +1,5 @@
 import { ConnectionMode, HandleStyle, NodeHandleData, NodeData, ThemeName, NodeType } from './types.js';
+import type { NodeTypeRegistry } from './node-type-registry.js';
 /**
  * Owns the canonical node list.
  * Groups, compositions, and leaf nodes are stored in separate z-order buckets
@@ -6,6 +7,7 @@ import { ConnectionMode, HandleStyle, NodeHandleData, NodeData, ThemeName, NodeT
  */
 export declare class NodeStore {
     private gl;
+    private registry?;
     /** Group nodes — drawn first (behind compositions and leaves). */
     readonly groups: Map<number, NodeData>;
     /** Leaf nodes — drawn last (in front of groups and compositions). */
@@ -22,7 +24,7 @@ export declare class NodeStore {
     private connectionMode;
     private handleStyle;
     private currentTheme;
-    constructor(gl: WebGL2RenderingContext, connectionMode?: ConnectionMode, handleStyle?: HandleStyle);
+    constructor(gl: WebGL2RenderingContext, connectionMode?: ConnectionMode, handleStyle?: HandleStyle, registry?: NodeTypeRegistry | undefined);
     getTheme(): ThemeName;
     /** The id that the next call to add() will assign. Useful for labelling. */
     get nextNodeId(): number;

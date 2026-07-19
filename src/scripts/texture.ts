@@ -129,27 +129,27 @@ export const C_NODE_THEMES: Record<ThemeName, ThemeStyle> = {
 
 export const CR_NODE_THEMES: Record<ThemeName, ThemeStyle> = {
   dark: {
-    bgFill: "rgb(9, 9, 10)",
+    bgFill: "rgba(0, 0, 0, 0)",
     borderStroke: "rgba(255, 255, 255, 0.95)",
     headerFill: "rgba(22, 20, 20, 0.79)",
     titleFill: "#f8fafc",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
+    bodyFill: "rgba(0, 0, 0, 0)",
     borderWidth: 1,
   },
   light: {
-    bgFill: "rgba(248, 250, 252, 0.9)",
-    borderStroke: "rgba(0, 0, 0, 0.4)",
+    bgFill: "rgba(0, 0, 0, 0)",
+    borderStroke: "rgba(0, 0, 0, 0.5)",
     headerFill: "rgba(226, 232, 240, 1)",
     titleFill: "#0f172a",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
+    bodyFill: "rgba(0, 0, 0, 0)",
     borderWidth: 1,
   },
   neon: {
-    bgFill: "rgba(10, 10, 20, 0.9)",
+    bgFill: "rgba(0, 0, 0, 0)",
     borderStroke: "#06b6d4",
     headerFill: "rgba(6, 182, 212, 0.2)",
     titleFill: "#cffafe",
-    bodyFill: "rgba(44, 159, 146, 0.3)",
+    bodyFill: "rgba(0, 0, 0, 0)",
     borderWidth: 2,
   },
 };
