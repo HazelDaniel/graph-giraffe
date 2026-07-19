@@ -2,7 +2,7 @@ import { NodeEditor, useGraphEvent } from "@graph-giraffe/react";
 import type { NodeEditorHandle } from "@graph-giraffe/react";
 
 import "./App.css";
-import "@graph-giraffe/core/assets/index.css";
+import "@graph-giraffe/react/assets/index.css";
 import logoSvg from "/logo.svg";
 import { useCallback, useRef } from "react";
 
