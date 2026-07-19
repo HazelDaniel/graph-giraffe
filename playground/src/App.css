@@ -442,13 +442,18 @@
     padding: 0 12px;
   }
 
-  .header-badge {
+  .header-title {
     display: none;
   }
+
 
   .playground {
     padding: 12px;
     gap: 12px;
+  }
+
+  .features-section {
+    min-height: 45rem;
   }
 
   .canvas-container {
