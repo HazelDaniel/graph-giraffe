@@ -1,6 +1,6 @@
 const STYLE_TEMPLATE = `
   :host {
-    position: fixed;
+    position: absolute;
     top: 0.8rem;
     left: 2rem;
     display: flex;

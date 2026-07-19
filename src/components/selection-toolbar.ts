@@ -15,7 +15,7 @@ export interface SelectionToolbarButtonSpec {
 
 const STYLE_TEMPLATE = `
   :host {
-    position: fixed;
+    position: absolute;
     display: none;
     z-index: 30;
     pointer-events: auto;
