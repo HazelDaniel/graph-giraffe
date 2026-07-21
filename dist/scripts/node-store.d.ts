@@ -26,6 +26,13 @@ export declare class NodeStore {
     private currentTheme;
     constructor(gl: WebGL2RenderingContext, connectionMode?: ConnectionMode, handleStyle?: HandleStyle, registry?: NodeTypeRegistry | undefined);
     getTheme(): ThemeName;
+    /** Remove all nodes and reset internal counters. Used during graph import. */
+    clear(): void;
+    /**
+     * Ensure the internal ID counter is at least `value`.
+     * Called after graph import so new nodes get IDs above the imported max.
+     */
+    restoreIdCounter(value: number): void;
     /** The id that the next call to add() will assign. Useful for labelling. */
     get nextNodeId(): number;
     /**

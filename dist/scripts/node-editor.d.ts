@@ -1,6 +1,7 @@
 import { GraphEventEmitter } from "./events.js";
 import { ConnectionMode, NodeEditorConfig, AddUploadedTextureParams } from "./types.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
+import type { GraphSnapshot } from "./graph-serialization.js";
 /**
  * NodeEditor is the single public class exposed to the entry point.
  * It owns every internal module and wires them together via callbacks.
@@ -72,6 +73,23 @@ export declare class NodeEditor {
     private uploadTextureSources;
     render(): void;
     setConnectionMode(connectionMode: ConnectionMode): void;
+    /**
+     * Serialize the full graph state into a portable JSON-compatible snapshot.
+     *
+     * Only persistent fields are captured — transient rendering state is omitted.
+     * The returned object can be passed to `JSON.stringify()` for persistence.
+     */
+    exportGraph(): GraphSnapshot;
+    /**
+     * Restore the editor to a previously exported graph snapshot.
+     *
+     * This clears all existing state (nodes, edges, history) and rebuilds
+     * from the snapshot. The operation is **not undoable** — it replaces the
+     * entire editor state as a fresh baseline.
+     */
+    importGraph(snapshot: GraphSnapshot): void;
+    private handleExport;
+    private handleImport;
     private handleGlobalTextureChange;
     private undo;
     private redo;

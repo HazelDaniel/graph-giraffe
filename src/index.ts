@@ -8,6 +8,7 @@
 // ─── Components / Custom Elements ────────────────────────
 export * from './components/action-pane.js';
 export * from './components/history-pane.js';
+export * from './components/kebab-menu.js';
 export * from './components/loading-screen.js';
 export * from './components/prop-group.js';
 export * from './components/select.js';
@@ -117,3 +118,16 @@ export * as shaders from './shaders.js';
 export { Matrix4, Vector3, Vector4 } from './vendor/cuon-matrix.js';
 
 export { default as Shell } from "./shell.js";
+
+// ─── Graph Serialization ────────────────────────────────
+
+export { serializeGraph, deserializeGraph } from './scripts/graph-serialization.js';
+export type {
+  GraphSnapshot,
+  SerializedNode,
+  SerializedEdge,
+  SerializedTexture,
+  SerializeGraphParams,
+  DeserializeGraphParams,
+  DeserializedEditorState,
+} from './scripts/graph-serialization.js';

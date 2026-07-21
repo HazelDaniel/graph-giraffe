@@ -4,6 +4,7 @@ import { Camera } from "./camera.js";
 import { EdgeStore } from "./edge-store.js";
 import { NodeStore } from "./node-store.js";
 import { MsdfAtlas } from "./msdf-text.js";
+import type { NodeTypeRegistry } from "./node-type-registry.js";
 /**
  * Owns the WebGL draw loop and all rendering logic.
  * It knows nothing about input events or UI — it only reads Camera and NodeStore state.
@@ -32,11 +33,12 @@ export declare class Renderer {
     private iconBGProgram;
     private msdfAtlas;
     private iconAtlas;
+    private registry?;
     private modelMatrix;
     private projMatrix;
     constructor(gl: WebGL2RenderingContext, canvas: HTMLCanvasElement, bgCanvas: HTMLCanvasElement, program: WebGLProgram, locations: NodeShaderLocations, geometry: GeometryNode, bgGeometry: BGGeometryNode, store: NodeStore, edgeStore: EdgeStore, camera: Camera, bgProgram: WebGLProgram, bgLocations: BGShaderLocations, labelCanvas: HTMLCanvasElement, getConnectionPreview: () => ConnectionPreviewData | null, 
     /** Callback so Renderer never stores bgColor itself — it belongs to the editor. */
-    getBgColor: () => [number, number, number, number], getFontColor: () => [number, number, number, number], getSelectedNodeIds: () => Set<number>, onFrame: () => void, msdfProgram: WebGLProgram, iconBGProgram: WebGLProgram, msdfAtlas: MsdfAtlas, iconAtlas: MsdfAtlas);
+    getBgColor: () => [number, number, number, number], getFontColor: () => [number, number, number, number], getSelectedNodeIds: () => Set<number>, onFrame: () => void, msdfProgram: WebGLProgram, iconBGProgram: WebGLProgram, msdfAtlas: MsdfAtlas, iconAtlas: MsdfAtlas, registry?: NodeTypeRegistry | undefined);
     private textRenderer;
     private iconRenderer;
     private iconBackgroundRenderer;
@@ -79,6 +81,8 @@ export declare class Renderer {
      */
     drawBG(picking: boolean): void;
     private drawNode;
+    private getDrawAPI;
+    private drawGenericRoundedRect;
     private drawSubgraphNode;
     private drawHubNode;
     private setModelMatrix;

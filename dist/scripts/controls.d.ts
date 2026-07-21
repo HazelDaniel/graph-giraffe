@@ -9,6 +9,8 @@ export interface ControlCallbacks {
     onUndo(): void;
     onRedo(): void;
     onDeleteNode(): void;
+    onImport?(): void;
+    onExport?(): void;
     onSubgraphCreate: () => void;
     onBgColorChange(r: number, g: number, b: number, a: number): void;
     onFontColorChange(r: number, g: number, b: number, a: number): void;

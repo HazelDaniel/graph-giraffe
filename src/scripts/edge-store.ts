@@ -41,6 +41,21 @@ export class EdgeStore {
     return [...this.edges.values()];
   }
 
+  /** Remove all edges and reset internal counters. Used during graph import. */
+  clear(): void {
+    this.edges.clear();
+    this.adjacency.clear();
+    this._nextId = 0;
+  }
+
+  /**
+   * Ensure the internal ID counter is at least `value`.
+   * Called after graph import so new edges get IDs above the imported max.
+   */
+  restoreIdCounter(value: number): void {
+    this._nextId = Math.max(this._nextId, value);
+  }
+
   get(id: number): EdgeData | undefined {
     return this.edges.get(id);
   }

@@ -23,6 +23,9 @@ const SHELL = `
   <!-- History Pane -->
   <gg-history-pane id="undo-redo-wrapper"></gg-history-pane>
 
+  <!-- Kebab Menu (Options) -->
+  <gg-kebab-menu id="kebab-menu"></gg-kebab-menu>
+
   <!-- Sidebar Overlay -->
   <gg-ui-controls
     id="sidebar"

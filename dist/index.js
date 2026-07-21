@@ -7,6 +7,7 @@
 // ─── Components / Custom Elements ────────────────────────
 export * from './components/action-pane.js';
 export * from './components/history-pane.js';
+export * from './components/kebab-menu.js';
 export * from './components/loading-screen.js';
 export * from './components/prop-group.js';
 export * from './components/select.js';
@@ -15,6 +16,9 @@ export * from './components/texture-select.js';
 export * from './components/ui-controls.js';
 // ─── Core ────────────────────────────────────────────────
 export { NodeEditor } from './scripts/node-editor.js';
+// ─── Node Type Registry ─────────────────────────────────
+export { NodeTypeRegistry } from './scripts/node-type-registry.js';
+export { BUILTIN_DESCRIPTORS, nodeDescriptor, hubDescriptor, groupDescriptor, compositionDescriptor, compositionChildDescriptor, subgraphDescriptor, } from './scripts/builtin-types.js';
 export { NODE_LAYOUT, NODE_SIZE, HANDLE_LAYOUT, DEFAULT_HANDLE_STYLE, isContainerNodeType, isLeafNodeType, isNodePrimitiveType, isCandidateNodeType, getDefaultNodeSize, } from './scripts/types.js';
 export { GraphEventEmitter } from './scripts/events.js';
 // ─── Texture Utilities ───────────────────────────────────
@@ -24,4 +28,6 @@ export * as shaders from './shaders.js';
 // ─── Vendor (re-exported for consumers) ─────────────────
 export { Matrix4, Vector3, Vector4 } from './vendor/cuon-matrix.js';
 export { default as Shell } from "./shell.js";
+// ─── Graph Serialization ────────────────────────────────
+export { serializeGraph, deserializeGraph } from './scripts/graph-serialization.js';
 //# sourceMappingURL=index.js.map

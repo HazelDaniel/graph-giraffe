@@ -38,22 +38,34 @@ export const NODE_SIZE = {
     subgraph: { width: 220, height: 160 },
     subgraphCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
 };
-export function isContainerNodeType(nodeType) {
+export function isContainerNodeType(nodeType, registry) {
+    if (registry)
+        return registry.isContainer(nodeType);
     return nodeType === "group" || nodeType === "composition" || nodeType === "subgraph";
 }
-export function isLeafNodeType(nodeType) {
+export function isLeafNodeType(nodeType, registry) {
+    if (registry)
+        return registry.isLeaf(nodeType);
     return nodeType === "node" || nodeType === "hub" || nodeType === "composition-child";
 }
-export function isNodePrimitiveType(nodeType) {
+export function isNodePrimitiveType(nodeType, registry) {
+    if (registry) {
+        const desc = registry.get(nodeType);
+        return desc ? desc.category === "leaf" && desc.handles.always : false;
+    }
     return nodeType === "node" || nodeType === "hub";
 }
-export function isCandidateNodeType(nodeType, connectionMode) {
+export function isCandidateNodeType(nodeType, connectionMode, registry) {
+    if (registry)
+        return registry.isConnectionCandidate(nodeType, connectionMode);
     if (connectionMode === "group") {
         return nodeType === "group";
     }
     return isNodePrimitiveType(nodeType) || nodeType === "composition" || nodeType === "subgraph";
 }
-export function getDefaultNodeSize(nodeType, isCollapsed = false) {
+export function getDefaultNodeSize(nodeType, isCollapsed = false, registry) {
+    if (registry)
+        return registry.getDefaultSize(nodeType, isCollapsed);
     switch (nodeType) {
         case "group":
         case "composition":

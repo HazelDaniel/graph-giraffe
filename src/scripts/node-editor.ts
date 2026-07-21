@@ -101,6 +101,11 @@ import {
   SPOTLIGHT,
   UNGRAPH,
 } from "../sprite.js";
+import {
+  serializeGraph,
+  deserializeGraph,
+} from "./graph-serialization.js";
+import type { GraphSnapshot } from "./graph-serialization.js";
 
 const baseButtons = (
   items: Array<[SelectionToolbarAction, string, string]>
@@ -407,6 +412,8 @@ export class NodeEditor {
       onUndo: () => this.undo(),
       onRedo: () => this.redo(),
       onDeleteNode: () => this.handleDeleteSelected(),
+      onImport: () => this.handleImport(),
+      onExport: () => this.handleExport(),
       onSubgraphCreate: () => this.handleSubgraphCreation(),
       onBgColorChange: (r, g, b, a) => {
         this.bgColor = [r, g, b, a];
@@ -568,6 +575,104 @@ export class NodeEditor {
   setConnectionMode(connectionMode: ConnectionMode): void {
     this.connectionMode = connectionMode;
     this.store.setConnectionMode(connectionMode);
+  }
+
+  /**
+   * Serialize the full graph state into a portable JSON-compatible snapshot.
+   *
+   * Only persistent fields are captured — transient rendering state is omitted.
+   * The returned object can be passed to `JSON.stringify()` for persistence.
+   */
+  exportGraph(): GraphSnapshot {
+    return serializeGraph({
+      store: this.store,
+      edgeStore: this.edgeStore,
+      textureSources: TextureRegistry.sources.values(),
+      theme: this.theme,
+      connectionMode: this.connectionMode,
+      bgColor: this.bgColor,
+      fontColor: this.fontColor,
+      camera: this.camera,
+    });
+  }
+
+  /**
+   * Restore the editor to a previously exported graph snapshot.
+   *
+   * This clears all existing state (nodes, edges, history) and rebuilds
+   * from the snapshot. The operation is **not undoable** — it replaces the
+   * entire editor state as a fresh baseline.
+   */
+  importGraph(snapshot: GraphSnapshot): void {
+    // Restore stores (nodes, edges, handle state, textures)
+    const editorState = deserializeGraph({
+      snapshot,
+      store: this.store,
+      edgeStore: this.edgeStore,
+      theme: this.theme,
+      registerTexture: (params) => {
+        TextureRegistry.addUploaded(params);
+      },
+    });
+
+    // Apply editor-level state via setters to trigger side effects
+    // (texture regeneration, renderer cache invalidation, etc.)
+    this.theme = editorState.theme;
+    TextureRegistry.theme = editorState.theme;
+    this.store.regenerateTextures(editorState.theme);
+    this.renderer.invalidateTextures();
+
+    this.connectionMode = editorState.connectionMode;
+    this.store.setConnectionMode(editorState.connectionMode);
+
+    this.bgColor = [...editorState.bgColor];
+    this.fontColor = [...editorState.fontColor];
+
+    this.camera.panX = editorState.camera.panX;
+    this.camera.panY = editorState.camera.panY;
+    this.camera.zoom = editorState.camera.zoom;
+
+    // Clear selection and history (import is a fresh baseline)
+    this.clearSelectionState();
+    this.history.clear();
+    this.syncToolbarState();
+  }
+
+  private handleExport(): void {
+    const snapshot = this.exportGraph();
+    const jsonStr = JSON.stringify(snapshot, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `graph-giraffe-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  private handleImport(): void {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event: ProgressEvent<FileReader>) => {
+        try {
+          const content = event.target?.result as string;
+          const snapshot = JSON.parse(content);
+          this.importGraph(snapshot);
+        } catch (err) {
+          console.error("Failed to parse imported graph JSON:", err);
+          alert("Invalid graph JSON file.");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   }
 
   private handleGlobalTextureChange(

@@ -12,6 +12,8 @@ export interface ControlCallbacks {
   onUndo(): void;
   onRedo(): void;
   onDeleteNode(): void;
+  onImport?(): void;
+  onExport?(): void;
 
   onSubgraphCreate: () => void;
   onBgColorChange(r: number, g: number, b: number, a: number): void;
@@ -110,6 +112,16 @@ export class UIControls {
     this.deleteNodeButton.addEventListener("click", () =>
       callbacks.onDeleteNode()
     );
+
+    const kebabMenu = document.getElementById("kebab-menu");
+    kebabMenu?.addEventListener("gg-kebab-action", (e: Event) => {
+      const customEvent = e as CustomEvent<{ action: "import" | "export" }>;
+      if (customEvent.detail.action === "import") {
+        callbacks.onImport?.();
+      } else if (customEvent.detail.action === "export") {
+        callbacks.onExport?.();
+      }
+    });
 
     const bgPicker = container.shadowRoot?.querySelector(
       "#bg-color-picker"

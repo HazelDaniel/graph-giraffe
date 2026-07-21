@@ -384,7 +384,12 @@ class textureRegistry {
         return `${cleanBase}-${suffix}`;
     }
 }
-export function getDefaultTextureIds(nodeType) {
+export function getDefaultTextureIds(nodeType, registry) {
+    if (registry) {
+        const desc = registry.get(nodeType);
+        if (desc)
+            return { ...desc.defaultTextureIds };
+    }
     const defaults = NODE_ID_TEXTURE_LOOKUP[nodeType];
     return { ...defaults };
 }

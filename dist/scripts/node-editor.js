@@ -19,7 +19,17 @@ import { TextureRegistry } from "./texture-registry.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import { CLONE, COLLAPSE, DELETE, EDIT, EXPAND, SPOTLIGHT, UNGRAPH, } from "../sprite.js";
+import { serializeGraph, deserializeGraph, } from "./graph-serialization.js";
 const baseButtons = (items) => items.map(([action, glyph, label]) => ({ action, glyph, label }));
+const TOOLBAR_ACTION_MAP = {
+    edit: [EDIT, "Edit"],
+    delete: [DELETE, "Delete"],
+    clone: [CLONE, "Clone"],
+    collapse: [COLLAPSE, "Collapse"],
+    expand: [EXPAND, "Expand"],
+    ungraph: [UNGRAPH, "Ungraph"],
+    spotlight: [SPOTLIGHT, "Spotlight"],
+};
 /**
  * NodeEditor is the single public class exposed to the entry point.
  * It owns every internal module and wires them together via callbacks.
@@ -160,7 +170,7 @@ export class NodeEditor {
         const labelCanvas = document.getElementById("2d-label-canvas");
         const geometry = new GeometryNode(gl, "rounded-square");
         const bgGeometry = new BGGeometryNode(gl, "dotted", backgroundCanvas);
-        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, () => this.selectedNodeIds, () => this.updateSelectionToolbarPosition(), msdfProgram, iconBGProgam, this.msdfAtlas, this.iconAtlas);
+        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, () => this.selectedNodeIds, () => this.updateSelectionToolbarPosition(), msdfProgram, iconBGProgam, this.msdfAtlas, this.iconAtlas, this.typeRegistry);
         const container = document.getElementById("sidebar");
         const historyPane = document.getElementById("undo-redo-wrapper");
         const toolPane = document.getElementById("tool-panel");
@@ -183,6 +193,8 @@ export class NodeEditor {
             onUndo: () => this.undo(),
             onRedo: () => this.redo(),
             onDeleteNode: () => this.handleDeleteSelected(),
+            onImport: () => this.handleImport(),
+            onExport: () => this.handleExport(),
             onSubgraphCreate: () => this.handleSubgraphCreation(),
             onBgColorChange: (r, g, b, a) => {
                 this.bgColor = [r, g, b, a];
@@ -311,6 +323,97 @@ export class NodeEditor {
     setConnectionMode(connectionMode) {
         this.connectionMode = connectionMode;
         this.store.setConnectionMode(connectionMode);
+    }
+    /**
+     * Serialize the full graph state into a portable JSON-compatible snapshot.
+     *
+     * Only persistent fields are captured — transient rendering state is omitted.
+     * The returned object can be passed to `JSON.stringify()` for persistence.
+     */
+    exportGraph() {
+        return serializeGraph({
+            store: this.store,
+            edgeStore: this.edgeStore,
+            textureSources: TextureRegistry.sources.values(),
+            theme: this.theme,
+            connectionMode: this.connectionMode,
+            bgColor: this.bgColor,
+            fontColor: this.fontColor,
+            camera: this.camera,
+        });
+    }
+    /**
+     * Restore the editor to a previously exported graph snapshot.
+     *
+     * This clears all existing state (nodes, edges, history) and rebuilds
+     * from the snapshot. The operation is **not undoable** — it replaces the
+     * entire editor state as a fresh baseline.
+     */
+    importGraph(snapshot) {
+        // Restore stores (nodes, edges, handle state, textures)
+        const editorState = deserializeGraph({
+            snapshot,
+            store: this.store,
+            edgeStore: this.edgeStore,
+            theme: this.theme,
+            registerTexture: (params) => {
+                TextureRegistry.addUploaded(params);
+            },
+        });
+        // Apply editor-level state via setters to trigger side effects
+        // (texture regeneration, renderer cache invalidation, etc.)
+        this.theme = editorState.theme;
+        TextureRegistry.theme = editorState.theme;
+        this.store.regenerateTextures(editorState.theme);
+        this.renderer.invalidateTextures();
+        this.connectionMode = editorState.connectionMode;
+        this.store.setConnectionMode(editorState.connectionMode);
+        this.bgColor = [...editorState.bgColor];
+        this.fontColor = [...editorState.fontColor];
+        this.camera.panX = editorState.camera.panX;
+        this.camera.panY = editorState.camera.panY;
+        this.camera.zoom = editorState.camera.zoom;
+        // Clear selection and history (import is a fresh baseline)
+        this.clearSelectionState();
+        this.history.clear();
+        this.syncToolbarState();
+    }
+    handleExport() {
+        const snapshot = this.exportGraph();
+        const jsonStr = JSON.stringify(snapshot, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `graph-giraffe-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    handleImport() {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json,application/json";
+        input.onchange = (e) => {
+            const file = e.target.files?.[0];
+            if (!file)
+                return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const content = event.target?.result;
+                    const snapshot = JSON.parse(content);
+                    this.importGraph(snapshot);
+                }
+                catch (err) {
+                    console.error("Failed to parse imported graph JSON:", err);
+                    alert("Invalid graph JSON file.");
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
     }
     handleGlobalTextureChange(kind, textureId) {
         let didChange = false;
@@ -1461,7 +1564,7 @@ export class NodeEditor {
         const visibleNodes = this.store.visibleNodes();
         for (let i = visibleNodes.length - 1; i >= 0; i--) {
             const node = visibleNodes[i];
-            if (!isCandidateNodeType(node.nodeType, this.connectionMode))
+            if (!isCandidateNodeType(node.nodeType, this.connectionMode, this.typeRegistry))
                 continue;
             if (node.handles.length === 0)
                 continue;
@@ -1531,6 +1634,18 @@ export class NodeEditor {
         this.syncSelectionToolbar();
     }
     getSelectionToolbarButtons(node) {
+        // ─── Registry-driven path ───────────────────────────────
+        if (this.typeRegistry.has(node.nodeType)) {
+            const isCollapsed = Boolean(node.isCollapsed);
+            const actions = this.typeRegistry.getToolbarActions(node.nodeType, isCollapsed);
+            return actions
+                .filter((a) => TOOLBAR_ACTION_MAP[a])
+                .map((a) => {
+                const [glyph, label] = TOOLBAR_ACTION_MAP[a];
+                return { action: a, glyph, label };
+            });
+        }
+        // ─── Fallback: hardcoded dispatch ───────────────────────
         if (node.nodeType === "subgraph") {
             return node.isCollapsed
                 ? baseButtons([
@@ -2446,6 +2561,34 @@ export class NodeEditor {
         const targetNode = this.store.get(targetNodeId);
         if (!sourceNode || !targetNode)
             return false;
+        // ─── Registry-driven direction + multi-connect checks ───
+        if (this.typeRegistry.has(sourceNode.nodeType) && this.typeRegistry.has(targetNode.nodeType)) {
+            if (!this.typeRegistry.isValidConnectionSide(sourceNode.nodeType, sourceHandleSide, "source")) {
+                return false;
+            }
+            if (!this.typeRegistry.isValidConnectionSide(targetNode.nodeType, targetHandleSide, "target")) {
+                return false;
+            }
+            const sourceOwningSubgraphId = this.getOutermostSubgraphId(sourceNodeId);
+            const targetOwningSubgraphId = this.getOutermostSubgraphId(targetNodeId);
+            if (sourceOwningSubgraphId !== targetOwningSubgraphId) {
+                return false;
+            }
+            // Composition-reference special case (business logic, not type metadata)
+            if (sourceNode.nodeType === "node" &&
+                targetNode.nodeType === "composition" &&
+                !this.canCreateCompositionReference(sourceNodeId, targetNodeId)) {
+                return false;
+            }
+            if (!this.typeRegistry.allowsMultiConnect(sourceNode.nodeType) &&
+                this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide))
+                return false;
+            if (!this.typeRegistry.allowsMultiConnect(targetNode.nodeType) &&
+                this.edgeStore.hasConnection(targetNodeId, targetHandleSide))
+                return false;
+            return true;
+        }
+        // ─── Fallback: hardcoded checks ─────────────────────────
         if (sourceNode.nodeType === "subgraph" && sourceHandleSide !== "right") {
             return false;
         }

@@ -1,4 +1,4 @@
-import type { ConnectionMode, NodeData, NodePropType, NodeShaderLocations } from "./types.js";
+import type { ConnectionMode, HandleSide, NodeData, NodePropType, NodeShaderLocations } from "./types.js";
 import type { MsdfTextRenderer } from "./msdf-text.js";
 import type { IconBackgroundRenderer } from "./icon-background-renderer.js";
 import type { TextureCache } from "./texture-cache.js";
@@ -38,6 +38,14 @@ export interface NodeOverlayContext {
     iconBackgroundRenderer: IconBackgroundRenderer;
     fontColor: [number, number, number];
 }
+export interface NodeOverlayConfig {
+    titlePosition: "header" | "container-top" | "center";
+    showTitle: boolean;
+    showLockIcon: boolean;
+    showAddIcon: boolean;
+    showProps: boolean;
+    showCompositionRef: boolean;
+}
 export interface NodeTypeDescriptor {
     type: string;
     category: "leaf" | "container";
@@ -52,8 +60,10 @@ export interface NodeTypeDescriptor {
     };
     handles: {
         always: boolean;
-        sides: ("left" | "right")[];
+        sides: HandleSide[];
         multiConnect: boolean;
+        outputSides?: HandleSide[];
+        inputSides?: HandleSide[];
     };
     isConnectionCandidate: (connectionMode: ConnectionMode) => boolean;
     allowedParents: string[] | null;
@@ -69,11 +79,14 @@ export interface NodeTypeDescriptor {
     renderConfig?: RoundedRectConfig | FlatConfig;
     rawDraw?: (ctx: NodeDrawContext) => boolean;
     drawOverlay?: (ctx: NodeOverlayContext) => void;
+    overlayConfig?: NodeOverlayConfig;
     layoutChildren?: (container: NodeData, children: NodeData[], allNodes: Map<number, NodeData>) => void;
     contributesToChildWorldPosition?: boolean;
     toolbarActions?: string[];
+    collapsedToolbarActions?: string[];
     collapsible?: boolean;
     lockable?: boolean;
+    usesCanvasLabel?: boolean;
 }
 export declare class NodeTypeRegistry {
     private descriptors;
@@ -94,5 +107,7 @@ export declare class NodeTypeRegistry {
     isConnectionCandidate(type: string, connectionMode: ConnectionMode): boolean;
     hasHandles(type: string, connectionMode: ConnectionMode): boolean;
     allowsMultiConnect(type: string): boolean;
+    isValidConnectionSide(type: string, side: HandleSide, role: "source" | "target"): boolean;
+    getToolbarActions(type: string, isCollapsed?: boolean): string[];
     contributesToChildWorldPosition(type: string): boolean;
 }

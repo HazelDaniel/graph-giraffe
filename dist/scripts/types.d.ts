@@ -1,3 +1,4 @@
+import type { NodeTypeRegistry } from "./node-type-registry.js";
 export type ThemeName = "dark" | "light" | "neon";
 export interface ThemeStyle {
     bgFill: string;
@@ -129,11 +130,11 @@ export declare const NODE_SIZE: {
         readonly height: number;
     };
 };
-export declare function isContainerNodeType(nodeType: NodeType): nodeType is ContainerNodeType;
-export declare function isLeafNodeType(nodeType: NodeType): nodeType is LeafNodeType;
-export declare function isNodePrimitiveType(nodeType: NodeType): nodeType is "node" | "hub";
-export declare function isCandidateNodeType(nodeType: NodeType, connectionMode: ConnectionMode): nodeType is CandidateNodeType;
-export declare function getDefaultNodeSize(nodeType: NodeType, isCollapsed?: boolean): {
+export declare function isContainerNodeType(nodeType: NodeType | string, registry?: NodeTypeRegistry): nodeType is ContainerNodeType;
+export declare function isLeafNodeType(nodeType: NodeType | string, registry?: NodeTypeRegistry): nodeType is LeafNodeType;
+export declare function isNodePrimitiveType(nodeType: NodeType | string, registry?: NodeTypeRegistry): nodeType is "node" | "hub";
+export declare function isCandidateNodeType(nodeType: NodeType | string, connectionMode: ConnectionMode, registry?: NodeTypeRegistry): nodeType is CandidateNodeType;
+export declare function getDefaultNodeSize(nodeType: NodeType | string, isCollapsed?: boolean, registry?: NodeTypeRegistry): {
     width: number;
     height: number;
 };

@@ -52,6 +52,12 @@ export class HistoryStack {
     return this.redoStack.length > 0;
   }
 
+  /** Discard all undo/redo history. Used when importing a graph. */
+  clear(): void {
+    this.undoStack.length = 0;
+    this.redoStack.length = 0;
+  }
+
   undo(ctx: CommandContext): Command | null {
     const command = this.undoStack.pop();
     if (!command) return null;

@@ -36,6 +36,25 @@ export class NodeStore {
     getTheme() {
         return this.currentTheme;
     }
+    /** Remove all nodes and reset internal counters. Used during graph import. */
+    clear() {
+        this.groups.clear();
+        this.nodes.clear();
+        this._groupOrder.clear();
+        this._nextGroupOrder = 0;
+        this._compositionOrder.clear();
+        this._nextCompositionOrder = 0;
+        this._leafOrder.clear();
+        this._nextLeafOrder = 0;
+        this._nextId = 0;
+    }
+    /**
+     * Ensure the internal ID counter is at least `value`.
+     * Called after graph import so new nodes get IDs above the imported max.
+     */
+    restoreIdCounter(value) {
+        this._nextId = Math.max(this._nextId, value);
+    }
     /** The id that the next call to add() will assign. Useful for labelling. */
     get nextNodeId() {
         return this._nextId + 1;

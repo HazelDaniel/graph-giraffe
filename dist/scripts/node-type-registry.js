@@ -72,6 +72,23 @@ export class NodeTypeRegistry {
     allowsMultiConnect(type) {
         return this.descriptors.get(type)?.handles.multiConnect ?? false;
     }
+    isValidConnectionSide(type, side, role) {
+        const desc = this.descriptors.get(type);
+        if (!desc)
+            return true;
+        if (role === "source") {
+            return desc.handles.outputSides ? desc.handles.outputSides.includes(side) : true;
+        }
+        return desc.handles.inputSides ? desc.handles.inputSides.includes(side) : true;
+    }
+    getToolbarActions(type, isCollapsed) {
+        const desc = this.descriptors.get(type);
+        if (!desc)
+            return [];
+        if (isCollapsed && desc.collapsedToolbarActions)
+            return desc.collapsedToolbarActions;
+        return desc.toolbarActions ?? [];
+    }
     contributesToChildWorldPosition(type) {
         const desc = this.descriptors.get(type);
         if (!desc)

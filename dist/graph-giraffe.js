@@ -7,8 +7,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
 var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
 var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
 var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
-var _shadow, _shadow2, _shadow3, _shadow4, _a;
-const STYLE_TEMPLATE$4 = `
+var _shadow, _shadow2, _shadow3, _shadow4, _shadow5, _a;
+const STYLE_TEMPLATE$5 = `
   :host {
     position: absolute;
     left: 50%;
@@ -135,7 +135,7 @@ class ActionPane extends HTMLElement {
   render() {
     __privateGet(this, _shadow).innerHTML = `
     <style>
-      ${STYLE_TEMPLATE$4}
+      ${STYLE_TEMPLATE$5}
     </style>
 
     ${this.getChildrenTemplate()}
@@ -337,7 +337,7 @@ class ActionPane extends HTMLElement {
 _shadow = new WeakMap();
 if (!customElements.get("gg-action-pane"))
   customElements.define("gg-action-pane", ActionPane);
-const STYLE_TEMPLATE$3 = `
+const STYLE_TEMPLATE$4 = `
   :host {
     position: absolute;
     top: 0.8rem;
@@ -416,7 +416,7 @@ class HistoryPane extends HTMLElement {
   render() {
     __privateGet(this, _shadow2).innerHTML = `
     <style>
-      ${STYLE_TEMPLATE$3}
+      ${STYLE_TEMPLATE$4}
     </style>
 
     ${this.getChildrenTemplate()}
@@ -434,6 +434,241 @@ class HistoryPane extends HTMLElement {
 _shadow2 = new WeakMap();
 if (!customElements.get("gg-history-pane"))
   customElements.define("gg-history-pane", HistoryPane);
+const STYLE_TEMPLATE$3 = `
+  :host {
+    position: absolute;
+    top: 0.8rem;
+    left: 12.2rem;
+    display: inline-flex;
+    padding: 0.8rem 0;
+    z-index: 10;
+  }
+
+  .root {
+    position: relative;
+    display: inline-flex;
+  }
+
+  button.kebab-button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.15));
+    color: var(--text-main, #f8fafc);
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  button.kebab-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: var(--accent, #38bdf8);
+  }
+
+  button.kebab-button:active {
+    transform: scale(0.96);
+  }
+
+  button.kebab-button.active {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--accent, #38bdf8);
+    color: var(--accent, #38bdf8);
+  }
+
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    min-width: 150px;
+    background: rgba(22, 22, 22, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.15));
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 100;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  .dropdown-menu.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: var(--text-main, #f8fafc);
+    font-size: 0.85rem;
+    font-family: inherit;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, color 0.15s ease;
+    box-sizing: border-box;
+  }
+
+  .menu-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--accent, #38bdf8);
+  }
+
+  .menu-item svg {
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
+
+  .menu-item:hover svg {
+    opacity: 1;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+`;
+class KebabMenu extends HTMLElement {
+  constructor() {
+    super(...arguments);
+    __privateAdd(this, _shadow3, this.attachShadow({ mode: "open" }));
+    __publicField(this, "isOpen", false);
+    __publicField(this, "handleOutsideClick", (e) => {
+      if (!this.isOpen) return;
+      const path = e.composedPath();
+      if (!path.includes(this)) {
+        this.close();
+      }
+    });
+  }
+  connectedCallback() {
+    this.render();
+    this.setupEventListeners();
+  }
+  disconnectedCallback() {
+    document.removeEventListener("pointerdown", this.handleOutsideClick);
+  }
+  setupEventListeners() {
+    const btn = __privateGet(this, _shadow3).querySelector("#btn-kebab");
+    btn == null ? void 0 : btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.toggle();
+    });
+    const dropdown = __privateGet(this, _shadow3).querySelector("#kebab-dropdown");
+    dropdown == null ? void 0 : dropdown.addEventListener("click", (e) => {
+      const target = e.target;
+      const button = target == null ? void 0 : target.closest(
+        "button[data-action]"
+      );
+      if (!button) return;
+      const action = button.dataset.action;
+      if (!action) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.close();
+      this.dispatchEvent(
+        new CustomEvent("gg-kebab-action", {
+          detail: { action },
+          bubbles: true,
+          composed: true
+        })
+      );
+    });
+    document.addEventListener("pointerdown", this.handleOutsideClick);
+  }
+  toggle() {
+    if (this.isOpen) {
+      this.close();
+    } else {
+      this.open();
+    }
+  }
+  open() {
+    if (this.isOpen) return;
+    this.isOpen = true;
+    const dropdown = __privateGet(this, _shadow3).querySelector("#kebab-dropdown");
+    const btn = __privateGet(this, _shadow3).querySelector("#btn-kebab");
+    dropdown == null ? void 0 : dropdown.classList.remove("hidden");
+    btn == null ? void 0 : btn.classList.add("active");
+    btn == null ? void 0 : btn.setAttribute("aria-expanded", "true");
+  }
+  close() {
+    if (!this.isOpen) return;
+    this.isOpen = false;
+    const dropdown = __privateGet(this, _shadow3).querySelector("#kebab-dropdown");
+    const btn = __privateGet(this, _shadow3).querySelector("#btn-kebab");
+    dropdown == null ? void 0 : dropdown.classList.add("hidden");
+    btn == null ? void 0 : btn.classList.remove("active");
+    btn == null ? void 0 : btn.setAttribute("aria-expanded", "false");
+  }
+  render() {
+    __privateGet(this, _shadow3).innerHTML = `
+      <style>${STYLE_TEMPLATE$3}</style>
+      <div class="root" part="root">
+        <button
+          id="btn-kebab"
+          class="kebab-button"
+          type="button"
+          aria-label="More options"
+          aria-expanded="false"
+          aria-haspopup="true"
+          title="More options"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="5" r="2.25" fill="currentColor"/>
+            <circle cx="12" cy="12" r="2.25" fill="currentColor"/>
+            <circle cx="12" cy="19" r="2.25" fill="currentColor"/>
+          </svg>
+        </button>
+        <div id="kebab-dropdown" class="dropdown-menu hidden" role="menu" aria-label="Options menu">
+          <button type="button" class="menu-item" data-action="import" role="menuitem">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>Import</span>
+          </button>
+          <button type="button" class="menu-item" data-action="export" role="menuitem">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span>Export</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }
+}
+_shadow3 = new WeakMap();
+if (!customElements.get("gg-kebab-menu")) {
+  customElements.define("gg-kebab-menu", KebabMenu);
+}
 const STYLE_TEMPLATE$2 = `
   :host {
     position: fixed;
@@ -1322,13 +1557,13 @@ const STYLE_TEMPLATE$1 = `
 class SelectionToolbar extends HTMLElement {
   constructor() {
     super();
-    __privateAdd(this, _shadow3, this.attachShadow({ mode: "open" }));
+    __privateAdd(this, _shadow4, this.attachShadow({ mode: "open" }));
     __publicField(this, "actions", []);
     __publicField(this, "visible", false);
     __publicField(this, "posX", 0);
     __publicField(this, "posY", 0);
     __publicField(this, "actionSignature", "");
-    __privateGet(this, _shadow3).addEventListener("click", (e) => {
+    __privateGet(this, _shadow4).addEventListener("click", (e) => {
       const target = e.target;
       const button = target == null ? void 0 : target.closest(
         "button[data-action]"
@@ -1375,7 +1610,7 @@ class SelectionToolbar extends HTMLElement {
     this.style.display = "none";
   }
   render() {
-    __privateGet(this, _shadow3).innerHTML = `
+    __privateGet(this, _shadow4).innerHTML = `
       <style>${STYLE_TEMPLATE$1}</style>
       <div class="root" part="root" aria-label="Selection actions" role="toolbar">
         ${this.actions.map(
@@ -1399,7 +1634,7 @@ class SelectionToolbar extends HTMLElement {
     }
   }
 }
-_shadow3 = new WeakMap();
+_shadow4 = new WeakMap();
 if (!customElements.get("gg-selection-toolbar")) {
   customElements.define("gg-selection-toolbar", SelectionToolbar);
 }
@@ -1469,22 +1704,30 @@ const NODE_SIZE = {
   subgraph: { width: 220, height: 160 },
   subgraphCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight }
 };
-function isContainerNodeType(nodeType) {
+function isContainerNodeType(nodeType, registry) {
+  if (registry) return registry.isContainer(nodeType);
   return nodeType === "group" || nodeType === "composition" || nodeType === "subgraph";
 }
-function isLeafNodeType(nodeType) {
+function isLeafNodeType(nodeType, registry) {
+  if (registry) return registry.isLeaf(nodeType);
   return nodeType === "node" || nodeType === "hub" || nodeType === "composition-child";
 }
-function isNodePrimitiveType(nodeType) {
+function isNodePrimitiveType(nodeType, registry) {
+  if (registry) {
+    const desc = registry.get(nodeType);
+    return desc ? desc.category === "leaf" && desc.handles.always : false;
+  }
   return nodeType === "node" || nodeType === "hub";
 }
-function isCandidateNodeType(nodeType, connectionMode) {
+function isCandidateNodeType(nodeType, connectionMode, registry) {
+  if (registry) return registry.isConnectionCandidate(nodeType, connectionMode);
   if (connectionMode === "group") {
     return nodeType === "group";
   }
   return isNodePrimitiveType(nodeType) || nodeType === "composition" || nodeType === "subgraph";
 }
-function getDefaultNodeSize(nodeType, isCollapsed = false) {
+function getDefaultNodeSize(nodeType, isCollapsed = false, registry) {
+  if (registry) return registry.getDefaultSize(nodeType, isCollapsed);
   switch (nodeType) {
     case "group":
     case "composition":
@@ -2057,7 +2300,11 @@ const _textureRegistry = class _textureRegistry {
 };
 __publicField(_textureRegistry, "_instance", null);
 let textureRegistry = _textureRegistry;
-function getDefaultTextureIds(nodeType) {
+function getDefaultTextureIds(nodeType, registry) {
+  if (registry) {
+    const desc = registry.get(nodeType);
+    if (desc) return { ...desc.defaultTextureIds };
+  }
   const defaults = NODE_ID_TEXTURE_LOOKUP[nodeType];
   return { ...defaults };
 }
@@ -2812,13 +3059,13 @@ const STYLE_TEMPLATE = `
 let UIControls$1 = (_a = class extends HTMLElement {
   constructor() {
     super(...arguments);
-    __privateAdd(this, _shadow4, this.attachShadow({ mode: "open" }));
+    __privateAdd(this, _shadow5, this.attachShadow({ mode: "open" }));
   }
   connectedCallback() {
     this.render();
   }
   render() {
-    __privateGet(this, _shadow4).innerHTML = `
+    __privateGet(this, _shadow5).innerHTML = `
     <style>
       ${STYLE_TEMPLATE}
     </style>
@@ -2884,7 +3131,7 @@ let UIControls$1 = (_a = class extends HTMLElement {
 
     `;
   }
-}, _shadow4 = new WeakMap(), _a);
+}, _shadow5 = new WeakMap(), _a);
 if (!customElements.get("gg-ui-controls"))
   customElements.define("gg-ui-controls", UIControls$1);
 class GeometryNode {
@@ -3828,6 +4075,19 @@ class EdgeStore {
   allEdges() {
     return [...this.edges.values()];
   }
+  /** Remove all edges and reset internal counters. Used during graph import. */
+  clear() {
+    this.edges.clear();
+    this.adjacency.clear();
+    this._nextId = 0;
+  }
+  /**
+   * Ensure the internal ID counter is at least `value`.
+   * Called after graph import so new edges get IDs above the imported max.
+   */
+  restoreIdCounter(value) {
+    this._nextId = Math.max(this._nextId, value);
+  }
   get(id) {
     return this.edges.get(id);
   }
@@ -4377,6 +4637,25 @@ class NodeStore {
   }
   getTheme() {
     return this.currentTheme;
+  }
+  /** Remove all nodes and reset internal counters. Used during graph import. */
+  clear() {
+    this.groups.clear();
+    this.nodes.clear();
+    this._groupOrder.clear();
+    this._nextGroupOrder = 0;
+    this._compositionOrder.clear();
+    this._nextCompositionOrder = 0;
+    this._leafOrder.clear();
+    this._nextLeafOrder = 0;
+    this._nextId = 0;
+  }
+  /**
+   * Ensure the internal ID counter is at least `value`.
+   * Called after graph import so new nodes get IDs above the imported max.
+   */
+  restoreIdCounter(value) {
+    this._nextId = Math.max(this._nextId, value);
   }
   /** The id that the next call to add() will assign. Useful for labelling. */
   get nextNodeId() {
@@ -5764,7 +6043,7 @@ class IconBackgroundRenderer {
   }
 }
 class Renderer {
-  constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, getBgColor, getFontColor, getSelectedNodeIds, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas) {
+  constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, getBgColor, getFontColor, getSelectedNodeIds, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry) {
     __publicField(this, "modelMatrix", new Matrix4());
     __publicField(this, "projMatrix", new Matrix4());
     __publicField(this, "textRenderer");
@@ -5799,6 +6078,7 @@ class Renderer {
     this.iconBGProgram = iconBGProgram;
     this.msdfAtlas = msdfAtlas;
     this.iconAtlas = iconAtlas;
+    this.registry = registry;
     this.labelCtx = labelCanvas.getContext("2d");
     this.edgeVertexBuffer = gl.createBuffer();
     this.edgeHeadBuffer = gl.createBuffer();
@@ -5950,7 +6230,12 @@ class Renderer {
     this.labelCtx.font = "600 14px Inter, sans-serif";
     this.labelCtx.textBaseline = "middle";
     for (const node of this.store.visibleNodes()) {
-      if (node.nodeType !== "group") continue;
+      if (this.registry) {
+        const desc = this.registry.get(node.nodeType);
+        if (!(desc == null ? void 0 : desc.usesCanvasLabel)) continue;
+      } else {
+        if (node.nodeType !== "group") continue;
+      }
       const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
       if (!this.isRectInViewport(x, y, node.width, node.height)) continue;
       const screenPos = this.camera.worldToScreen(node.localX, node.localY);
@@ -6376,13 +6661,32 @@ class Renderer {
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
       return;
     }
-    if (node.nodeType === "subgraph") {
-      this.drawSubgraphNode(node, worldX, worldY, z);
-      return;
-    }
-    if (node.nodeType === "hub") {
-      this.drawHubNode(node, worldX, worldY, z, picking);
-      return;
+    if (this.registry) {
+      const desc = this.registry.get(node.nodeType);
+      if (desc == null ? void 0 : desc.rawDraw) {
+        const ctx = {
+          gl,
+          node,
+          worldX,
+          worldY,
+          z,
+          renderer: this.getDrawAPI()
+        };
+        if (desc.rawDraw(ctx)) return;
+      }
+      if ((desc == null ? void 0 : desc.renderMode) === "rounded-rect") {
+        this.drawGenericRoundedRect(node, worldX, worldY, z, desc);
+        return;
+      }
+    } else {
+      if (node.nodeType === "subgraph") {
+        this.drawSubgraphNode(node, worldX, worldY, z);
+        return;
+      }
+      if (node.nodeType === "hub") {
+        this.drawHubNode(node, worldX, worldY, z, picking);
+        return;
+      }
     }
     if (node.isDropTarget) {
       this.setModelMatrix(
@@ -6431,10 +6735,15 @@ class Renderer {
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
     let headHeight = node.height;
-    if (node.nodeType === "node" || node.nodeType === "composition-child") {
-      headHeight = NODE_LAYOUT.headerHeight;
-    } else if (node.nodeType === "group" || node.nodeType === "composition") {
-      headHeight = node.height;
+    if (this.registry) {
+      const desc = this.registry.get(node.nodeType);
+      headHeight = (desc == null ? void 0 : desc.category) === "leaf" ? NODE_LAYOUT.headerHeight : node.height;
+    } else {
+      if (node.nodeType === "node" || node.nodeType === "composition-child") {
+        headHeight = NODE_LAYOUT.headerHeight;
+      } else if (node.nodeType === "group" || node.nodeType === "composition") {
+        headHeight = node.height;
+      }
     }
     const headCache = this.textureCache.getTexture(node.textureIds.head);
     if (headCache) {
@@ -6899,6 +7208,214 @@ class Renderer {
       }
     }
   }
+  getDrawAPI() {
+    return {
+      setModelMatrix: (x, y, w, h, z) => this.setModelMatrix(x, y, w, h, z),
+      getTextureCache: () => this.textureCache,
+      getLocations: () => this.locations,
+      getCamera: () => this.camera,
+      getGL: () => this.gl
+    };
+  }
+  drawGenericRoundedRect(node, worldX, worldY, z, desc) {
+    var _a2, _b, _c, _d;
+    const gl = this.gl;
+    const config = desc.renderConfig;
+    const radius = (config == null ? void 0 : config.radius) ?? 12;
+    const borderWidth = (config == null ? void 0 : config.borderWidth) ?? 1.5;
+    const [fillR, fillG, fillB, fillA] = (config == null ? void 0 : config.fillColor) ?? [0.08, 0.09, 0.1, 0.9];
+    const [borderR, borderG, borderB, borderA] = (config == null ? void 0 : config.borderColor) ?? [1, 1, 1, 0.9];
+    const isCollapsed = this.store.shouldCollapseNode(node);
+    if (node.isDropTarget || node.isSelected) {
+      this.setModelMatrix(
+        worldX - 3,
+        worldY - 3,
+        node.width + 6,
+        node.height + 6,
+        z
+      );
+      gl.uniform1i(this.locations.u_UseTexture, 0);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 1);
+      gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
+      gl.uniform4f(
+        this.locations.u_Color,
+        node.isDropTarget ? 0.04 : 0.08,
+        node.isDropTarget ? 0.38 : 0.14,
+        node.isDropTarget ? 0.16 : 0.68,
+        0.09
+      );
+      gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1, 0.95);
+      gl.uniform1f(this.locations.u_BorderWidth, 2);
+      gl.uniform1f(this.locations.u_Radius, isCollapsed ? 8 : radius);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    }
+    this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+    gl.uniform1i(this.locations.u_UseTexture, 0);
+    gl.uniform1i(this.locations.u_Use9Slice, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 1);
+    gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+    gl.uniform4f(this.locations.u_Color, fillR, fillG, fillB, isCollapsed ? 0.9 : fillA);
+    gl.uniform4f(this.locations.u_BorderColor, borderR, borderG, borderB, borderA);
+    gl.uniform1f(this.locations.u_BorderWidth, isCollapsed ? borderWidth : borderWidth);
+    gl.uniform1f(this.locations.u_Radius, isCollapsed ? 8 : radius);
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 0);
+    if (node.nodeType === "hub") {
+      const slotPadding = 10;
+      const iconSlotWidth = Math.max(
+        48,
+        Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28)))
+      );
+      const iconSlotHeight = Math.max(0, node.height - slotPadding * 2);
+      const iconCenterX = worldX + slotPadding + iconSlotWidth / 2;
+      const iconCenterY = worldY + node.height / 2;
+      this.setModelMatrix(
+        worldX + slotPadding,
+        worldY + slotPadding,
+        iconSlotWidth,
+        iconSlotHeight,
+        z
+      );
+      gl.uniform1i(this.locations.u_UseTexture, 0);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 1);
+      gl.uniform2f(this.locations.u_Dimensions, iconSlotWidth, iconSlotHeight);
+      gl.uniform4f(this.locations.u_Color, 0.15, 0.16, 0.18, 0.92);
+      gl.uniform4f(this.locations.u_BorderColor, 1, 1, 1, 0.28);
+      gl.uniform1f(this.locations.u_BorderWidth, 1);
+      gl.uniform1f(this.locations.u_Radius, 12);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
+      this.iconRenderer.addText(
+        "",
+        iconCenterX,
+        iconCenterY,
+        Math.max(18, Math.min(28, iconSlotHeight * 0.48)),
+        1,
+        1,
+        1,
+        1,
+        "center",
+        "middle"
+      );
+    }
+    const [r, g, b, _] = this.getFontColor();
+    const overlayConfig = desc.overlayConfig;
+    if (overlayConfig) {
+      let titleY;
+      if (isCollapsed) {
+        titleY = node.height / 2;
+      } else if (overlayConfig.titlePosition === "container-top") {
+        titleY = 20;
+      } else if (overlayConfig.titlePosition === "center") {
+        titleY = node.height / 2;
+      } else {
+        titleY = NODE_LAYOUT.headerHeight / 2;
+      }
+      let titleX = worldX + NODE_LAYOUT.padding;
+      if (node.nodeType === "hub") {
+        const iconSlotWidth = Math.max(
+          48,
+          Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28)))
+        );
+        titleX = worldX + iconSlotWidth + NODE_LAYOUT.padding * 1.5;
+        titleY = node.height / 2;
+      }
+      if (overlayConfig.showTitle || isCollapsed) {
+        this.textRenderer.addText(
+          node.text,
+          titleX,
+          worldY + titleY,
+          14,
+          r,
+          g,
+          b,
+          1,
+          "left",
+          "middle"
+        );
+      }
+      if (overlayConfig.showLockIcon) {
+        const lockX = node.width / 2;
+        const lockY = NODE_LAYOUT.lockBtnTopY;
+        const isLocked = Boolean(node.isLocked);
+        this.iconBackgroundRenderer.addQuad(
+          worldX + lockX,
+          worldY + lockY + 1.2,
+          r,
+          g,
+          b,
+          isLocked ? 0.12 : 0.05,
+          dumbGlyphWidth,
+          dumbGlyphHeight,
+          ((_a2 = this.iconAtlas.common) == null ? void 0 : _a2.base) || 0,
+          ((_b = this.iconAtlas.common) == null ? void 0 : _b.lineHeight) || 0,
+          16,
+          "center",
+          void 0,
+          "circle"
+        );
+        this.iconRenderer.addText(
+          isLocked ? "" : "",
+          worldX + lockX,
+          worldY + lockY,
+          16,
+          r,
+          g,
+          b,
+          1,
+          "center",
+          "middle"
+        );
+      }
+      if (overlayConfig.showAddIcon && !isCollapsed) {
+        const xPos = node.width / 2;
+        const yPos = node.height - NODE_LAYOUT.plusBtnPaddingBottom;
+        this.iconBackgroundRenderer.addQuad(
+          worldX + xPos,
+          worldY + yPos + 1.2,
+          r,
+          g,
+          b,
+          0.05,
+          dumbGlyphWidth,
+          dumbGlyphHeight,
+          ((_c = this.iconAtlas.common) == null ? void 0 : _c.base) || 0,
+          ((_d = this.iconAtlas.common) == null ? void 0 : _d.lineHeight) || 0,
+          16,
+          "center",
+          void 0,
+          "circle"
+        );
+        this.textRenderer.addText(
+          "+",
+          worldX + xPos,
+          worldY + yPos,
+          20,
+          r,
+          g,
+          b,
+          1,
+          "center",
+          "middle"
+        );
+      }
+    }
+    if (desc.drawOverlay) {
+      desc.drawOverlay({
+        node,
+        worldX,
+        worldY,
+        z,
+        isCollapsed,
+        textRenderer: this.textRenderer,
+        iconRenderer: this.iconRenderer,
+        iconBackgroundRenderer: this.iconBackgroundRenderer,
+        fontColor: [r, g, b]
+      });
+    }
+  }
   drawSubgraphNode(node, worldX, worldY, z) {
     const gl = this.gl;
     const [r, g, b, _] = this.getFontColor();
@@ -7143,6 +7660,16 @@ class UIControls {
       "click",
       () => callbacks.onDeleteNode()
     );
+    const kebabMenu = document.getElementById("kebab-menu");
+    kebabMenu == null ? void 0 : kebabMenu.addEventListener("gg-kebab-action", (e) => {
+      var _a3, _b2;
+      const customEvent = e;
+      if (customEvent.detail.action === "import") {
+        (_a3 = callbacks.onImport) == null ? void 0 : _a3.call(callbacks);
+      } else if (customEvent.detail.action === "export") {
+        (_b2 = callbacks.onExport) == null ? void 0 : _b2.call(callbacks);
+      }
+    });
     const bgPicker = (_m = container.shadowRoot) == null ? void 0 : _m.querySelector(
       "#bg-color-picker"
     );
@@ -7279,6 +7806,11 @@ class HistoryStack {
   }
   canRedo() {
     return this.redoStack.length > 0;
+  }
+  /** Discard all undo/redo history. Used when importing a graph. */
+  clear() {
+    this.undoStack.length = 0;
+    this.redoStack.length = 0;
   }
   undo(ctx) {
     const command = this.undoStack.pop();
@@ -7917,6 +8449,20 @@ class NodeTypeRegistry {
     var _a2;
     return ((_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.handles.multiConnect) ?? false;
   }
+  isValidConnectionSide(type, side, role) {
+    const desc = this.descriptors.get(type);
+    if (!desc) return true;
+    if (role === "source") {
+      return desc.handles.outputSides ? desc.handles.outputSides.includes(side) : true;
+    }
+    return desc.handles.inputSides ? desc.handles.inputSides.includes(side) : true;
+  }
+  getToolbarActions(type, isCollapsed) {
+    const desc = this.descriptors.get(type);
+    if (!desc) return [];
+    if (isCollapsed && desc.collapsedToolbarActions) return desc.collapsedToolbarActions;
+    return desc.toolbarActions ?? [];
+  }
   contributesToChildWorldPosition(type) {
     const desc = this.descriptors.get(type);
     if (!desc) return true;
@@ -7972,6 +8518,14 @@ const nodeDescriptor = {
     return NODE_LAYOUT.headerHeight + 16 + lineCount * 20 + 16;
   },
   renderMode: "textured",
+  overlayConfig: {
+    titlePosition: "header",
+    showTitle: true,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: true,
+    showCompositionRef: true
+  },
   toolbarActions: ["edit", "delete"],
   collapsible: false,
   lockable: false
@@ -7981,7 +8535,13 @@ const hubDescriptor = {
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 240, height: 100 },
-  handles: { always: true, sides: ["left", "right"], multiConnect: true },
+  handles: {
+    always: true,
+    sides: ["left", "right"],
+    multiConnect: true,
+    outputSides: ["right"],
+    inputSides: ["left"]
+  },
   isConnectionCandidate: () => true,
   allowedParents: ["subgraph"],
   canBeRoot: true,
@@ -7993,6 +8553,14 @@ const hubDescriptor = {
     borderColor: [0.25, 0.27, 0.29, 1],
     borderWidth: 1.5,
     radius: 16
+  },
+  overlayConfig: {
+    titlePosition: "header",
+    showTitle: true,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: false,
+    showCompositionRef: false
   },
   toolbarActions: ["edit", "delete"],
   collapsible: false,
@@ -8010,9 +8578,18 @@ const groupDescriptor = {
   defaultTextureIds: { body: "gg-group-body-default", head: "gg-group-head-default" },
   textureKinds: ["group-body", "group-head"],
   renderMode: "textured",
+  overlayConfig: {
+    titlePosition: "container-top",
+    showTitle: false,
+    showLockIcon: true,
+    showAddIcon: true,
+    showProps: false,
+    showCompositionRef: false
+  },
   toolbarActions: ["spotlight", "edit", "delete"],
   collapsible: false,
   lockable: true,
+  usesCanvasLabel: true,
   contributesToChildWorldPosition: true
 };
 const compositionDescriptor = {
@@ -8027,6 +8604,14 @@ const compositionDescriptor = {
   defaultTextureIds: { body: "gg-composition-body-default", head: "gg-composition-head-default" },
   textureKinds: ["composition-body", "composition-head"],
   renderMode: "textured",
+  overlayConfig: {
+    titlePosition: "container-top",
+    showTitle: false,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: false,
+    showCompositionRef: false
+  },
   toolbarActions: ["delete"],
   collapsible: false,
   lockable: false,
@@ -8044,6 +8629,14 @@ const compositionChildDescriptor = {
   defaultTextureIds: { body: "gg-node-body-default", head: "gg-composition-child-head-default" },
   textureKinds: ["composition-child-head"],
   renderMode: "textured",
+  overlayConfig: {
+    titlePosition: "center",
+    showTitle: true,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: false,
+    showCompositionRef: false
+  },
   toolbarActions: ["edit", "delete"],
   collapsible: false,
   lockable: false
@@ -8054,7 +8647,13 @@ const subgraphDescriptor = {
   zTier: -0.05,
   defaultSize: { width: 220, height: 160 },
   collapsedSize: { width: 190, height: NODE_LAYOUT.headerHeight },
-  handles: { always: true, sides: ["left", "right"], multiConnect: false },
+  handles: {
+    always: true,
+    sides: ["left", "right"],
+    multiConnect: false,
+    outputSides: ["right"],
+    inputSides: ["left"]
+  },
   isConnectionCandidate: (mode) => mode === "node",
   allowedParents: ["subgraph"],
   canBeRoot: true,
@@ -8066,7 +8665,16 @@ const subgraphDescriptor = {
     borderWidth: 1.5,
     radius: 12
   },
+  overlayConfig: {
+    titlePosition: "header",
+    showTitle: true,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: false,
+    showCompositionRef: false
+  },
   toolbarActions: ["collapse", "ungraph", "clone", "edit", "delete"],
+  collapsedToolbarActions: ["expand", "clone", "edit", "delete"],
   collapsible: true,
   lockable: false,
   contributesToChildWorldPosition: false
@@ -8100,7 +8708,194 @@ const COLLAPSE = `
 const SPOTLIGHT = `
 <svg style="transform: scale(0.5);" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="brightness" class="icon glyph"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><circle cx="12" cy="12" r="5"></circle><path d="M12,5a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5Z"></path><path d="M17.66,7.34a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34Z"></path><path d="M21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Z"></path><path d="M18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41Z"></path><path d="M12,19a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19Z"></path><path d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17Z"></path><path d="M5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Z"></path><path d="M5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Z"></path></g></svg>
 `;
+function serializeGraph(params) {
+  const {
+    store,
+    edgeStore,
+    textureSources,
+    theme,
+    connectionMode,
+    bgColor,
+    fontColor,
+    camera
+  } = params;
+  const nodes = [];
+  for (const node of store.allNodesMap.values()) {
+    nodes.push({
+      id: node.id,
+      nodeType: node.nodeType,
+      localX: node.localX,
+      localY: node.localY,
+      width: node.width,
+      height: node.height,
+      text: node.text,
+      textureIds: { body: node.textureIds.body, head: node.textureIds.head },
+      parentId: node.parentId,
+      childIds: [...node.childIds],
+      compositionRefId: node.compositionRefId,
+      isLocked: node.isLocked || void 0,
+      isCollapsed: node.isCollapsed || void 0,
+      props: cloneNodeProps(node.props)
+    });
+  }
+  const edges = [];
+  for (const edge of edgeStore.allEdges()) {
+    edges.push({
+      id: edge.id,
+      sourceNodeId: edge.sourceNodeId,
+      sourceHandleSide: edge.sourceHandleSide,
+      targetNodeId: edge.targetNodeId,
+      targetHandleSide: edge.targetHandleSide,
+      edgeType: edge.edgeType,
+      headType: edge.headType,
+      headSkinId: edge.headSkinId,
+      label: edge.label
+    });
+  }
+  const textures = [];
+  for (const source of textureSources) {
+    if (source.sourceType === "upload") {
+      textures.push({
+        id: source.id,
+        label: source.label,
+        kind: source.kind,
+        svgText: source.svgText
+      });
+    }
+  }
+  return {
+    version: 1,
+    editor: {
+      theme,
+      connectionMode,
+      bgColor: [...bgColor],
+      fontColor: [...fontColor],
+      camera: { panX: camera.panX, panY: camera.panY, zoom: camera.zoom }
+    },
+    nodes,
+    edges,
+    textures,
+    counters: {
+      nodeId: store.nextNodeId - 1,
+      // _nextId (internal counter)
+      edgeId: edgeStore.nextEdgeId - 1
+      // _nextId (internal counter)
+    }
+  };
+}
+function deserializeGraph(params) {
+  const { snapshot, store, edgeStore, theme, registerTexture } = params;
+  if (snapshot.version !== 1) {
+    throw new Error(
+      `Unsupported graph snapshot version: ${snapshot.version}. Expected 1.`
+    );
+  }
+  store.clear();
+  edgeStore.clear();
+  if (registerTexture) {
+    for (const tex of snapshot.textures) {
+      registerTexture({
+        id: tex.id,
+        label: tex.label,
+        kind: tex.kind,
+        svgText: tex.svgText
+      });
+    }
+  }
+  const sorted = topologicalSortNodes(snapshot.nodes);
+  const importTheme = snapshot.editor.theme ?? theme;
+  for (const sn of sorted) {
+    const node = store.add(
+      sn.localX,
+      sn.localY,
+      sn.text,
+      importTheme,
+      sn.nodeType,
+      sn.id
+    );
+    node.textureIds = { body: sn.textureIds.body, head: sn.textureIds.head };
+    node.width = sn.width;
+    node.height = sn.height;
+    node.compositionRefId = sn.compositionRefId;
+    node.isLocked = sn.isLocked ?? false;
+    node.isCollapsed = sn.isCollapsed ?? false;
+    node.props = cloneNodeProps(sn.props);
+  }
+  for (const sn of sorted) {
+    if (sn.parentId !== null) {
+      store.setParent(sn.id, sn.parentId);
+      const node = store.get(sn.id);
+      if (node) {
+        node.localX = sn.localX;
+        node.localY = sn.localY;
+        node.width = sn.width;
+        node.height = sn.height;
+      }
+    }
+  }
+  for (const se of snapshot.edges) {
+    edgeStore.add({
+      sourceNodeId: se.sourceNodeId,
+      sourceHandleSide: se.sourceHandleSide,
+      targetNodeId: se.targetNodeId,
+      targetHandleSide: se.targetHandleSide,
+      edgeType: se.edgeType,
+      headType: se.headType,
+      headSkinId: se.headSkinId,
+      label: se.label,
+      // Bypass multi-connection checks — snapshot is a known-valid state
+      sourceCanHaveMultipleConnections: true,
+      targetCanHaveMultipleConnections: true,
+      idOverride: se.id
+    });
+  }
+  for (const se of snapshot.edges) {
+    store.updateHandleConnectionState(se.sourceNodeId, se.sourceHandleSide, true);
+    store.updateHandleConnectionState(se.targetNodeId, se.targetHandleSide, true);
+  }
+  store.restoreIdCounter(snapshot.counters.nodeId);
+  edgeStore.restoreIdCounter(snapshot.counters.edgeId);
+  return {
+    theme: snapshot.editor.theme,
+    connectionMode: snapshot.editor.connectionMode,
+    bgColor: [...snapshot.editor.bgColor],
+    fontColor: [...snapshot.editor.fontColor],
+    camera: { ...snapshot.editor.camera }
+  };
+}
+function topologicalSortNodes(nodes) {
+  const nodeMap = /* @__PURE__ */ new Map();
+  for (const node of nodes) {
+    nodeMap.set(node.id, node);
+  }
+  const sorted = [];
+  const visited = /* @__PURE__ */ new Set();
+  function visit(node) {
+    if (visited.has(node.id)) return;
+    visited.add(node.id);
+    if (node.parentId !== null) {
+      const parent = nodeMap.get(node.parentId);
+      if (parent) {
+        visit(parent);
+      }
+    }
+    sorted.push(node);
+  }
+  for (const node of nodes) {
+    visit(node);
+  }
+  return sorted;
+}
 const baseButtons = (items) => items.map(([action, glyph, label]) => ({ action, glyph, label }));
+const TOOLBAR_ACTION_MAP = {
+  edit: [EDIT, "Edit"],
+  delete: [DELETE, "Delete"],
+  clone: [CLONE, "Clone"],
+  collapse: [COLLAPSE, "Collapse"],
+  expand: [EXPAND, "Expand"],
+  ungraph: [UNGRAPH, "Ungraph"],
+  spotlight: [SPOTLIGHT, "Spotlight"]
+};
 const _NodeEditor = class _NodeEditor {
   constructor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, IconBGVsSource, IconBGFsSource, options = {}, nodeTextureUploadList) {
     __publicField(this, "events", new GraphEventEmitter());
@@ -8276,7 +9071,8 @@ const _NodeEditor = class _NodeEditor {
       msdfProgram,
       iconBGProgam,
       this.msdfAtlas,
-      this.iconAtlas
+      this.iconAtlas,
+      this.typeRegistry
     );
     const container = document.getElementById("sidebar");
     const historyPane = document.getElementById("undo-redo-wrapper");
@@ -8303,6 +9099,8 @@ const _NodeEditor = class _NodeEditor {
       onUndo: () => this.undo(),
       onRedo: () => this.redo(),
       onDeleteNode: () => this.handleDeleteSelected(),
+      onImport: () => this.handleImport(),
+      onExport: () => this.handleExport(),
       onSubgraphCreate: () => this.handleSubgraphCreation(),
       onBgColorChange: (r, g, b, a) => {
         this.bgColor = [r, g, b, a];
@@ -8436,6 +9234,93 @@ const _NodeEditor = class _NodeEditor {
   setConnectionMode(connectionMode) {
     this.connectionMode = connectionMode;
     this.store.setConnectionMode(connectionMode);
+  }
+  /**
+   * Serialize the full graph state into a portable JSON-compatible snapshot.
+   *
+   * Only persistent fields are captured — transient rendering state is omitted.
+   * The returned object can be passed to `JSON.stringify()` for persistence.
+   */
+  exportGraph() {
+    return serializeGraph({
+      store: this.store,
+      edgeStore: this.edgeStore,
+      textureSources: TextureRegistry.sources.values(),
+      theme: this.theme,
+      connectionMode: this.connectionMode,
+      bgColor: this.bgColor,
+      fontColor: this.fontColor,
+      camera: this.camera
+    });
+  }
+  /**
+   * Restore the editor to a previously exported graph snapshot.
+   *
+   * This clears all existing state (nodes, edges, history) and rebuilds
+   * from the snapshot. The operation is **not undoable** — it replaces the
+   * entire editor state as a fresh baseline.
+   */
+  importGraph(snapshot) {
+    const editorState = deserializeGraph({
+      snapshot,
+      store: this.store,
+      edgeStore: this.edgeStore,
+      theme: this.theme,
+      registerTexture: (params) => {
+        TextureRegistry.addUploaded(params);
+      }
+    });
+    this.theme = editorState.theme;
+    TextureRegistry.theme = editorState.theme;
+    this.store.regenerateTextures(editorState.theme);
+    this.renderer.invalidateTextures();
+    this.connectionMode = editorState.connectionMode;
+    this.store.setConnectionMode(editorState.connectionMode);
+    this.bgColor = [...editorState.bgColor];
+    this.fontColor = [...editorState.fontColor];
+    this.camera.panX = editorState.camera.panX;
+    this.camera.panY = editorState.camera.panY;
+    this.camera.zoom = editorState.camera.zoom;
+    this.clearSelectionState();
+    this.history.clear();
+    this.syncToolbarState();
+  }
+  handleExport() {
+    const snapshot = this.exportGraph();
+    const jsonStr = JSON.stringify(snapshot, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `graph-giraffe-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  handleImport() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = (e) => {
+      var _a2;
+      const file = (_a2 = e.target.files) == null ? void 0 : _a2[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        var _a3;
+        try {
+          const content = (_a3 = event.target) == null ? void 0 : _a3.result;
+          const snapshot = JSON.parse(content);
+          this.importGraph(snapshot);
+        } catch (err) {
+          console.error("Failed to parse imported graph JSON:", err);
+          alert("Invalid graph JSON file.");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   }
   handleGlobalTextureChange(kind, textureId) {
     const applyToNodes = (nodes) => {
@@ -9554,7 +10439,7 @@ const _NodeEditor = class _NodeEditor {
     const visibleNodes = this.store.visibleNodes();
     for (let i = visibleNodes.length - 1; i >= 0; i--) {
       const node = visibleNodes[i];
-      if (!isCandidateNodeType(node.nodeType, this.connectionMode)) continue;
+      if (!isCandidateNodeType(node.nodeType, this.connectionMode, this.typeRegistry)) continue;
       if (node.handles.length === 0) continue;
       const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
       for (const handle of node.handles) {
@@ -9619,6 +10504,14 @@ const _NodeEditor = class _NodeEditor {
     this.syncSelectionToolbar();
   }
   getSelectionToolbarButtons(node) {
+    if (this.typeRegistry.has(node.nodeType)) {
+      const isCollapsed = Boolean(node.isCollapsed);
+      const actions = this.typeRegistry.getToolbarActions(node.nodeType, isCollapsed);
+      return actions.filter((a) => TOOLBAR_ACTION_MAP[a]).map((a) => {
+        const [glyph, label] = TOOLBAR_ACTION_MAP[a];
+        return { action: a, glyph, label };
+      });
+    }
     if (node.nodeType === "subgraph") {
       return node.isCollapsed ? baseButtons([
         ["expand", `${EXPAND}`, "Expand"],
@@ -10536,6 +11429,25 @@ const _NodeEditor = class _NodeEditor {
     const sourceNode = this.store.get(sourceNodeId);
     const targetNode = this.store.get(targetNodeId);
     if (!sourceNode || !targetNode) return false;
+    if (this.typeRegistry.has(sourceNode.nodeType) && this.typeRegistry.has(targetNode.nodeType)) {
+      if (!this.typeRegistry.isValidConnectionSide(sourceNode.nodeType, sourceHandleSide, "source")) {
+        return false;
+      }
+      if (!this.typeRegistry.isValidConnectionSide(targetNode.nodeType, targetHandleSide, "target")) {
+        return false;
+      }
+      const sourceOwningSubgraphId2 = this.getOutermostSubgraphId(sourceNodeId);
+      const targetOwningSubgraphId2 = this.getOutermostSubgraphId(targetNodeId);
+      if (sourceOwningSubgraphId2 !== targetOwningSubgraphId2) {
+        return false;
+      }
+      if (sourceNode.nodeType === "node" && targetNode.nodeType === "composition" && !this.canCreateCompositionReference(sourceNodeId, targetNodeId)) {
+        return false;
+      }
+      if (!this.typeRegistry.allowsMultiConnect(sourceNode.nodeType) && this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide)) return false;
+      if (!this.typeRegistry.allowsMultiConnect(targetNode.nodeType) && this.edgeStore.hasConnection(targetNodeId, targetHandleSide)) return false;
+      return true;
+    }
     if (sourceNode.nodeType === "subgraph" && sourceHandleSide !== "right") {
       return false;
     }
@@ -10934,6 +11846,9 @@ const SHELL = `
   <!-- History Pane -->
   <gg-history-pane id="undo-redo-wrapper"></gg-history-pane>
 
+  <!-- Kebab Menu (Options) -->
+  <gg-kebab-menu id="kebab-menu"></gg-kebab-menu>
+
   <!-- Sidebar Overlay -->
   <gg-ui-controls
     id="sidebar"
@@ -10949,17 +11864,20 @@ const SHELL = `
 `;
 export {
   ActionPane,
+  BUILTIN_DESCRIPTORS,
   CustomSelect,
   DEFAULT_HANDLE_STYLE,
   GGPropGroup,
   GraphEventEmitter,
   HANDLE_LAYOUT,
   HistoryPane,
+  KebabMenu,
   LoadingScreen,
   Matrix4,
   NODE_LAYOUT,
   NODE_SIZE,
   NodeEditor,
+  NodeTypeRegistry,
   SelectionToolbar,
   SHELL as Shell,
   TextureRegistry,
@@ -10967,14 +11885,22 @@ export {
   UIControls$1 as UIControls,
   Vector3,
   Vector4,
+  compositionChildDescriptor,
+  compositionDescriptor,
+  deserializeGraph,
   generateTetureSkinOption,
   getCompositionReferenceTextureIds,
   getDefaultNodeSize,
   getDefaultTextureIds,
+  groupDescriptor,
+  hubDescriptor,
   isCandidateNodeType,
   isContainerNodeType,
   isLeafNodeType,
   isNodePrimitiveType,
-  shaders
+  nodeDescriptor,
+  serializeGraph,
+  shaders,
+  subgraphDescriptor
 };
 //# sourceMappingURL=graph-giraffe.js.map

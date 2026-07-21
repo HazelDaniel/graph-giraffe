@@ -40,6 +40,16 @@ export class UIControls {
         this.undoButton.addEventListener("click", () => callbacks.onUndo());
         this.redoButton.addEventListener("click", () => callbacks.onRedo());
         this.deleteNodeButton.addEventListener("click", () => callbacks.onDeleteNode());
+        const kebabMenu = document.getElementById("kebab-menu");
+        kebabMenu?.addEventListener("gg-kebab-action", (e) => {
+            const customEvent = e;
+            if (customEvent.detail.action === "import") {
+                callbacks.onImport?.();
+            }
+            else if (customEvent.detail.action === "export") {
+                callbacks.onExport?.();
+            }
+        });
         const bgPicker = container.shadowRoot?.querySelector("#bg-color-picker");
         bgPicker?.addEventListener("input", (e) => {
             const hex = e.target.value;

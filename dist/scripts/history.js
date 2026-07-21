@@ -30,6 +30,11 @@ export class HistoryStack {
     canRedo() {
         return this.redoStack.length > 0;
     }
+    /** Discard all undo/redo history. Used when importing a graph. */
+    clear() {
+        this.undoStack.length = 0;
+        this.redoStack.length = 0;
+    }
     undo(ctx) {
         const command = this.undoStack.pop();
         if (!command)

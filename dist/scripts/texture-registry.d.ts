@@ -1,4 +1,5 @@
 import { AddUploadedTextureParams, NodeTextureIds, NodeType, TextureKind, TextureSource, ThemeName } from "./types.js";
+import type { NodeTypeRegistry } from "./node-type-registry.js";
 export declare const DEFAULT_TEXTURE_SKINS: Record<TextureKind, string[]>;
 /**
  * Durable texture source registry.
@@ -28,7 +29,7 @@ declare class textureRegistry {
     private registerDefault;
     private ensureUniqueId;
 }
-export declare function getDefaultTextureIds(nodeType: NodeType): NodeTextureIds;
+export declare function getDefaultTextureIds(nodeType: NodeType | string, registry?: NodeTypeRegistry): NodeTextureIds;
 export declare function getCompositionReferenceTextureIds(): NodeTextureIds;
 export declare function generateTetureSkinOption(kind: TextureKind, label: string, index: number, id: string): TextureSource;
 export declare const TextureRegistry: textureRegistry;

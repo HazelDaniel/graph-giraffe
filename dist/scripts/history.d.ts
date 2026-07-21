@@ -26,6 +26,8 @@ export declare class HistoryStack {
     get redoDepth(): number;
     canUndo(): boolean;
     canRedo(): boolean;
+    /** Discard all undo/redo history. Used when importing a graph. */
+    clear(): void;
     undo(ctx: CommandContext): Command | null;
     redo(ctx: CommandContext): Command | null;
 }
