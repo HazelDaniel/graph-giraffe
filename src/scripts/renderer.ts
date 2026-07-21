@@ -28,6 +28,14 @@ import { getIconBGLocations, getMSDFShaderLocations } from "./shader.js";
 import { MsdfAtlas, MsdfTextRenderer } from "./msdf-text.js";
 import { IconBackgroundRenderer } from "./icon-background-renderer.js";
 import { dumbGlyphHeight, dumbGlyphWidth } from "./globals.js";
+import type {
+  NodeTypeRegistry,
+  NodeTypeDescriptor,
+  RoundedRectConfig,
+  NodeDrawContext,
+  NodeOverlayContext,
+  RendererDrawAPI,
+} from "./node-type-registry.js";
 
 /**
  * Owns the WebGL draw loop and all rendering logic.
@@ -60,7 +68,8 @@ export class Renderer {
     private msdfProgram: WebGLProgram,
     private iconBGProgram: WebGLProgram,
     private msdfAtlas: MsdfAtlas,
-    private iconAtlas: MsdfAtlas
+    private iconAtlas: MsdfAtlas,
+    private registry?: NodeTypeRegistry
   ) {
     this.labelCtx = labelCanvas.getContext("2d");
     this.edgeVertexBuffer = gl.createBuffer();
@@ -272,7 +281,12 @@ export class Renderer {
     this.labelCtx.textBaseline = "middle";
 
     for (const node of this.store.visibleNodes()) {
-      if (node.nodeType !== "group") continue;
+      if (this.registry) {
+        const desc = this.registry.get(node.nodeType);
+        if (!desc?.usesCanvasLabel) continue;
+      } else {
+        if (node.nodeType !== "group") continue;
+      }
 
       const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
       if (!this.isRectInViewport(x, y, node.width, node.height)) continue;
@@ -764,14 +778,31 @@ export class Renderer {
       return;
     }
 
-    if (node.nodeType === "subgraph") {
-      this.drawSubgraphNode(node, worldX, worldY, z);
-      return;
-    }
-
-    if (node.nodeType === "hub") {
-      this.drawHubNode(node, worldX, worldY, z, picking);
-      return;
+    // ─── Registry-driven dispatch ───────────────────────────
+    if (this.registry) {
+      const desc = this.registry.get(node.nodeType);
+      if (desc?.rawDraw) {
+        const ctx: NodeDrawContext = {
+          gl, node, worldX, worldY, z,
+          renderer: this.getDrawAPI(),
+        };
+        if (desc.rawDraw(ctx)) return;
+      }
+      if (desc?.renderMode === "rounded-rect") {
+        this.drawGenericRoundedRect(node, worldX, worldY, z, desc);
+        return;
+      }
+      // fall through to textured path
+    } else {
+      // Fallback: hardcoded dispatch for built-in rounded-rect types
+      if (node.nodeType === "subgraph") {
+        this.drawSubgraphNode(node, worldX, worldY, z);
+        return;
+      }
+      if (node.nodeType === "hub") {
+        this.drawHubNode(node, worldX, worldY, z, picking);
+        return;
+      }
     }
 
     if (node.isDropTarget) {
@@ -826,10 +857,15 @@ export class Renderer {
 
     // Draw head
     let headHeight = node.height;
-    if (node.nodeType === "node" || node.nodeType === "composition-child") {
-      headHeight = NODE_LAYOUT.headerHeight;
-    } else if (node.nodeType === "group" || node.nodeType === "composition") {
-      headHeight = node.height; // for containers, "head" might mean the entire background or top bar, depending on SVG
+    if (this.registry) {
+      const desc = this.registry.get(node.nodeType);
+      headHeight = (desc?.category === "leaf") ? NODE_LAYOUT.headerHeight : node.height;
+    } else {
+      if (node.nodeType === "node" || node.nodeType === "composition-child") {
+        headHeight = NODE_LAYOUT.headerHeight;
+      } else if (node.nodeType === "group" || node.nodeType === "composition") {
+        headHeight = node.height;
+      }
     }
     const headCache = this.textureCache.getTexture(node.textureIds.head);
     if (headCache) {
@@ -1341,6 +1377,184 @@ export class Renderer {
           }
         }
       }
+    }
+  }
+
+  private getDrawAPI(): RendererDrawAPI {
+    return {
+      setModelMatrix: (x, y, w, h, z) => this.setModelMatrix(x, y, w, h, z),
+      getTextureCache: () => this.textureCache,
+      getLocations: () => this.locations,
+      getCamera: () => this.camera,
+      getGL: () => this.gl,
+    };
+  }
+
+  private drawGenericRoundedRect(
+    node: NodeData,
+    worldX: number,
+    worldY: number,
+    z: number,
+    desc: NodeTypeDescriptor
+  ): void {
+    const gl = this.gl;
+    const config = desc.renderConfig as RoundedRectConfig | undefined;
+    const radius = config?.radius ?? 12;
+    const borderWidth = config?.borderWidth ?? 1.5;
+    const [fillR, fillG, fillB, fillA] = config?.fillColor ?? [0.08, 0.09, 0.1, 0.9];
+    const [borderR, borderG, borderB, borderA] = config?.borderColor ?? [1.0, 1.0, 1.0, 0.9];
+    const isCollapsed = this.store.shouldCollapseNode(node);
+
+    if (node.isDropTarget || node.isSelected) {
+      this.setModelMatrix(
+        worldX - 3, worldY - 3,
+        node.width + 6, node.height + 6, z
+      );
+      gl.uniform1i(this.locations.u_UseTexture, 0);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 1);
+      gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
+      gl.uniform4f(
+        this.locations.u_Color,
+        node.isDropTarget ? 0.04 : 0.08,
+        node.isDropTarget ? 0.38 : 0.14,
+        node.isDropTarget ? 0.16 : 0.68,
+        0.09
+      );
+      gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1.0, 0.95);
+      gl.uniform1f(this.locations.u_BorderWidth, 2.0);
+      gl.uniform1f(this.locations.u_Radius, isCollapsed ? 8.0 : radius);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    }
+
+    this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+    gl.uniform1i(this.locations.u_UseTexture, 0);
+    gl.uniform1i(this.locations.u_Use9Slice, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 1);
+    gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+    gl.uniform4f(this.locations.u_Color, fillR, fillG, fillB, isCollapsed ? 0.9 : fillA);
+    gl.uniform4f(this.locations.u_BorderColor, borderR, borderG, borderB, borderA);
+    gl.uniform1f(this.locations.u_BorderWidth, isCollapsed ? borderWidth : borderWidth);
+    gl.uniform1f(this.locations.u_Radius, isCollapsed ? 8.0 : radius);
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 0);
+
+    // Hub-specific icon slot (built-in special case)
+    if (node.nodeType === "hub") {
+      const slotPadding = 10;
+      const iconSlotWidth = Math.max(
+        48,
+        Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28)))
+      );
+      const iconSlotHeight = Math.max(0, node.height - slotPadding * 2);
+      const iconCenterX = worldX + slotPadding + iconSlotWidth / 2;
+      const iconCenterY = worldY + node.height / 2;
+
+      this.setModelMatrix(
+        worldX + slotPadding, worldY + slotPadding,
+        iconSlotWidth, iconSlotHeight, z
+      );
+      gl.uniform1i(this.locations.u_UseTexture, 0);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 1);
+      gl.uniform2f(this.locations.u_Dimensions, iconSlotWidth, iconSlotHeight);
+      gl.uniform4f(this.locations.u_Color, 0.15, 0.16, 0.18, 0.92);
+      gl.uniform4f(this.locations.u_BorderColor, 1.0, 1.0, 1.0, 0.28);
+      gl.uniform1f(this.locations.u_BorderWidth, 1.0);
+      gl.uniform1f(this.locations.u_Radius, 12.0);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
+
+      this.iconRenderer.addText(
+        "",
+        iconCenterX, iconCenterY,
+        Math.max(18, Math.min(28, iconSlotHeight * 0.48)),
+        1.0, 1.0, 1.0, 1.0,
+        "center", "middle"
+      );
+    }
+
+    // ─── Overlay via overlayConfig ──────────────────────────
+    const [r, g, b, _] = this.getFontColor();
+    const overlayConfig = desc.overlayConfig;
+
+    if (overlayConfig) {
+      let titleY: number;
+      if (isCollapsed) {
+        titleY = node.height / 2;
+      } else if (overlayConfig.titlePosition === "container-top") {
+        titleY = 20;
+      } else if (overlayConfig.titlePosition === "center") {
+        titleY = node.height / 2;
+      } else {
+        titleY = NODE_LAYOUT.headerHeight / 2;
+      }
+
+      // For hub, offset title past the icon slot
+      let titleX = worldX + NODE_LAYOUT.padding;
+      if (node.nodeType === "hub") {
+        const iconSlotWidth = Math.max(
+          48,
+          Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28)))
+        );
+        titleX = worldX + iconSlotWidth + NODE_LAYOUT.padding * 1.5;
+        titleY = node.height / 2;
+      }
+
+      if (overlayConfig.showTitle || isCollapsed) {
+        this.textRenderer.addText(
+          node.text,
+          titleX, worldY + titleY,
+          14, r, g, b, 1.0, "left", "middle"
+        );
+      }
+
+      if (overlayConfig.showLockIcon) {
+        const lockX = node.width / 2;
+        const lockY = NODE_LAYOUT.lockBtnTopY;
+        const isLocked = Boolean(node.isLocked);
+        this.iconBackgroundRenderer.addQuad(
+          worldX + lockX, worldY + lockY + 1.2,
+          r, g, b, isLocked ? 0.12 : 0.05,
+          dumbGlyphWidth, dumbGlyphHeight,
+          this.iconAtlas.common?.base || 0,
+          this.iconAtlas.common?.lineHeight || 0,
+          16, "center", undefined, "circle"
+        );
+        this.iconRenderer.addText(
+          isLocked ? "" : "",
+          worldX + lockX, worldY + lockY,
+          16, r, g, b, 1.0, "center", "middle"
+        );
+      }
+
+      if (overlayConfig.showAddIcon && !isCollapsed) {
+        const xPos = node.width / 2;
+        const yPos = node.height - NODE_LAYOUT.plusBtnPaddingBottom;
+        this.iconBackgroundRenderer.addQuad(
+          worldX + xPos, worldY + yPos + 1.2,
+          r, g, b, 0.05,
+          dumbGlyphWidth, dumbGlyphHeight,
+          this.iconAtlas.common?.base || 0,
+          this.iconAtlas.common?.lineHeight || 0,
+          16, "center", undefined, "circle"
+        );
+        this.textRenderer.addText(
+          "+", worldX + xPos, worldY + yPos,
+          20, r, g, b, 1.0, "center", "middle"
+        );
+      }
+    }
+
+    // Custom overlay hook
+    if (desc.drawOverlay) {
+      desc.drawOverlay({
+        node, worldX, worldY, z, isCollapsed,
+        textRenderer: this.textRenderer,
+        iconRenderer: this.iconRenderer,
+        iconBackgroundRenderer: this.iconBackgroundRenderer,
+        fontColor: [r, g, b],
+      });
     }
   }
 

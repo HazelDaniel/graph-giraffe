@@ -107,6 +107,16 @@ const baseButtons = (
 ): SelectionToolbarButtonSpec[] =>
   items.map(([action, glyph, label]) => ({ action, glyph, label }));
 
+const TOOLBAR_ACTION_MAP: Record<string, [string, string]> = {
+  edit: [EDIT, "Edit"],
+  delete: [DELETE, "Delete"],
+  clone: [CLONE, "Clone"],
+  collapse: [COLLAPSE, "Collapse"],
+  expand: [EXPAND, "Expand"],
+  ungraph: [UNGRAPH, "Ungraph"],
+  spotlight: [SPOTLIGHT, "Spotlight"],
+};
+
 interface DragSnapshot {
   localX: number;
   localY: number;
@@ -363,7 +373,8 @@ export class NodeEditor {
       msdfProgram,
       iconBGProgam,
       this.msdfAtlas,
-      this.iconAtlas
+      this.iconAtlas,
+      this.typeRegistry
     );
 
     const container = document.getElementById("sidebar");
@@ -2025,7 +2036,7 @@ export class NodeEditor {
 
     for (let i = visibleNodes.length - 1; i >= 0; i--) {
       const node = visibleNodes[i];
-      if (!isCandidateNodeType(node.nodeType, this.connectionMode)) continue;
+      if (!isCandidateNodeType(node.nodeType, this.connectionMode, this.typeRegistry)) continue;
       if (node.handles.length === 0) continue;
 
       const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
@@ -2119,6 +2130,19 @@ export class NodeEditor {
   private getSelectionToolbarButtons(
     node: NodeData
   ): SelectionToolbarButtonSpec[] {
+    // ─── Registry-driven path ───────────────────────────────
+    if (this.typeRegistry.has(node.nodeType)) {
+      const isCollapsed = Boolean(node.isCollapsed);
+      const actions = this.typeRegistry.getToolbarActions(node.nodeType, isCollapsed);
+      return actions
+        .filter((a) => TOOLBAR_ACTION_MAP[a])
+        .map((a) => {
+          const [glyph, label] = TOOLBAR_ACTION_MAP[a];
+          return { action: a as SelectionToolbarAction, glyph, label };
+        });
+    }
+
+    // ─── Fallback: hardcoded dispatch ───────────────────────
     if (node.nodeType === "subgraph") {
       return node.isCollapsed
         ? baseButtons([
@@ -3278,6 +3302,43 @@ export class NodeEditor {
     const targetNode = this.store.get(targetNodeId);
     if (!sourceNode || !targetNode) return false;
 
+    // ─── Registry-driven direction + multi-connect checks ───
+    if (this.typeRegistry.has(sourceNode.nodeType) && this.typeRegistry.has(targetNode.nodeType)) {
+      if (!this.typeRegistry.isValidConnectionSide(sourceNode.nodeType, sourceHandleSide, "source")) {
+        return false;
+      }
+      if (!this.typeRegistry.isValidConnectionSide(targetNode.nodeType, targetHandleSide, "target")) {
+        return false;
+      }
+
+      const sourceOwningSubgraphId = this.getOutermostSubgraphId(sourceNodeId);
+      const targetOwningSubgraphId = this.getOutermostSubgraphId(targetNodeId);
+      if (sourceOwningSubgraphId !== targetOwningSubgraphId) {
+        return false;
+      }
+
+      // Composition-reference special case (business logic, not type metadata)
+      if (
+        sourceNode.nodeType === "node" &&
+        targetNode.nodeType === "composition" &&
+        !this.canCreateCompositionReference(sourceNodeId, targetNodeId)
+      ) {
+        return false;
+      }
+
+      if (
+        !this.typeRegistry.allowsMultiConnect(sourceNode.nodeType) &&
+        this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide)
+      ) return false;
+      if (
+        !this.typeRegistry.allowsMultiConnect(targetNode.nodeType) &&
+        this.edgeStore.hasConnection(targetNodeId, targetHandleSide)
+      ) return false;
+
+      return true;
+    }
+
+    // ─── Fallback: hardcoded checks ─────────────────────────
     if (sourceNode.nodeType === "subgraph" && sourceHandleSide !== "right") {
       return false;
     }

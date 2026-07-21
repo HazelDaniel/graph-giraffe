@@ -1,4 +1,4 @@
-import type { NodeTypeDescriptor } from "./node-type-registry.js";
+import type { NodeTypeDescriptor, NodeOverlayConfig } from "./node-type-registry.js";
 import type { NodePropType } from "./types.js";
 import { NODE_LAYOUT } from "./types.js";
 
@@ -57,6 +57,14 @@ export const nodeDescriptor: NodeTypeDescriptor = {
   },
 
   renderMode: "textured",
+  overlayConfig: {
+    titlePosition: "header",
+    showTitle: true,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: true,
+    showCompositionRef: true,
+  },
   toolbarActions: ["edit", "delete"],
   collapsible: false,
   lockable: false,
@@ -68,7 +76,13 @@ export const hubDescriptor: NodeTypeDescriptor = {
   zTier: 0.4,
   defaultSize: { width: 240, height: 100 },
 
-  handles: { always: true, sides: ["left", "right"], multiConnect: true },
+  handles: {
+    always: true,
+    sides: ["left", "right"],
+    multiConnect: true,
+    outputSides: ["right"],
+    inputSides: ["left"],
+  },
   isConnectionCandidate: () => true,
 
   allowedParents: ["subgraph"],
@@ -83,6 +97,14 @@ export const hubDescriptor: NodeTypeDescriptor = {
     borderColor: [0.25, 0.27, 0.29, 1.0],
     borderWidth: 1.5,
     radius: 16,
+  },
+  overlayConfig: {
+    titlePosition: "header",
+    showTitle: true,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: false,
+    showCompositionRef: false,
   },
 
   toolbarActions: ["edit", "delete"],
@@ -106,9 +128,18 @@ export const groupDescriptor: NodeTypeDescriptor = {
   textureKinds: ["group-body", "group-head"],
 
   renderMode: "textured",
+  overlayConfig: {
+    titlePosition: "container-top",
+    showTitle: false,
+    showLockIcon: true,
+    showAddIcon: true,
+    showProps: false,
+    showCompositionRef: false,
+  },
   toolbarActions: ["spotlight", "edit", "delete"],
   collapsible: false,
   lockable: true,
+  usesCanvasLabel: true,
   contributesToChildWorldPosition: true,
 };
 
@@ -128,6 +159,14 @@ export const compositionDescriptor: NodeTypeDescriptor = {
   textureKinds: ["composition-body", "composition-head"],
 
   renderMode: "textured",
+  overlayConfig: {
+    titlePosition: "container-top",
+    showTitle: false,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: false,
+    showCompositionRef: false,
+  },
   toolbarActions: ["delete"],
   collapsible: false,
   lockable: false,
@@ -150,6 +189,14 @@ export const compositionChildDescriptor: NodeTypeDescriptor = {
   textureKinds: ["composition-child-head"],
 
   renderMode: "textured",
+  overlayConfig: {
+    titlePosition: "center",
+    showTitle: true,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: false,
+    showCompositionRef: false,
+  },
   toolbarActions: ["edit", "delete"],
   collapsible: false,
   lockable: false,
@@ -162,7 +209,13 @@ export const subgraphDescriptor: NodeTypeDescriptor = {
   defaultSize: { width: 220, height: 160 },
   collapsedSize: { width: 190, height: NODE_LAYOUT.headerHeight },
 
-  handles: { always: true, sides: ["left", "right"], multiConnect: false },
+  handles: {
+    always: true,
+    sides: ["left", "right"],
+    multiConnect: false,
+    outputSides: ["right"],
+    inputSides: ["left"],
+  },
   isConnectionCandidate: (mode) => mode === "node",
 
   allowedParents: ["subgraph"],
@@ -177,8 +230,17 @@ export const subgraphDescriptor: NodeTypeDescriptor = {
     borderWidth: 1.5,
     radius: 12,
   },
+  overlayConfig: {
+    titlePosition: "header",
+    showTitle: true,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: false,
+    showCompositionRef: false,
+  },
 
   toolbarActions: ["collapse", "ungraph", "clone", "edit", "delete"],
+  collapsedToolbarActions: ["expand", "clone", "edit", "delete"],
   collapsible: true,
   lockable: false,
   contributesToChildWorldPosition: false,

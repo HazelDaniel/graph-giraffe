@@ -19,6 +19,29 @@ export * from './components/ui-controls.js';
 
 export { NodeEditor } from './scripts/node-editor.js';
 
+// ─── Node Type Registry ─────────────────────────────────
+
+export { NodeTypeRegistry } from './scripts/node-type-registry.js';
+export type {
+  NodeTypeDescriptor,
+  NodeOverlayConfig,
+  RoundedRectConfig,
+  FlatConfig,
+  NodeDrawContext,
+  NodeOverlayContext,
+  RendererDrawAPI,
+} from './scripts/node-type-registry.js';
+
+export {
+  BUILTIN_DESCRIPTORS,
+  nodeDescriptor,
+  hubDescriptor,
+  groupDescriptor,
+  compositionDescriptor,
+  compositionChildDescriptor,
+  subgraphDescriptor,
+} from './scripts/builtin-types.js';
+
 // ─── Types ───────────────────────────────────────────────
 
 export type {

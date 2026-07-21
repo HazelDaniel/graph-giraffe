@@ -1,3 +1,5 @@
+import type { NodeTypeRegistry } from "./node-type-registry.js";
+
 export type ThemeName = "dark" | "light" | "neon";
 export interface ThemeStyle {
   bgFill: string;
@@ -135,23 +137,38 @@ export const NODE_SIZE = {
 } as const;
 
 export function isContainerNodeType(
-  nodeType: NodeType
+  nodeType: NodeType | string,
+  registry?: NodeTypeRegistry
 ): nodeType is ContainerNodeType {
+  if (registry) return registry.isContainer(nodeType);
   return nodeType === "group" || nodeType === "composition" || nodeType === "subgraph";
 }
 
-export function isLeafNodeType(nodeType: NodeType): nodeType is LeafNodeType {
+export function isLeafNodeType(
+  nodeType: NodeType | string,
+  registry?: NodeTypeRegistry
+): nodeType is LeafNodeType {
+  if (registry) return registry.isLeaf(nodeType);
   return nodeType === "node" || nodeType === "hub" || nodeType === "composition-child";
 }
 
-export function isNodePrimitiveType(nodeType: NodeType): nodeType is "node" | "hub" {
+export function isNodePrimitiveType(
+  nodeType: NodeType | string,
+  registry?: NodeTypeRegistry
+): nodeType is "node" | "hub" {
+  if (registry) {
+    const desc = registry.get(nodeType);
+    return desc ? desc.category === "leaf" && desc.handles.always : false;
+  }
   return nodeType === "node" || nodeType === "hub";
 }
 
 export function isCandidateNodeType(
-  nodeType: NodeType,
-  connectionMode: ConnectionMode
+  nodeType: NodeType | string,
+  connectionMode: ConnectionMode,
+  registry?: NodeTypeRegistry
 ): nodeType is CandidateNodeType {
+  if (registry) return registry.isConnectionCandidate(nodeType, connectionMode);
   if (connectionMode === "group") {
     return nodeType === "group";
   }
@@ -160,9 +177,11 @@ export function isCandidateNodeType(
 }
 
 export function getDefaultNodeSize(
-  nodeType: NodeType,
-  isCollapsed: boolean = false
+  nodeType: NodeType | string,
+  isCollapsed: boolean = false,
+  registry?: NodeTypeRegistry
 ): { width: number; height: number } {
+  if (registry) return registry.getDefaultSize(nodeType, isCollapsed);
   switch (nodeType) {
     case "group":
     case "composition":

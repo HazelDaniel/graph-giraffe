@@ -7,6 +7,7 @@ import {
   TextureSource,
   ThemeName,
 } from "./types.js";
+import type { NodeTypeRegistry } from "./node-type-registry.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const NODE_HEAD_TEXTURE_SKINS = [
@@ -488,8 +489,15 @@ class textureRegistry {
   }
 }
 
-export function getDefaultTextureIds(nodeType: NodeType): NodeTextureIds {
-  const defaults = NODE_ID_TEXTURE_LOOKUP[nodeType];
+export function getDefaultTextureIds(
+  nodeType: NodeType | string,
+  registry?: NodeTypeRegistry
+): NodeTextureIds {
+  if (registry) {
+    const desc = registry.get(nodeType);
+    if (desc) return { ...desc.defaultTextureIds };
+  }
+  const defaults = NODE_ID_TEXTURE_LOOKUP[nodeType as TextureLookupKeys];
   return { ...defaults };
 }
 

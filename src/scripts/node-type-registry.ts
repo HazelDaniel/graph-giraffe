@@ -1,5 +1,6 @@
 import type {
   ConnectionMode,
+  HandleSide,
   NodeData,
   NodePropType,
   NodeShaderLocations,
@@ -53,6 +54,17 @@ export interface NodeOverlayContext {
   fontColor: [number, number, number];
 }
 
+// ─── Overlay Config ──────────────────────────────────────
+
+export interface NodeOverlayConfig {
+  titlePosition: "header" | "container-top" | "center";
+  showTitle: boolean;
+  showLockIcon: boolean;
+  showAddIcon: boolean;
+  showProps: boolean;
+  showCompositionRef: boolean;
+}
+
 // ─── Node Type Descriptor ────────────────────────────────
 
 export interface NodeTypeDescriptor {
@@ -64,8 +76,10 @@ export interface NodeTypeDescriptor {
 
   handles: {
     always: boolean;
-    sides: ("left" | "right")[];
+    sides: HandleSide[];
     multiConnect: boolean;
+    outputSides?: HandleSide[];
+    inputSides?: HandleSide[];
   };
 
   isConnectionCandidate: (connectionMode: ConnectionMode) => boolean;
@@ -83,6 +97,7 @@ export interface NodeTypeDescriptor {
   renderConfig?: RoundedRectConfig | FlatConfig;
   rawDraw?: (ctx: NodeDrawContext) => boolean;
   drawOverlay?: (ctx: NodeOverlayContext) => void;
+  overlayConfig?: NodeOverlayConfig;
 
   layoutChildren?: (
     container: NodeData,
@@ -92,8 +107,10 @@ export interface NodeTypeDescriptor {
   contributesToChildWorldPosition?: boolean;
 
   toolbarActions?: string[];
+  collapsedToolbarActions?: string[];
   collapsible?: boolean;
   lockable?: boolean;
+  usesCanvasLabel?: boolean;
 }
 
 // ─── Registry ────────────────────────────────────────────
@@ -183,6 +200,26 @@ export class NodeTypeRegistry {
 
   allowsMultiConnect(type: string): boolean {
     return this.descriptors.get(type)?.handles.multiConnect ?? false;
+  }
+
+  isValidConnectionSide(
+    type: string,
+    side: HandleSide,
+    role: "source" | "target"
+  ): boolean {
+    const desc = this.descriptors.get(type);
+    if (!desc) return true;
+    if (role === "source") {
+      return desc.handles.outputSides ? desc.handles.outputSides.includes(side) : true;
+    }
+    return desc.handles.inputSides ? desc.handles.inputSides.includes(side) : true;
+  }
+
+  getToolbarActions(type: string, isCollapsed?: boolean): string[] {
+    const desc = this.descriptors.get(type);
+    if (!desc) return [];
+    if (isCollapsed && desc.collapsedToolbarActions) return desc.collapsedToolbarActions;
+    return desc.toolbarActions ?? [];
   }
 
   contributesToChildWorldPosition(type: string): boolean {
