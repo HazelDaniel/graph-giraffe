@@ -73,8 +73,8 @@ export const Hero: React.FC = () => {
       </div>
 
       <div className="flex gap-8 mx-auto items-center">
-        <Button text="Try Out Demo" />
-        <Button text="Contribute" variant="secondary" />
+        <Button text="Try Out Demo"  destUrl="https://playground-graph-giraffe.vercel.app" isAnchor />
+        <Button text="Contribute" variant="secondary" destUrl="https://github.com/HazelDaniel/graph-giraffe.git" isAnchor/>
       </div>
     </div>
   );

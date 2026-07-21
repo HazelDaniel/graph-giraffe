@@ -2,10 +2,12 @@ type ButtonProp = {
   variant?: "primary" | "secondary";
   className?: string;
   innerClassName?: string;
+  isAnchor?: boolean;
+  destUrl?: string;
   text: string;
 };
 
-export const Button: React.FC<ButtonProp> = ({ variant, className, innerClassName, text }) => {
+export const Button: React.FC<ButtonProp> = ({ variant, className, innerClassName, text, isAnchor, destUrl }) => {
   return (
     <span
       className={
@@ -23,7 +25,8 @@ export const Button: React.FC<ButtonProp> = ({ variant, className, innerClassNam
             : `bg-tertiary-700 group-hover/btn:ring-2 duration-150 delay-75 group-hover/btn:ring-tertiary-200 ring-offset-4 `
         } rounded-[inherit] relative`}
       >
-        {text}
+        {isAnchor ? <a href={destUrl} target="_blank" rel="noopener noreferrer">{text}
+        </a> : text}
       </button>
     </span>
   );

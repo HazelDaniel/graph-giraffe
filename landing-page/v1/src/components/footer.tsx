@@ -42,8 +42,8 @@ export const Footer: React.FC = () => {
 
       <p className="text-primary-50 mb-14 font-geist-medium text-2xl translate-y-12">Get The Giraffe experience Today</p>
       <div className="flex gap-8 mx-auto items-center mt-6">
-        <Button text="Try Out Demo" innerClassName="bg-[#0D0D0D]/90 shadow-[inset_0px_4px_16px_rgba(41,144,133,0.4)]" className="" />
-        <Button text="Contribute" variant="secondary" className="*:text-tertiary-700 bg-primary-50 hover:bg-tertiary-700 hover:*:text-primary-50" innerClassName="bg-primary-50 group-hover/btn:bg-dark group-hover/btn:ring-2 group-hover/btn:ring-primary-50 duration-150" />
+        <Button text="Try Out Demo" innerClassName="bg-[#0D0D0D]/90 shadow-[inset_0px_4px_16px_rgba(41,144,133,0.4)]" className="" isAnchor destUrl="https://github.com/HazelDaniel/graph-giraffe.git"/>
+        <Button text="Contribute" variant="secondary" className="*:text-tertiary-700 bg-primary-50 hover:bg-tertiary-700 hover:*:text-primary-50" innerClassName="bg-primary-50 group-hover/btn:bg-dark group-hover/btn:ring-2 group-hover/btn:ring-primary-50 duration-150" isAnchor destUrl="https:github.com/HazelDaniel/graph-giraffe.git"/>
       </div>
     </footer>
   );
