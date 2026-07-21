@@ -39,7 +39,7 @@ export const Header: React.FC = () => {
           <li><a href="#">Community</a></li>
           <li><a href="https://playground-graph-giraffe.vercel.app/">Demo</a></li>
         </ul>
-        <Button text="Github" variant="primary" className="hidden md:flex" />
+        <Button text="Github" variant="primary" className="hidden md:flex" isAnchor destUrl="https://github.com/HazelDaniel/graph-giraffe.git"/>
         <span className="flex md:hidden items-center justify-center text-primary-50 bg-dark p-2 size-12 rounded-md">
           <MorphToggleButton
             toggled={!expanded}
