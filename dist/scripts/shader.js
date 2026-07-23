@@ -86,6 +86,7 @@ export function getMSDFShaderLocations(gl, program) {
         u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix"),
         u_ProjMatrix: gl.getUniformLocation(program, "u_ProjMatrix"),
         u_Atlas: gl.getUniformLocation(program, "u_Atlas"),
+        u_pxRange: gl.getUniformLocation(program, "u_pxRange"),
     };
     validateShaderLocations(locations);
     return locations;

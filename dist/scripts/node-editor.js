@@ -582,12 +582,16 @@ export class NodeEditor {
         this.events.dispatch("history:command", { command: cmd, action: "redo" });
         this.syncToolbarState();
     }
+    dpr = 1;
     handleResize(canvas) {
         const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-        this.renderer.resize(canvas.width, canvas.height);
-        this.pickFBO.resize(canvas.width, canvas.height);
+        this.dpr = typeof window !== "undefined" ? Math.max(1, window.devicePixelRatio || 1) : 1;
+        const physicalWidth = Math.round(rect.width * this.dpr);
+        const physicalHeight = Math.round(rect.height * this.dpr);
+        canvas.width = physicalWidth;
+        canvas.height = physicalHeight;
+        this.renderer.resize(physicalWidth, physicalHeight, this.dpr);
+        this.pickFBO.resize(physicalWidth, physicalHeight);
     }
     pushCommand(command) {
         this.history.push(command);
@@ -1665,7 +1669,9 @@ export class NodeEditor {
         this.renderer["gl"].clear(this.renderer["gl"].COLOR_BUFFER_BIT |
             this.renderer["gl"].DEPTH_BUFFER_BIT);
         this.renderer.drawNodes(true);
-        const pixels = this.pickFBO.readPixel(screenX, screenY);
+        const pixelX = Math.round(screenX * this.dpr);
+        const pixelY = Math.round(screenY * this.dpr);
+        const pixels = this.pickFBO.readPixel(pixelX, pixelY);
         this.pickFBO.unbind();
         if (pixels[0] === 255 && pixels[1] === 255 && pixels[2] === 255) {
             return 0;

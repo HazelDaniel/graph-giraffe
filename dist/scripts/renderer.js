@@ -96,15 +96,22 @@ export class Renderer {
     edgeFrame = [];
     textureCache;
     isZooming = false;
+    dpr = 1;
     /** Call once after each canvas resize to update the orthographic projection. */
-    resize(width, height) {
+    resize(width, height, dpr = 1) {
+        this.dpr = dpr;
         this.gl.viewport(0, 0, width, height);
         // Origin top-left, y-axis pointing down — matches screen and 2D canvas convention
-        this.projMatrix.setOrtho(0, width, height, 0, -2, 2);
+        const cssWidth = width / dpr;
+        const cssHeight = height / dpr;
+        this.projMatrix.setOrtho(0, cssWidth, cssHeight, 0, -2, 2);
         this.bgCanvas.width = width;
         this.bgCanvas.height = height;
         this.labelCanvas.width = width;
         this.labelCanvas.height = height;
+        if (this.labelCtx) {
+            this.labelCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
     }
     /** Start the RAF-driven render loop. */
     startLoop() {
@@ -134,7 +141,10 @@ export class Renderer {
     drawOverlay() {
         if (!this.labelCtx)
             return;
+        this.labelCtx.save();
+        this.labelCtx.setTransform(1, 0, 0, 1, 0, 0);
         this.labelCtx.clearRect(0, 0, this.labelCanvas.width, this.labelCanvas.height);
+        this.labelCtx.restore();
         this.drawConnectionPreview();
         this.drawEdgeLabels();
         for (const node of this.store.visibleNodes()) {

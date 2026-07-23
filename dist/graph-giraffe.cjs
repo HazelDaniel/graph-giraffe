@@ -3324,7 +3324,8 @@ function getMSDFShaderLocations(gl, program) {
     a_Z: gl.getAttribLocation(program, "a_Z"),
     u_ViewMatrix: gl.getUniformLocation(program, "u_ViewMatrix"),
     u_ProjMatrix: gl.getUniformLocation(program, "u_ProjMatrix"),
-    u_Atlas: gl.getUniformLocation(program, "u_Atlas")
+    u_Atlas: gl.getUniformLocation(program, "u_Atlas"),
+    u_pxRange: gl.getUniformLocation(program, "u_pxRange")
   };
   validateShaderLocations(locations);
   return locations;
@@ -5548,9 +5549,13 @@ class TextureCache {
             nativeHeight = parseFloat(parts[3]);
           }
         }
-        const scale = 2;
-        const width = nativeWidth * scale;
-        const height = nativeHeight * scale;
+        const logicalScale = 2;
+        const logicalWidth = nativeWidth * logicalScale;
+        const logicalHeight = nativeHeight * logicalScale;
+        const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+        const rasterScale = Math.max(4, Math.round(2 * dpr));
+        const width = nativeWidth * rasterScale;
+        const height = nativeHeight * rasterScale;
         svg.setAttribute("width", width.toString());
         svg.setAttribute("height", height.toString());
         svg.setAttribute("preserveAspectRatio", "none");
@@ -5558,7 +5563,7 @@ class TextureCache {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
-          this.uploadQueue.push({ id: textureId, image: img });
+          this.uploadQueue.push({ id: textureId, image: img, logicalWidth, logicalHeight });
           this.onTextureLoaded();
         };
         img.onerror = (err) => {
@@ -5582,7 +5587,7 @@ class TextureCache {
     const MAX_UPLOADS = 2;
     let uploadsDone = 0;
     while (this.uploadQueue.length > 0 && uploadsDone < MAX_UPLOADS) {
-      const { id, image } = this.uploadQueue.shift();
+      const { id, image, logicalWidth, logicalHeight } = this.uploadQueue.shift();
       const entry = this.cache.get(id);
       if (entry && entry.state === "PENDING") {
         const tex = this.gl.createTexture();
@@ -5603,8 +5608,8 @@ class TextureCache {
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
         entry.texture = tex;
-        entry.nativeWidth = image.width;
-        entry.nativeHeight = image.height;
+        entry.nativeWidth = logicalWidth;
+        entry.nativeHeight = logicalHeight;
         entry.state = "READY";
         uploadsDone++;
         this.onTextureLoaded();
@@ -5645,6 +5650,7 @@ class MsdfAtlas {
     __publicField(this, "glyphs", /* @__PURE__ */ new Map());
     __publicField(this, "common", null);
     __publicField(this, "info", null);
+    __publicField(this, "pxRange", 4);
     this.gl = gl;
   }
   async load(imageUrl, jsonUrl) {
@@ -5654,6 +5660,9 @@ class MsdfAtlas {
     ]);
     this.common = json.common;
     this.info = json.info;
+    if (json.distanceField && json.distanceField.distanceRange) {
+      this.pxRange = json.distanceField.distanceRange;
+    }
     for (const char of json.chars) {
       this.glyphs.set(char.id, char);
     }
@@ -5862,6 +5871,7 @@ class MsdfTextRenderer {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.atlas.texture);
     gl.uniform1i(this.locations.u_Atlas, 0);
+    gl.uniform1f(this.locations.u_pxRange, this.atlas.pxRange || 4);
     gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_SHORT, 0);
     this.vertexCount = 0;
     this.indexCount = 0;
@@ -6058,6 +6068,7 @@ class Renderer {
     __publicField(this, "edgeFrame", []);
     __publicField(this, "textureCache");
     __publicField(this, "isZooming", false);
+    __publicField(this, "dpr", 1);
     this.gl = gl;
     this.canvas = canvas;
     this.bgCanvas = bgCanvas;
@@ -6114,13 +6125,19 @@ class Renderer {
     );
   }
   /** Call once after each canvas resize to update the orthographic projection. */
-  resize(width, height) {
+  resize(width, height, dpr = 1) {
+    this.dpr = dpr;
     this.gl.viewport(0, 0, width, height);
-    this.projMatrix.setOrtho(0, width, height, 0, -2, 2);
+    const cssWidth = width / dpr;
+    const cssHeight = height / dpr;
+    this.projMatrix.setOrtho(0, cssWidth, cssHeight, 0, -2, 2);
     this.bgCanvas.width = width;
     this.bgCanvas.height = height;
     this.labelCanvas.width = width;
     this.labelCanvas.height = height;
+    if (this.labelCtx) {
+      this.labelCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
   }
   /** Start the RAF-driven render loop. */
   startLoop() {
@@ -6148,12 +6165,15 @@ class Renderer {
   }
   drawOverlay() {
     if (!this.labelCtx) return;
+    this.labelCtx.save();
+    this.labelCtx.setTransform(1, 0, 0, 1, 0, 0);
     this.labelCtx.clearRect(
       0,
       0,
       this.labelCanvas.width,
       this.labelCanvas.height
     );
+    this.labelCtx.restore();
     this.drawConnectionPreview();
     this.drawEdgeLabels();
     for (const node of this.store.visibleNodes()) {
@@ -8952,6 +8972,7 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "pinchDistance", null);
     __publicField(this, "msdfAtlas");
     __publicField(this, "iconAtlas");
+    __publicField(this, "dpr", 1);
     __publicField(this, "zoomThrottleTimer", null);
     __publicField(this, "ZOOM_THROTTLE_MS", 180);
     this.canvasId = canvasId;
@@ -9466,10 +9487,13 @@ const _NodeEditor = class _NodeEditor {
   }
   handleResize(canvas) {
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    this.renderer.resize(canvas.width, canvas.height);
-    this.pickFBO.resize(canvas.width, canvas.height);
+    this.dpr = typeof window !== "undefined" ? Math.max(1, window.devicePixelRatio || 1) : 1;
+    const physicalWidth = Math.round(rect.width * this.dpr);
+    const physicalHeight = Math.round(rect.height * this.dpr);
+    canvas.width = physicalWidth;
+    canvas.height = physicalHeight;
+    this.renderer.resize(physicalWidth, physicalHeight, this.dpr);
+    this.pickFBO.resize(physicalWidth, physicalHeight);
   }
   pushCommand(command) {
     this.history.push(command);
@@ -10539,7 +10563,9 @@ const _NodeEditor = class _NodeEditor {
       this.renderer["gl"].COLOR_BUFFER_BIT | this.renderer["gl"].DEPTH_BUFFER_BIT
     );
     this.renderer.drawNodes(true);
-    const pixels = this.pickFBO.readPixel(screenX, screenY);
+    const pixelX = Math.round(screenX * this.dpr);
+    const pixelY = Math.round(screenY * this.dpr);
+    const pixels = this.pickFBO.readPixel(pixelX, pixelY);
     this.pickFBO.unbind();
     if (pixels[0] === 255 && pixels[1] === 255 && pixels[2] === 255) {
       return 0;
@@ -11824,18 +11850,24 @@ precision mediump float;
 in vec2 v_TexCoord;
 in vec4 v_Color;
 uniform sampler2D u_Atlas;
+uniform float u_pxRange;
 out vec4 fragColor;
 
 float median(float r, float g, float b) {
   return max(min(r, g), min(max(r, g), b));
 }
 
+float screenPxRange() {
+  vec2 unitRange = vec2(u_pxRange) / vec2(textureSize(u_Atlas, 0));
+  vec2 screenTexSize = vec2(1.0) / fwidth(v_TexCoord);
+  return max(0.5 * dot(unitRange, screenTexSize), 1.0);
+}
+
 void main() {
   vec4 sampleData = texture(u_Atlas, v_TexCoord);
   float sigDist = median(sampleData.r, sampleData.g, sampleData.b) - 0.5;
-  // The fwidth function is required for crisp edges at all scales
-  float afwidth = fwidth(sigDist);
-  float opacity = smoothstep(-afwidth, afwidth, sigDist);
+  float pxDistance = sigDist * screenPxRange();
+  float opacity = clamp(pxDistance + 0.5, 0.0, 1.0);
   fragColor = vec4(v_Color.rgb, v_Color.a * opacity);
 }`;
 const iconBGVertexShader = `#version 300 es

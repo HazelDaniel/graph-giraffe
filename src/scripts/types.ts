@@ -235,6 +235,7 @@ export interface MSDFShaderLocations {
   u_ViewMatrix: WebGLUniformLocation;
   u_ProjMatrix: WebGLUniformLocation;
   u_Atlas: WebGLUniformLocation;
+  u_pxRange: WebGLUniformLocation;
 }
 
 export interface IconBGShaderLocations {

@@ -12,7 +12,7 @@ export interface CachedTexture {
 export class TextureCache {
   private gl: WebGL2RenderingContext;
   private cache = new Map<string, CachedTexture>();
-  private uploadQueue: { id: string; image: HTMLImageElement }[] = [];
+  private uploadQueue: { id: string; image: HTMLImageElement; logicalWidth: number; logicalHeight: number }[] = [];
   
   private currentFrame: number = 0;
   
@@ -56,10 +56,18 @@ export class TextureCache {
           }
         }
 
-        // High quality rasterization: scale 2x native
-        const scale = 2;
-        const width = nativeWidth * scale;
-        const height = nativeHeight * scale;
+        // The "logical" size is the 2x convention the 9-slice margins were authored against.
+        // We rasterize at a higher scale for GPU supersampling but report
+        // the 2x dimensions so u_TextureSize / u_SliceMargins stay consistent.
+        const logicalScale = 2;
+        const logicalWidth = nativeWidth * logicalScale;
+        const logicalHeight = nativeHeight * logicalScale;
+
+        // Ultra-high quality rasterization: 4x native scale (accounts for high-DPI displays & zoom)
+        const dpr = typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1;
+        const rasterScale = Math.max(4, Math.round(2 * dpr));
+        const width = nativeWidth * rasterScale;
+        const height = nativeHeight * rasterScale;
 
         svg.setAttribute("width", width.toString());
         svg.setAttribute("height", height.toString());
@@ -73,7 +81,7 @@ export class TextureCache {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
-          this.uploadQueue.push({ id: textureId, image: img });
+          this.uploadQueue.push({ id: textureId, image: img, logicalWidth, logicalHeight });
           // Call drawFrame to trigger upload processing
           this.onTextureLoaded();
         };
@@ -107,7 +115,7 @@ export class TextureCache {
     let uploadsDone = 0;
     
     while (this.uploadQueue.length > 0 && uploadsDone < MAX_UPLOADS) {
-      const { id, image } = this.uploadQueue.shift()!;
+      const { id, image, logicalWidth, logicalHeight } = this.uploadQueue.shift()!;
       const entry = this.cache.get(id);
       if (entry && entry.state === 'PENDING') {
         const tex = this.gl.createTexture()!;
@@ -129,8 +137,10 @@ export class TextureCache {
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
         
         entry.texture = tex;
-        entry.nativeWidth = image.width;
-        entry.nativeHeight = image.height;
+        // Report the logical 2x dimensions so 9-slice margins stay consistent.
+        // The GPU texture is higher-res supersampling; the shader doesn't need to know.
+        entry.nativeWidth = logicalWidth;
+        entry.nativeHeight = logicalHeight;
         entry.state = 'READY';
         
         uploadsDone++;

@@ -38,6 +38,7 @@ export declare class MsdfAtlas {
     glyphs: Map<number, GlyphMetrics>;
     common: AtlasJson["common"] | null;
     info: AtlasJson["info"] | null;
+    pxRange: number;
     constructor(gl: WebGL2RenderingContext);
     load(imageUrl: string, jsonUrl: string): Promise<void>;
     private loadImage;

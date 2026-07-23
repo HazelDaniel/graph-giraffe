@@ -4,6 +4,7 @@ export class MsdfAtlas {
     glyphs = new Map();
     common = null;
     info = null;
+    pxRange = 4.0;
     constructor(gl) {
         this.gl = gl;
     }
@@ -14,6 +15,9 @@ export class MsdfAtlas {
         ]);
         this.common = json.common;
         this.info = json.info;
+        if (json.distanceField && json.distanceField.distanceRange) {
+            this.pxRange = json.distanceField.distanceRange;
+        }
         for (const char of json.chars) {
             this.glyphs.set(char.id, char);
         }
@@ -194,6 +198,7 @@ export class MsdfTextRenderer {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.atlas.texture);
         gl.uniform1i(this.locations.u_Atlas, 0);
+        gl.uniform1f(this.locations.u_pxRange, this.atlas.pxRange || 4.0);
         gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_SHORT, 0);
         this.vertexCount = 0;
         this.indexCount = 0;

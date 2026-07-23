@@ -49,8 +49,9 @@ export declare class Renderer {
     private edgeFrame;
     private textureCache;
     isZooming: boolean;
+    private dpr;
     /** Call once after each canvas resize to update the orthographic projection. */
-    resize(width: number, height: number): void;
+    resize(width: number, height: number, dpr?: number): void;
     /** Start the RAF-driven render loop. */
     startLoop(): void;
     private tick;

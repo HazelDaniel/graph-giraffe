@@ -138,6 +138,7 @@ export declare class NodeEditor {
     private handleGlobalTextureChange;
     private undo;
     private redo;
+    private dpr;
     private handleResize;
     private pushCommand;
     private get commandContext();
