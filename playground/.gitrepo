@@ -6,7 +6,7 @@
 [subrepo]
 	remote = git@github.com:HazelDaniel/playground.graph-giraffe.git
 	branch = master
-	commit = b4f397379a46a4836fbb4baee594bc5f4ab3dc82
-	parent = 8267380c23369cf2a480679ea464bfb02ef64f9b
+	commit = 0bbbf59c0068f4013bd22d091134315bd53500ca
+	parent = fcbc49f88e13af06e01db79ef328a408fd80c2bc
 	method = merge
 	cmdver = 0.4.9
