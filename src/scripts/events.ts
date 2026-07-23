@@ -95,6 +95,11 @@ export interface GraphEvents {
   "pane:scroll": {
     event: WheelEvent;
   };
+  "camera:change": {
+    panX: number;
+    panY: number;
+    zoom: number;
+  };
 }
 
 export type SyncHandler<T> = (payload: T) => void;

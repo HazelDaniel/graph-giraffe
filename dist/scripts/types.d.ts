@@ -62,6 +62,13 @@ export interface EdgeData {
     isSelected: boolean;
     visible: boolean;
 }
+export interface CustomOverlay {
+    id: string;
+    element: HTMLElement;
+    worldX: number;
+    worldY: number;
+    scaleWithZoom?: boolean;
+}
 export interface NodeEditorConfig {
     connectionMode?: ConnectionMode;
     handleStyle?: HandleStyle;

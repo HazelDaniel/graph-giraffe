@@ -12,6 +12,10 @@ const SHELL = `
     style="pointer-events: none; z-index: 5"
   ></canvas>
 
+  <!-- Custom DOM Overlay Containers -->
+  <div id="gg-overlays-scaling" style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; z-index: 6; transform-origin: 0 0;"></div>
+  <div id="gg-overlays-fixed" style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; z-index: 6; transform-origin: 0 0;"></div>
+
   <!-- Screen Reader Only Node List -->
   <ul
     id="sr-node-list"

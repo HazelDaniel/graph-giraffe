@@ -7,3 +7,4 @@ node_modules
 .qwen
 .agents
 animations
+export.json

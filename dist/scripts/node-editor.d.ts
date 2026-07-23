@@ -1,5 +1,5 @@
 import { GraphEventEmitter } from "./events.js";
-import { ConnectionMode, NodeEditorConfig, AddUploadedTextureParams } from "./types.js";
+import { ConnectionMode, NodeEditorConfig, AddUploadedTextureParams, CustomOverlay } from "./types.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
 import type { GraphSnapshot } from "./graph-serialization.js";
 /**
@@ -54,6 +54,9 @@ export declare class NodeEditor {
     private selectionToolbar;
     private selectionToolbarNodeId;
     private selectionToolbarActionSignature;
+    private overlays;
+    private scalingOverlayContainer;
+    private fixedOverlayContainer;
     private resizeObserver;
     private activeTouches;
     private gestureMode;
@@ -88,6 +91,48 @@ export declare class NodeEditor {
      * entire editor state as a fresh baseline.
      */
     importGraph(snapshot: GraphSnapshot): void;
+    /**
+     * Add a custom DOM overlay component to the canvas.
+     */
+    addOverlay(overlay: CustomOverlay): void;
+    /**
+     * Remove a custom DOM overlay component by ID.
+     */
+    removeOverlay(id: string): void;
+    /**
+     * Retrieve a custom DOM overlay component by ID.
+     */
+    getOverlay(id: string): CustomOverlay | undefined;
+    /**
+     * Update the world position of an existing overlay component.
+     */
+    updateOverlayPosition(id: string, worldX: number, worldY: number): void;
+    /**
+     * Convert a world-space coordinate to screen-space pixel coordinates.
+     */
+    worldToScreen(worldX: number, worldY: number): {
+        x: number;
+        y: number;
+    };
+    /**
+     * Convert a screen-space pixel coordinate to world-space coordinates.
+     */
+    screenToWorld(screenX: number, screenY: number): {
+        x: number;
+        y: number;
+    };
+    /**
+     * Get the current camera viewport state (panX, panY, zoom).
+     */
+    getCameraState(): {
+        panX: number;
+        panY: number;
+        zoom: number;
+    };
+    /**
+     * Synchronize overlay container transforms with current camera pan and zoom.
+     */
+    private updateOverlays;
     private handleExport;
     private handleImport;
     private handleGlobalTextureChange;

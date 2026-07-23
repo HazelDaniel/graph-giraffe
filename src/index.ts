@@ -72,6 +72,7 @@ export type {
   NodePropPrimitive,
   PropChangePayload,
   ConnectionPreviewData,
+  CustomOverlay,
   GeometryType,
   GeometryMeshType,
   BGGeometryMeshType,

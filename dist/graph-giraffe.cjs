@@ -8943,6 +8943,9 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "selectionToolbar", null);
     __publicField(this, "selectionToolbarNodeId", null);
     __publicField(this, "selectionToolbarActionSignature", "");
+    __publicField(this, "overlays", /* @__PURE__ */ new Map());
+    __publicField(this, "scalingOverlayContainer");
+    __publicField(this, "fixedOverlayContainer");
     __publicField(this, "resizeObserver");
     __publicField(this, "activeTouches", /* @__PURE__ */ new Map());
     __publicField(this, "gestureMode", false);
@@ -9051,6 +9054,10 @@ const _NodeEditor = class _NodeEditor {
     );
     const geometry = new GeometryNode(gl, "rounded-square");
     const bgGeometry = new BGGeometryNode(gl, "dotted", backgroundCanvas);
+    const scalingContainer = document.getElementById("gg-overlays-scaling");
+    const fixedContainer = document.getElementById("gg-overlays-fixed");
+    if (scalingContainer) this.scalingOverlayContainer = scalingContainer;
+    if (fixedContainer) this.fixedOverlayContainer = fixedContainer;
     this.renderer = new Renderer(
       gl,
       canvas,
@@ -9069,7 +9076,10 @@ const _NodeEditor = class _NodeEditor {
       () => this.bgColor,
       () => this.fontColor,
       () => this.selectedNodeIds,
-      () => this.updateSelectionToolbarPosition(),
+      () => {
+        this.updateSelectionToolbarPosition();
+        this.updateOverlays();
+      },
       msdfProgram,
       iconBGProgam,
       this.msdfAtlas,
@@ -9286,6 +9296,105 @@ const _NodeEditor = class _NodeEditor {
     this.clearSelectionState();
     this.history.clear();
     this.syncToolbarState();
+  }
+  /**
+   * Add a custom DOM overlay component to the canvas.
+   */
+  addOverlay(overlay) {
+    if (this.overlays.has(overlay.id)) {
+      this.removeOverlay(overlay.id);
+    }
+    this.overlays.set(overlay.id, overlay);
+    overlay.element.style.position = "absolute";
+    if (!overlay.element.style.pointerEvents) {
+      overlay.element.style.pointerEvents = "auto";
+    }
+    if (overlay.scaleWithZoom !== false) {
+      overlay.element.style.left = `${overlay.worldX}px`;
+      overlay.element.style.top = `${overlay.worldY}px`;
+      if (this.scalingOverlayContainer) {
+        this.scalingOverlayContainer.appendChild(overlay.element);
+      }
+    } else {
+      overlay.element.style.left = "0px";
+      overlay.element.style.top = "0px";
+      if (this.fixedOverlayContainer) {
+        this.fixedOverlayContainer.appendChild(overlay.element);
+      }
+    }
+    this.updateOverlays();
+  }
+  /**
+   * Remove a custom DOM overlay component by ID.
+   */
+  removeOverlay(id) {
+    const overlay = this.overlays.get(id);
+    if (overlay) {
+      overlay.element.remove();
+      this.overlays.delete(id);
+    }
+  }
+  /**
+   * Retrieve a custom DOM overlay component by ID.
+   */
+  getOverlay(id) {
+    return this.overlays.get(id);
+  }
+  /**
+   * Update the world position of an existing overlay component.
+   */
+  updateOverlayPosition(id, worldX, worldY) {
+    const overlay = this.overlays.get(id);
+    if (overlay) {
+      overlay.worldX = worldX;
+      overlay.worldY = worldY;
+      if (overlay.scaleWithZoom !== false) {
+        overlay.element.style.left = `${worldX}px`;
+        overlay.element.style.top = `${worldY}px`;
+      }
+      this.updateOverlays();
+    }
+  }
+  /**
+   * Convert a world-space coordinate to screen-space pixel coordinates.
+   */
+  worldToScreen(worldX, worldY) {
+    return this.camera.worldToScreen(worldX, worldY);
+  }
+  /**
+   * Convert a screen-space pixel coordinate to world-space coordinates.
+   */
+  screenToWorld(screenX, screenY) {
+    return this.camera.screenToWorld(screenX, screenY);
+  }
+  /**
+   * Get the current camera viewport state (panX, panY, zoom).
+   */
+  getCameraState() {
+    return {
+      panX: this.camera.panX,
+      panY: this.camera.panY,
+      zoom: this.camera.zoom
+    };
+  }
+  /**
+   * Synchronize overlay container transforms with current camera pan and zoom.
+   */
+  updateOverlays() {
+    const { panX, panY, zoom } = this.camera;
+    if (this.scalingOverlayContainer) {
+      this.scalingOverlayContainer.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    }
+    if (this.fixedOverlayContainer) {
+      this.fixedOverlayContainer.style.transform = `translate(${panX}px, ${panY}px)`;
+    }
+    for (const overlay of this.overlays.values()) {
+      if (overlay.scaleWithZoom === false) {
+        overlay.element.style.transform = `translate(${overlay.worldX * zoom}px, ${overlay.worldY * zoom}px)`;
+        overlay.element.style.transformOrigin = "0 0";
+      }
+    }
+    this.events.dispatch("camera:change", { panX, panY, zoom });
   }
   handleExport() {
     const snapshot = this.exportGraph();
@@ -11836,6 +11945,10 @@ const SHELL = `
     id="2d-label-canvas"
     style="pointer-events: none; z-index: 5"
   ></canvas>
+
+  <!-- Custom DOM Overlay Containers -->
+  <div id="gg-overlays-scaling" style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; z-index: 6; transform-origin: 0 0;"></div>
+  <div id="gg-overlays-fixed" style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; z-index: 6; transform-origin: 0 0;"></div>
 
   <!-- Screen Reader Only Node List -->
   <ul

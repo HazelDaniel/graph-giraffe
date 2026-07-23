@@ -68,6 +68,9 @@ const noopSideEffects: WorldActionSideEffects = {
 
 // NodePlacementSnapshot is imported from history-snapshots.ts
 
+import { NodeTypeRegistry } from "./node-type-registry.js";
+import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
+
 export class WorldActionDriver {
   readonly store: NodeStore;
   readonly edgeStore: EdgeStore;
@@ -82,10 +85,15 @@ export class WorldActionDriver {
   constructor(options: WorldActionDriverOptions = {}) {
     this.theme = options.theme ?? "dark";
     this.sideEffects = { ...noopSideEffects, ...options.sideEffects };
+    const registry = new NodeTypeRegistry();
+    for (const desc of BUILTIN_DESCRIPTORS) {
+      registry.register(desc);
+    }
     this.store = new NodeStore(
       {} as WebGL2RenderingContext,
       "node",
-      DEFAULT_HANDLE_STYLE
+      DEFAULT_HANDLE_STYLE,
+      registry
     );
     this.edgeStore = new EdgeStore();
     this.history = new HistoryStack({ maxHistory: options.maxHistory });

@@ -71,6 +71,7 @@ import {
   isNodePrimitiveType,
   TextureKind,
   AddUploadedTextureParams,
+  CustomOverlay,
 } from "./types.js";
 import { MsdfAtlas } from "./msdf-text.js";
 import {
@@ -219,6 +220,10 @@ export class NodeEditor {
   private selectionToolbarNodeId: number | null = null;
   private selectionToolbarActionSignature: string = "";
 
+  private overlays = new Map<string, CustomOverlay>();
+  private scalingOverlayContainer!: HTMLElement;
+  private fixedOverlayContainer!: HTMLElement;
+
   private resizeObserver!: ResizeObserver;
 
   private activeTouches = new Map<number, PointerEvent>();
@@ -356,6 +361,11 @@ export class NodeEditor {
     const geometry = new GeometryNode(gl, "rounded-square");
     const bgGeometry = new BGGeometryNode(gl, "dotted", backgroundCanvas);
 
+    const scalingContainer = document.getElementById("gg-overlays-scaling");
+    const fixedContainer = document.getElementById("gg-overlays-fixed");
+    if (scalingContainer) this.scalingOverlayContainer = scalingContainer;
+    if (fixedContainer) this.fixedOverlayContainer = fixedContainer;
+
     this.renderer = new Renderer(
       gl,
       canvas,
@@ -374,7 +384,10 @@ export class NodeEditor {
       () => this.bgColor,
       () => this.fontColor,
       () => this.selectedNodeIds,
-      () => this.updateSelectionToolbarPosition(),
+      () => {
+        this.updateSelectionToolbarPosition();
+        this.updateOverlays();
+      },
       msdfProgram,
       iconBGProgam,
       this.msdfAtlas,
@@ -636,6 +649,117 @@ export class NodeEditor {
     this.clearSelectionState();
     this.history.clear();
     this.syncToolbarState();
+  }
+
+  /**
+   * Add a custom DOM overlay component to the canvas.
+   */
+  addOverlay(overlay: CustomOverlay): void {
+    if (this.overlays.has(overlay.id)) {
+      this.removeOverlay(overlay.id);
+    }
+    this.overlays.set(overlay.id, overlay);
+
+    overlay.element.style.position = "absolute";
+    if (!overlay.element.style.pointerEvents) {
+      overlay.element.style.pointerEvents = "auto";
+    }
+
+    if (overlay.scaleWithZoom !== false) {
+      overlay.element.style.left = `${overlay.worldX}px`;
+      overlay.element.style.top = `${overlay.worldY}px`;
+      if (this.scalingOverlayContainer) {
+        this.scalingOverlayContainer.appendChild(overlay.element);
+      }
+    } else {
+      overlay.element.style.left = "0px";
+      overlay.element.style.top = "0px";
+      if (this.fixedOverlayContainer) {
+        this.fixedOverlayContainer.appendChild(overlay.element);
+      }
+    }
+    this.updateOverlays();
+  }
+
+  /**
+   * Remove a custom DOM overlay component by ID.
+   */
+  removeOverlay(id: string): void {
+    const overlay = this.overlays.get(id);
+    if (overlay) {
+      overlay.element.remove();
+      this.overlays.delete(id);
+    }
+  }
+
+  /**
+   * Retrieve a custom DOM overlay component by ID.
+   */
+  getOverlay(id: string): CustomOverlay | undefined {
+    return this.overlays.get(id);
+  }
+
+  /**
+   * Update the world position of an existing overlay component.
+   */
+  updateOverlayPosition(id: string, worldX: number, worldY: number): void {
+    const overlay = this.overlays.get(id);
+    if (overlay) {
+      overlay.worldX = worldX;
+      overlay.worldY = worldY;
+      if (overlay.scaleWithZoom !== false) {
+        overlay.element.style.left = `${worldX}px`;
+        overlay.element.style.top = `${worldY}px`;
+      }
+      this.updateOverlays();
+    }
+  }
+
+  /**
+   * Convert a world-space coordinate to screen-space pixel coordinates.
+   */
+  worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
+    return this.camera.worldToScreen(worldX, worldY);
+  }
+
+  /**
+   * Convert a screen-space pixel coordinate to world-space coordinates.
+   */
+  screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
+    return this.camera.screenToWorld(screenX, screenY);
+  }
+
+  /**
+   * Get the current camera viewport state (panX, panY, zoom).
+   */
+  getCameraState(): { panX: number; panY: number; zoom: number } {
+    return {
+      panX: this.camera.panX,
+      panY: this.camera.panY,
+      zoom: this.camera.zoom,
+    };
+  }
+
+  /**
+   * Synchronize overlay container transforms with current camera pan and zoom.
+   */
+  private updateOverlays(): void {
+    const { panX, panY, zoom } = this.camera;
+    if (this.scalingOverlayContainer) {
+      this.scalingOverlayContainer.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    }
+    if (this.fixedOverlayContainer) {
+      this.fixedOverlayContainer.style.transform = `translate(${panX}px, ${panY}px)`;
+    }
+
+    for (const overlay of this.overlays.values()) {
+      if (overlay.scaleWithZoom === false) {
+        overlay.element.style.transform = `translate(${overlay.worldX * zoom}px, ${overlay.worldY * zoom}px)`;
+        overlay.element.style.transformOrigin = "0 0";
+      }
+    }
+
+    this.events.dispatch("camera:change", { panX, panY, zoom });
   }
 
   private handleExport(): void {
