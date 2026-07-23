@@ -1488,7 +1488,7 @@ const STYLE_TEMPLATE$1 = `
   :host {
     position: absolute;
     display: none;
-    z-index: 30;
+    z-index: 10;
     pointer-events: auto;
     left: 0;
     top: 0;

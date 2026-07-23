@@ -17,7 +17,7 @@ const STYLE_TEMPLATE = `
   :host {
     position: absolute;
     display: none;
-    z-index: 30;
+    z-index: 10;
     pointer-events: auto;
     left: 0;
     top: 0;
