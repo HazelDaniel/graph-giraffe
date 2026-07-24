@@ -7,6 +7,7 @@ import { Matrix4 } from '../vendor/cuon-matrix.js';
  * The orthographic projection handles the flip; the camera only deals in pixels.
  */
 export class Camera {
+    editor;
     panX = 0;
     panY = 0;
     zoom = 1;
@@ -15,6 +16,9 @@ export class Camera {
     _targetPanY = 0;
     _targetZoom = 1;
     _viewMatrix = new Matrix4();
+    constructor(editor) {
+        this.editor = editor;
+    }
     /** Translate the viewport by (dx, dy) in screen pixels. */
     pan(dx, dy) {
         this._animating = false;
@@ -67,6 +71,8 @@ export class Camera {
         this._targetPanY = panY;
         this._targetZoom = Math.max(0.1, Math.min(zoom, 5.0));
         this._animating = true;
+        if (this.editor)
+            this.editor.cameraDirty = true;
     }
     /**
      * Compute and return the current view matrix.
@@ -85,6 +91,8 @@ export class Camera {
                 this.panX = this._targetPanX;
                 this.panY = this._targetPanY;
                 this.zoom = this._targetZoom;
+                if (this.editor)
+                    this.editor.cameraDirty = false;
                 this._animating = false;
             }
         }

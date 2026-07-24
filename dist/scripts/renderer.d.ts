@@ -84,6 +84,7 @@ export declare class Renderer {
     private drawNode;
     private getDrawAPI;
     private drawGenericRoundedRect;
+    private drawBranchNode;
     private drawSubgraphNode;
     private drawHubNode;
     private setModelMatrix;

@@ -49,6 +49,7 @@ export class NodeEditor {
     nodeTextureUploadList;
     events = new GraphEventEmitter();
     typeRegistry = new NodeTypeRegistry();
+    cameraDirty = false;
     get debug() {
         return this.events.debug;
     }
@@ -140,7 +141,7 @@ export class NodeEditor {
             this.typeRegistry.register(descriptor);
         }
         // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
-        this.camera = new Camera();
+        this.camera = new Camera(this);
         this.store = new NodeStore(gl, this.connectionMode, options.handleStyle ?? DEFAULT_HANDLE_STYLE, this.typeRegistry);
         this.edgeStore = new EdgeStore();
         this.history = new HistoryStack();
@@ -200,6 +201,7 @@ export class NodeEditor {
         this.controls = new UIControls(canvas, container, historyPane, toolPane, {
             onAddNode: () => this.handleAddNode(canvas, "node"),
             onAddGroup: () => this.handleAddNode(canvas, "group"),
+            onAddBranch: () => this.handleAddNode(canvas, "branch"),
             onAddComposition: () => this.handleAddComposition(canvas),
             onToggleMultiSelect: () => this.toggleMultiSelectMode(),
             onUndo: () => this.undo(),
@@ -488,6 +490,8 @@ export class NodeEditor {
                 overlay.element.style.transformOrigin = "0 0";
             }
         }
+        if (!this.cameraDirty)
+            return;
         this.events.dispatch("camera:change", { panX, panY, zoom });
     }
     handleExport() {
@@ -2103,6 +2107,7 @@ export class NodeEditor {
         this.isPanning = true;
         this.lastMouseX = clientX;
         this.lastMouseY = clientY;
+        this.cameraDirty = true;
     }
     handlePointerMove(e, canvas) {
         if (e.pointerType !== "mouse") {
@@ -2215,6 +2220,7 @@ export class NodeEditor {
             this.gestureMode = false;
             this.pinchDistance = null;
             this.isPanning = false;
+            this.cameraDirty = false;
         }
         if (this.activeTouches.size === 0) {
             await this.handleMouseUp(e, canvas);
@@ -2246,6 +2252,7 @@ export class NodeEditor {
     }
     async handleMouseUp(e, canvas) {
         this.isPanning = false;
+        this.cameraDirty = false;
         if (this.activeConnectionDrag) {
             const source = this.activeConnectionDrag;
             const target = this.hoveredHandle;
@@ -2608,7 +2615,7 @@ export class NodeEditor {
     }
     createHubFromConnectionDrop(source, canvas, clientX, clientY) {
         const sourceNode = this.store.get(source.sourceNodeId);
-        if (sourceNode?.nodeType === "composition") {
+        if (sourceNode?.nodeType === "composition" || sourceNode?.nodeType === "branch") {
             return false;
         }
         const { left, top } = canvas.getBoundingClientRect();
@@ -2809,10 +2816,12 @@ export class NodeEditor {
     ZOOM_THROTTLE_MS = 180;
     triggerZoomThrottle() {
         this.renderer.isZooming = true;
+        this.cameraDirty = true;
         if (this.zoomThrottleTimer) {
             clearTimeout(this.zoomThrottleTimer);
         }
         this.zoomThrottleTimer = setTimeout(() => {
+            this.cameraDirty = false;
             this.renderer.isZooming = false;
             this.zoomThrottleTimer = null;
         }, this.ZOOM_THROTTLE_MS);

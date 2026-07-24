@@ -11,12 +11,12 @@ export interface ThemeStyle {
 export type GeometryMeshType = "rounded-square";
 export type BGGeometryMeshType = "dotted" | "grid";
 export type GeometryType = "circle" | "square" | "rounded-square";
-export type NodeType = "node" | "hub" | "group" | "composition" | "composition-child" | "subgraph";
+export type NodeType = "node" | "hub" | "branch" | "group" | "composition" | "composition-child" | "subgraph";
 export type ContainerNodeType = "group" | "composition" | "subgraph";
-export type LeafNodeType = "node" | "hub" | "composition-child";
+export type LeafNodeType = "node" | "hub" | "branch" | "composition-child";
 export type CandidateNodeType = Exclude<NodeType, "composition-child">;
 export type ConnectionMode = "group" | "node";
-export type HandleSide = "left" | "right";
+export type HandleSide = "left" | "right" | "top" | "bottom";
 export type HandleShape = "circle" | "square";
 export type EdgeType = "line" | "cubic" | "line-curve" | "orthogonal";
 export type EdgeHeadType = "none" | "arrow";
@@ -101,6 +101,7 @@ export declare const NODE_LAYOUT: {
 export declare const HANDLE_LAYOUT: {
     sideInset: number;
     offsetX: number;
+    offsetY: number;
 };
 export declare const DEFAULT_HANDLE_STYLE: HandleStyle;
 export declare const NODE_SIZE: {
@@ -111,6 +112,10 @@ export declare const NODE_SIZE: {
     readonly hub: {
         readonly width: 240;
         readonly height: 100;
+    };
+    readonly branch: {
+        readonly width: 140;
+        readonly height: 120;
     };
     readonly nodeCollapsed: {
         readonly width: 190;
@@ -139,7 +144,7 @@ export declare const NODE_SIZE: {
 };
 export declare function isContainerNodeType(nodeType: NodeType | string, registry?: NodeTypeRegistry): nodeType is ContainerNodeType;
 export declare function isLeafNodeType(nodeType: NodeType | string, registry?: NodeTypeRegistry): nodeType is LeafNodeType;
-export declare function isNodePrimitiveType(nodeType: NodeType | string, registry?: NodeTypeRegistry): nodeType is "node" | "hub";
+export declare function isNodePrimitiveType(nodeType: NodeType | string, registry?: NodeTypeRegistry): nodeType is "node" | "hub" | "branch";
 export declare function isCandidateNodeType(nodeType: NodeType | string, connectionMode: ConnectionMode, registry?: NodeTypeRegistry): nodeType is CandidateNodeType;
 export declare function getDefaultNodeSize(nodeType: NodeType | string, isCollapsed?: boolean, registry?: NodeTypeRegistry): {
     width: number;

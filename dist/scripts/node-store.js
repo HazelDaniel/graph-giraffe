@@ -633,7 +633,7 @@ export class NodeStore {
             }
             return getDefaultNodeSize('composition');
         }
-        const defaultSize = getDefaultNodeSize(node.nodeType, shouldCollapse);
+        const defaultSize = getDefaultNodeSize(node.nodeType, shouldCollapse, this.registry);
         // If the node has props and is not collapsed, derive height from props schema
         if (node.nodeType === 'node' && !shouldCollapse && node.props) {
             return { width: defaultSize.width, height: this.calculatePropHeight(node.props) };
@@ -663,6 +663,14 @@ export class NodeStore {
                 return [];
             const desc = this.registry.get(nodeType);
             return desc.handles.sides.map((side) => ({
+                candidateId,
+                side,
+                isConnected: existingHandles.find((handle) => handle.side === side)?.isConnected ?? false,
+                style: { ...this.handleStyle },
+            }));
+        }
+        if (nodeType === "branch") {
+            return ["top", "left", "right"].map((side) => ({
                 candidateId,
                 side,
                 isConnected: existingHandles.find((handle) => handle.side === side)?.isConnected ?? false,

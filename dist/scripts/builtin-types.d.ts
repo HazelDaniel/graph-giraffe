@@ -5,4 +5,5 @@ export declare const groupDescriptor: NodeTypeDescriptor;
 export declare const compositionDescriptor: NodeTypeDescriptor;
 export declare const compositionChildDescriptor: NodeTypeDescriptor;
 export declare const subgraphDescriptor: NodeTypeDescriptor;
+export declare const branchDescriptor: NodeTypeDescriptor;
 export declare const BUILTIN_DESCRIPTORS: NodeTypeDescriptor[];

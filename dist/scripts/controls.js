@@ -6,6 +6,7 @@
  */
 export class UIControls {
     addNodeButton;
+    addBranchButton;
     createSubgraphButton;
     addGroupButton;
     addCompositionButton;
@@ -25,6 +26,7 @@ export class UIControls {
         this.addCompositionButton = toolPane.shadowRoot?.querySelector("#btn-add-composition");
         this.multiSelectButton = toolPane.shadowRoot?.querySelector("#btn-multi-select");
         this.createSubgraphButton = toolPane.shadowRoot?.querySelector("#btn-create-subgraph");
+        this.addBranchButton = toolPane.shadowRoot?.querySelector("#btn-add-branch");
         this.undoButton = historyPane.shadowRoot?.querySelector("#btn-undo");
         this.redoButton = historyPane.shadowRoot?.querySelector("#btn-redo");
         this.deleteNodeButton = toolPane.shadowRoot?.querySelector("#btn-delete-node");
@@ -37,6 +39,7 @@ export class UIControls {
         this.addCompositionButton.addEventListener("click", () => callbacks.onAddComposition());
         this.multiSelectButton.addEventListener("click", () => callbacks.onToggleMultiSelect());
         this.createSubgraphButton.addEventListener("click", () => callbacks.onSubgraphCreate());
+        this.addBranchButton?.addEventListener("click", () => callbacks.onAddBranch?.());
         this.undoButton.addEventListener("click", () => callbacks.onUndo());
         this.redoButton.addEventListener("click", () => callbacks.onRedo());
         this.deleteNodeButton.addEventListener("click", () => callbacks.onDeleteNode());

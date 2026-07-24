@@ -553,7 +553,15 @@ export class Renderer {
                     return;
             }
             if (desc?.renderMode === "rounded-rect") {
+                if (node.nodeType === "hub") {
+                    this.drawHubNode(node, worldX, worldY, z, picking);
+                    return;
+                }
                 this.drawGenericRoundedRect(node, worldX, worldY, z, desc);
+                return;
+            }
+            if (desc?.renderMode === "rounded-triangle") {
+                this.drawBranchNode(node, worldX, worldY, z, picking, desc);
                 return;
             }
             // fall through to textured path
@@ -566,6 +574,10 @@ export class Renderer {
             }
             if (node.nodeType === "hub") {
                 this.drawHubNode(node, worldX, worldY, z, picking);
+                return;
+            }
+            if (node.nodeType === "branch") {
+                this.drawBranchNode(node, worldX, worldY, z, picking);
                 return;
             }
         }
@@ -849,7 +861,7 @@ export class Renderer {
         gl.uniform1f(this.locations.u_Radius, isCollapsed ? 8.0 : radius);
         gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         gl.uniform1i(this.locations.u_RenderMode, 0);
-        // Hub-specific icon slot (built-in special case)
+        // Hub icon slot (built-in special case)
         if (node.nodeType === "hub") {
             const slotPadding = 10;
             const iconSlotWidth = Math.max(48, Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28))));
@@ -867,7 +879,7 @@ export class Renderer {
             gl.uniform1f(this.locations.u_Radius, 12.0);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
             gl.uniform1i(this.locations.u_RenderMode, 0);
-            this.iconRenderer.addText("", iconCenterX, iconCenterY, Math.max(18, Math.min(28, iconSlotHeight * 0.48)), 1.0, 1.0, 1.0, 1.0, "center", "middle");
+            this.iconRenderer.addText("", iconCenterX, iconCenterY, Math.min(iconSlotWidth, iconSlotHeight) * 0.55, 1, 1, 1, 0.92, "center", "middle");
         }
         // ─── Overlay via overlayConfig ──────────────────────────
         const [r, g, b, _] = this.getFontColor();
@@ -920,6 +932,66 @@ export class Renderer {
                 fontColor: [r, g, b],
             });
         }
+    }
+    drawBranchNode(node, worldX, worldY, z, picking, desc) {
+        const gl = this.gl;
+        const config = desc?.renderConfig;
+        const radius = config?.radius ?? 10;
+        const borderWidth = config?.borderWidth ?? 1.8;
+        const [fillR, fillG, fillB, fillA] = config?.fillColor ?? [0.10, 0.11, 0.13, 0.95];
+        const [borderR, borderG, borderB, borderA] = config?.borderColor ?? [0.45, 0.50, 0.58, 0.9];
+        if (picking) {
+            // For picking, draw a simple filled quad covering the triangle's bounding box.
+            // The SDF discards fragments outside the triangle shape.
+            gl.uniform1i(this.locations.u_UseTexture, 0);
+            gl.uniform1i(this.locations.u_Use9Slice, 0);
+            gl.uniform1i(this.locations.u_RenderMode, 2);
+            gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+            gl.uniform4f(this.locations.u_Color, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1.0);
+            gl.uniform4f(this.locations.u_BorderColor, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1.0);
+            gl.uniform1f(this.locations.u_BorderWidth, 0.0);
+            gl.uniform1f(this.locations.u_Radius, radius);
+            this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+            gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+            gl.uniform1i(this.locations.u_RenderMode, 0);
+            return;
+        }
+        const [r, g, b, _] = this.getFontColor();
+        // Selection / drop-target glow (rounded triangle outline)
+        if (node.isDropTarget || node.isSelected) {
+            this.setModelMatrix(worldX - 4, worldY - 4, node.width + 8, node.height + 8, z);
+            gl.uniform1i(this.locations.u_UseTexture, 0);
+            gl.uniform1i(this.locations.u_Use9Slice, 0);
+            gl.uniform1i(this.locations.u_RenderMode, 2);
+            gl.uniform2f(this.locations.u_Dimensions, node.width + 8, node.height + 8);
+            gl.uniform4f(this.locations.u_Color, node.isDropTarget ? 0.04 : 0.08, node.isDropTarget ? 0.38 : 0.14, node.isDropTarget ? 0.16 : 0.68, 0.09);
+            gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1.0, 0.95);
+            gl.uniform1f(this.locations.u_BorderWidth, 2.5);
+            gl.uniform1f(this.locations.u_Radius, radius);
+            gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+        }
+        // Body: rounded triangle
+        this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+        gl.uniform1i(this.locations.u_UseTexture, 0);
+        gl.uniform1i(this.locations.u_Use9Slice, 0);
+        gl.uniform1i(this.locations.u_RenderMode, 2);
+        gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+        gl.uniform4f(this.locations.u_Color, fillR, fillG, fillB, fillA);
+        gl.uniform4f(this.locations.u_BorderColor, borderR, borderG, borderB, borderA);
+        gl.uniform1f(this.locations.u_BorderWidth, borderWidth);
+        gl.uniform1f(this.locations.u_Radius, radius);
+        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+        gl.uniform1i(this.locations.u_RenderMode, 0);
+        // Centered icon (placeholder branch glyph)
+        // Position the icon at the visual centroid of the triangle
+        // For triangle pointing up, centroid is at 1/3 from the bottom
+        const iconCenterX = worldX + node.width / 2;
+        const iconCenterY = worldY + node.height * 0.45;
+        const iconSize = Math.min(node.width, node.height) * 0.22;
+        this.iconRenderer.addText("", iconCenterX, iconCenterY, iconSize, 1, 1, 1, 0.85, "center", "middle");
+        // Title centered below the icon
+        const titleY = worldY + node.height * 0.68;
+        this.textRenderer.addText(node.text, worldX + node.width / 2, titleY, 12, r, g, b, 1.0, "center", "middle");
     }
     drawSubgraphNode(node, worldX, worldY, z) {
         const gl = this.gl;

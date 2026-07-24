@@ -2,6 +2,7 @@ import {
   ConnectionMode,
   DEFAULT_HANDLE_STYLE,
   HandleStyle,
+  HandleSide,
   NodeHandleData,
   getDefaultNodeSize,
   isContainerNodeType,
@@ -746,7 +747,7 @@ export class NodeStore {
       return getDefaultNodeSize('composition');
     }
 
-    const defaultSize = getDefaultNodeSize(node.nodeType, shouldCollapse);
+    const defaultSize = getDefaultNodeSize(node.nodeType, shouldCollapse, this.registry);
 
     // If the node has props and is not collapsed, derive height from props schema
     if (node.nodeType === 'node' && !shouldCollapse && node.props) {
@@ -786,7 +787,17 @@ export class NodeStore {
     if (this.registry) {
       if (!this.registry.hasHandles(nodeType, this.connectionMode)) return [];
       const desc = this.registry.get(nodeType)!;
-      return (desc.handles.sides as ("left" | "right")[]).map((side) => ({
+      return (desc.handles.sides as HandleSide[]).map((side) => ({
+        candidateId,
+        side,
+        isConnected:
+          existingHandles.find((handle) => handle.side === side)?.isConnected ?? false,
+        style: { ...this.handleStyle },
+      }));
+    }
+
+    if (nodeType === "branch") {
+      return (["top", "left", "right"] as const).map((side) => ({
         candidateId,
         side,
         isConnected:

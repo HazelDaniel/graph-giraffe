@@ -24,7 +24,6 @@ const STYLE_TEMPLATE$5 = `
     padding: 1px 4px;
     padding-right: 0;
     z-index: 10;
-
   }
 
   :host>.root {
@@ -36,12 +35,45 @@ const STYLE_TEMPLATE$5 = `
     display: flex;
     flex-direction: inherit;
     cursor: inherit;
+    position: static;
   }
 
-    button,a,*[role="button"],*::-webkit-scrollbar-thumb, input[type="radio"], input[type="range"] {
-    //cursor: url("data:image/svg+xml,%3Csvg width='38' height='44' viewBox='8 8 38 44' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg filter='url(%23filter0_d_322_719)'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M12.6711 24L10.8979 21.2906C9.6871 19.4406 7.10808 18.7658 5.13534 19.78L5.595 19.5436C5.10544 19.7954 4.87068 20.4228 5.07226 20.9442L7.5268 27.2948C7.91592 28.3016 8.90972 29.7254 9.73322 30.4406C9.73322 30.4406 14.6711 34.5278 14.6711 36.06V38H22.671L24.671 34L26.671 38H28.671V36.06C28.671 34.5278 31.6888 29.7014 31.6888 29.7014C32.2442 28.7632 32.7072 27.1104 32.7072 26.0132V17.9436C32.671 16.157 31.1524 14.7091 29.2786 14.7091C28.341 14.7091 27.5818 15.433 27.5818 16.3268V16.9731C27.5818 15.1865 26.063 13.7386 24.1892 13.7386C23.2516 13.7386 22.4924 14.4626 22.4924 15.3564V16.0027C22.4924 14.2161 20.9736 12.7682 19.0998 12.7682C18.1624 12.7682 17.403 13.4921 17.403 14.3859V15.0322C17.403 14.7451 17.3724 14.5169 17.313 14.336L16.7955 6.00242C16.7255 4.87552 15.7757 4 14.6711 4C13.5588 4 12.6711 4.89526 12.6711 5.99962V14V24ZM26.7072 22H28.7072V30H26.7072V22ZM22.7072 22H24.7072V30H22.7072V22ZM18.7072 22H20.7072V30H18.7072V22Z' fill='white'/%3E%3Cmask id='mask0_322_719' style='mask-type:luminance' maskUnits='userSpaceOnUse' x='3' y='2' width='32' height='38'%3E%3Cpath d='M35 2H3V40H35V2Z' fill='white'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M12.6711 24L10.8979 21.2906C9.6871 19.4406 7.10808 18.7658 5.13534 19.78L5.595 19.5436C5.10544 19.7954 4.87068 20.4228 5.07226 20.9442L7.5268 27.2948C7.91592 28.3016 8.90972 29.7254 9.73322 30.4406C9.73322 30.4406 14.6711 34.5278 14.6711 36.06V38H22.671L24.671 34L26.671 38H28.671V36.06C28.671 34.5278 31.6888 29.7014 31.6888 29.7014C32.2442 28.7632 32.7072 27.1104 32.7072 26.0132V17.9436C32.671 16.157 31.1524 14.7091 29.2786 14.7091C28.341 14.7091 27.5818 15.433 27.5818 16.3268V16.9731C27.5818 15.1865 26.063 13.7386 24.1892 13.7386C23.2516 13.7386 22.4924 14.4626 22.4924 15.3564V16.0027C22.4924 14.2161 20.9736 12.7682 19.0998 12.7682C18.1624 12.7682 17.403 13.4921 17.403 14.3859V15.0322C17.403 14.7451 17.3724 14.5169 17.313 14.336L16.7955 6.00242C16.7255 4.87552 15.7757 4 14.6711 4C13.5588 4 12.6711 4.89526 12.6711 5.99962V14V24ZM26.7072 22H28.7072V30H26.7072V22ZM22.7072 22H24.7072V30H22.7072V22ZM18.7072 22H20.7072V30H18.7072V22Z' fill='black'/%3E%3C/mask%3E%3Cg mask='url(%23mask0_322_719)'%3E%3Cpath d='M12.6709 24L10.9975 25.0952L14.6709 30.708V24H12.6709ZM9.73306 30.4406L8.4216 31.9506L8.43952 31.9662L8.45782 31.9814L9.73306 30.4406ZM14.6709 38H12.6709V40H14.6709V38ZM22.6708 38V40H23.907L24.4598 38.8944L22.6708 38ZM24.6708 34L26.4598 33.1056L24.6708 29.5278L22.882 33.1056L24.6708 34ZM26.6708 38L24.882 38.8944L25.4348 40H26.6708V38ZM28.6708 38V40H30.6708V38H28.6708ZM31.6886 29.7014L33.3844 30.7616L33.3972 30.7412L33.4096 30.7204L31.6886 29.7014ZM32.707 17.9436H34.707V17.9234L34.7066 17.9031L32.707 17.9436ZM17.3128 14.336L15.3167 14.46L15.3326 14.7156L15.4124 14.959L17.3128 14.336ZM28.707 22H30.707V20H28.707V22ZM28.707 30V32H30.707V30H28.707ZM26.707 30H24.707V32H26.707V30ZM24.707 22H26.707V20H24.707V22ZM24.707 30V32H26.707V30H24.707ZM22.707 30H20.707V32H22.707V30ZM20.707 22H22.707V20H20.707V22ZM20.707 30V32H22.707V30H20.707ZM18.707 30H16.7071V32H18.707V30ZM14.3444 22.9048L12.5712 20.1954L9.22426 22.386L10.9975 25.0952L14.3444 22.9048ZM12.5712 20.1954C10.796 17.4831 7.09768 16.5222 4.22076 18.0012L6.04962 21.5586C7.11814 21.0094 8.5779 21.3984 9.22426 22.386L12.5712 20.1954ZM6.04962 21.5586L6.50928 21.3224L4.68042 17.7649L4.22076 18.0012L6.04962 21.5586ZM4.68042 17.7649C3.26198 18.4942 2.64426 20.2104 3.2066 21.6654L6.9376 20.2232C7.02876 20.459 7.00888 20.6792 6.94788 20.8426C6.88704 21.0054 6.75278 21.1972 6.50928 21.3224L4.68042 17.7649ZM3.2066 21.6654L5.66114 28.0158L9.39214 26.5738L6.9376 20.2232L3.2066 21.6654ZM5.66114 28.0158C6.16656 29.3236 7.34918 31.0192 8.4216 31.9506L11.0445 28.9306C10.4699 28.4316 9.66496 27.2796 9.39214 26.5738L5.66114 28.0158ZM9.73306 30.4406C8.45782 31.9814 8.45792 31.9814 8.45782 31.9814C8.45942 31.9828 8.46354 31.986 8.46744 31.9894C8.47522 31.9958 8.48746 32.006 8.5039 32.0198C8.53676 32.0474 8.58628 32.089 8.65006 32.1432C8.77772 32.2518 8.96198 32.41 9.18384 32.605C9.6296 32.997 10.2176 33.5296 10.8001 34.102C11.3914 34.6832 11.9352 35.2648 12.3173 35.759C12.5093 36.0074 12.6259 36.1896 12.6862 36.3048C12.7672 36.46 12.6709 36.3482 12.6709 36.06H16.6709C16.6709 35.3888 16.4203 34.814 16.2314 34.4524C16.0216 34.051 15.7524 33.6624 15.4815 33.3122C14.9378 32.609 14.2471 31.8814 13.6039 31.2494C12.9519 30.6084 12.3055 30.0236 11.8254 29.6014C11.5843 29.3894 11.3828 29.2162 11.2404 29.0952C11.1692 29.0348 11.1126 28.987 11.0731 28.954C11.0534 28.9374 11.0379 28.9246 11.027 28.9154C11.0216 28.911 11.0173 28.9074 11.0141 28.9048C11.0126 28.9034 11.0113 28.9024 11.0103 28.9016C11.0107 28.9018 11.0098 28.9012 11.0103 28.9016C11.0102 28.9014 11.0087 28.9002 11.0086 28.9002C11.0085 28.9 11.0083 28.9 9.73306 30.4406ZM12.6709 36.06V38H16.6709V36.06H12.6709ZM14.6709 40H22.6708V36H14.6709V40ZM24.4598 38.8944L26.4598 34.8944L22.882 33.1056L20.882 37.1056L24.4598 38.8944ZM22.882 34.8944L24.882 38.8944L28.4598 37.1056L26.4598 33.1056L22.882 34.8944ZM26.6708 40H28.6708V36H26.6708V40ZM30.6708 38V36.06H26.6708V38H30.6708ZM30.6708 36.06C30.6708 36.1316 30.6928 35.8878 30.984 35.2C31.232 34.6146 31.5762 33.9298 31.9398 33.2558C32.3002 32.5882 32.6628 31.9618 32.9368 31.5006C33.0732 31.2708 33.1866 31.0836 33.2652 30.955C33.3046 30.8906 33.3352 30.8412 33.3554 30.8082C33.3656 30.7918 33.3732 30.7794 33.3782 30.7716C33.3806 30.7678 33.3834 30.7634 33.3844 30.7616C33.3842 30.7618 33.385 30.7608 33.3844 30.7616C33.3844 30.7618 33.3844 30.7616 31.6886 29.7014C29.9928 28.641 29.9926 28.6412 29.9926 28.6414C29.993 28.641 29.9924 28.6416 29.9926 28.6414C29.992 28.6424 29.9904 28.645 29.9894 28.6464C29.9876 28.6494 29.985 28.6536 29.9816 28.6588C29.9752 28.6694 29.9658 28.6844 29.9538 28.7036C29.93 28.7422 29.8958 28.7978 29.8526 28.8684C29.7662 29.0098 29.6438 29.2118 29.4974 29.4582C29.2056 29.9498 28.8138 30.6258 28.4196 31.3564C28.0288 32.0804 27.6186 32.8896 27.3008 33.64C27.0262 34.2882 26.6708 35.2222 26.6708 36.06H30.6708ZM33.4096 30.7204C33.8052 30.0522 34.1184 29.2262 34.3334 28.4516C34.548 27.678 34.707 26.8018 34.707 26.0132H30.707C30.707 26.322 30.6348 26.8206 30.479 27.3824C30.3234 27.9428 30.1276 28.4122 29.9676 28.6824L33.4096 30.7204ZM34.707 26.0132V17.9436H30.707V26.0132H34.707ZM34.7066 17.9031C34.6472 14.9636 32.1756 12.7091 29.2784 12.7091V16.7091C30.129 16.7091 30.6946 17.3504 30.7074 17.9841L34.7066 17.9031ZM29.2784 12.7091C27.3272 12.7091 25.5816 14.2396 25.5816 16.3268H29.5816C29.5816 16.4634 29.5202 16.5715 29.4584 16.6303C29.3986 16.6875 29.3304 16.7091 29.2784 16.7091V12.7091ZM25.5816 16.3268V16.9731H29.5816V16.3268H25.5816ZM29.5816 16.9731C29.5816 13.9931 27.0764 11.7386 24.189 11.7386V15.7386C25.0492 15.7386 25.5816 16.38 25.5816 16.9731H29.5816ZM24.189 11.7386C22.238 11.7386 20.4922 13.2692 20.4922 15.3564H24.4922C24.4922 15.493 24.4308 15.6011 24.3692 15.6599C24.3092 15.717 24.241 15.7386 24.189 15.7386V11.7386ZM20.4922 15.3564V16.0027H24.4922V15.3564H20.4922ZM24.4922 16.0027C24.4922 13.0227 21.987 10.7682 19.0996 10.7682V14.7682C19.96 14.7682 20.4922 15.4095 20.4922 16.0027H24.4922ZM19.0996 10.7682C17.1486 10.7682 15.4028 12.2987 15.4028 14.3859H19.4028C19.4028 14.5225 19.3414 14.6306 19.2798 14.6894C19.2198 14.7466 19.1516 14.7682 19.0996 14.7682V10.7682ZM15.4028 14.3859V15.0322H19.4028V14.3859H15.4028ZM19.4028 15.0322C19.4028 14.6176 19.3604 14.1618 19.2134 13.713L15.4124 14.959C15.3967 14.9111 15.395 14.8887 15.3969 14.9031C15.3988 14.9175 15.4028 14.9582 15.4028 15.0322H19.4028ZM19.309 14.212L18.7914 5.87846L14.7991 6.1264L15.3167 14.46L19.309 14.212ZM18.7914 5.87846C18.6556 3.69008 16.8248 2 14.6709 2V6C14.6886 6 14.7203 6.00692 14.7542 6.03866C14.7864 6.06876 14.7975 6.09952 14.7991 6.1264L18.7914 5.87846ZM14.6709 2C12.4494 2 10.6709 3.79536 10.6709 5.99962L14.6709 6V2ZM10.6709 5.99962V14H14.6709V6L10.6709 5.99962ZM10.6709 14V24H14.6709V14H10.6709ZM26.707 24H28.707V20H26.707V24ZM26.707 22V30H30.707V22H26.707ZM28.707 28H26.707V32H28.707V28ZM28.707 30V22H24.707V30H28.707ZM22.707 24H24.707V20H22.707V24ZM22.707 22V30H26.707V22H22.707ZM24.707 28H22.707V32H24.707V28ZM24.707 30V22H20.707V30H24.707ZM18.707 24H20.707V20H18.707V24ZM18.707 22V30H22.707V22H18.707ZM20.707 28H18.707V32H20.707V28ZM20.707 30V22H16.7071V30H20.707Z' fill='black' fill-opacity='0.8'/%3E%3C/g%3E%3C/g%3E%3Cdefs%3E%3Cfilter id='filter0_d_322_719' x='0.000167847' y='0' width='37.7069' height='44' filterUnits='userSpaceOnUse' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-opacity='0' result='BackgroundImageFix'/%3E%3CfeColorMatrix in='SourceAlpha' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0' result='hardAlpha'/%3E%3CfeOffset dy='1'/%3E%3CfeGaussianBlur stdDeviation='1.5'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0'/%3E%3CfeBlend mode='normal' in2='BackgroundImageFix' result='effect1_dropShadow_322_719'/%3E%3CfeBlend mode='normal' in='SourceGraphic' in2='effect1_dropShadow_322_719' result='shape'/%3E%3C/filter%3E%3C/defs%3E%3C/svg%3E%0A"), auto !important;
+  .kebab-subpane {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.6rem;
+    background-color: #161616f0;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.15));
+    border-radius: 1.2rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 12px) scale(0.85);
+    transform-origin: bottom center;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+    z-index: 20;
   }
 
+  .kebab-subpane button {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  .kebab-subpane.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, 0px) scale(1);
+  }
+
+  button,a,*[role="button"],*::-webkit-scrollbar-thumb, input[type="radio"], input[type="range"] {
+    //cursor: url("data:image/svg+xml,%3Csvg width='38' height='44' viewBox='8 8 38 44' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg filter='url(%23filter0_d_322_719)'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M12.6711 24L10.8979 21.2906C9.6871 19.4406 7.10808 18.7658 5.13534 19.78L5.595 19.5436C5.10544 19.7954 4.87068 20.4228 5.07226 20.9442L7.5268 27.2948C7.91592 28.3016 8.90972 29.7254 9.73322 30.4406C9.73322 30.4406 14.6711 34.5278 14.6711 36.06V38H22.671L24.671 34L26.671 38H28.671V36.06C28.671 34.5278 31.6888 29.7014 31.6888 29.7014C32.2442 28.7632 32.7072 27.1104 32.7072 26.0132V17.9436C32.671 16.157 31.1524 14.7091 29.2786 14.7091C28.341 14.7091 27.5818 15.433 27.5818 16.3268V16.9731C27.5818 15.1865 26.063 13.7386 24.1892 13.7386C23.2516 13.7386 22.4924 14.4626 22.4924 15.3564V16.0027C22.4924 14.2161 20.9736 12.7682 19.0998 12.7682C18.1624 12.7682 17.403 13.4921 17.403 14.3859V15.0322C17.403 14.7451 17.3724 14.5169 17.313 14.336L16.7955 6.00242C16.7255 4.87552 15.7757 4 14.6711 4C13.5588 4 12.6711 4.89526 12.6711 5.99962V14V24ZM26.7072 22H28.7072V30H26.7072V22ZM22.7072 22H24.7072V30H22.7072V22ZM18.7072 22H20.7072V30H18.7072V22Z' fill='white'/%3E%3Cmask id='mask0_322_719' style='mask-type:luminance' maskUnits='userSpaceOnUse' x='3' y='2' width='32' height='38'%3E%3Cpath d='M35 2H3V40H35V2Z' fill='white'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M12.6711 24L10.8979 21.2906C9.6871 19.4406 7.10808 18.7658 5.13534 19.78L5.595 19.5436C5.10544 19.7954 4.87068 20.4228 5.07226 20.9442L7.5268 27.2948C7.91592 28.3016 8.90972 29.7254 9.73322 30.4406C9.73322 30.4406 14.6711 34.5278 14.6711 36.06V38H22.671L24.671 34L26.671 38H28.671V36.06C28.671 34.5278 31.6888 29.7014 31.6888 29.7014C32.2442 28.7632 32.7072 27.1104 32.7072 26.0132V17.9436C32.671 16.157 31.1524 14.7091 29.2786 14.7091C28.341 14.7091 27.5818 15.433 27.5818 16.3268V16.9731C27.5818 15.1865 26.063 13.7386 24.1892 13.7386C23.2516 13.7386 22.4924 14.4626 22.4924 15.3564V16.0027C22.4924 14.2161 20.9736 12.7682 19.0996 12.7682V14.7682C19.96 14.7682 20.4922 15.4095 20.4922 16.0027H24.4922ZM19.0996 10.7682C17.1486 10.7682 15.4028 12.2987 15.4028 14.3859H19.4028C19.4028 14.5225 19.3414 14.6306 19.2798 14.6894C19.2198 14.7466 19.1516 14.7682 19.0996 14.7682V10.7682ZM15.4028 14.3859V15.0322H19.4028V14.3859H15.4028ZM19.4028 15.0322C19.4028 14.6176 19.3604 14.1618 19.2134 13.713L15.4124 14.959C15.3967 14.9111 15.395 14.8887 15.3969 14.9031C15.3988 14.9175 15.4028 14.9582 15.4028 15.0322H19.4028ZM19.309 14.212L18.7914 5.87846L14.7991 6.1264L15.3167 14.46L19.309 14.212ZM18.7914 5.87846C18.6556 3.69008 16.8248 2 14.6709 2V6C14.6886 6 14.7203 6.00692 14.7542 6.03866C14.7864 6.06876 14.7975 6.09952 14.7991 6.1264L18.7914 5.87846ZM14.6709 2C12.4494 2 10.6709 3.79536 10.6709 5.99962L14.6709 6V2ZM10.6709 5.99962V14H14.6709V6L10.6709 5.99962ZM10.6709 14V24H14.6709V14H10.6709ZM26.707 24H28.707V20H26.707V24ZM26.707 22V30H30.707V22H26.707ZM28.707 28H26.707V32H28.707V28ZM28.707 30V22H24.707V30H28.707ZM22.707 24H24.707V20H22.707V24ZM22.707 22V30H26.707V22H22.707ZM24.707 28H22.707V32H24.707V28ZM24.707 30V22H20.707V30H24.707ZM18.707 24H20.707V20H18.707V24ZM18.707 22V30H22.707V22H18.707ZM20.707 28H18.707V32H20.707V28ZM20.707 30V22H16.7071V30H20.707Z' fill='black' fill-opacity='0.8'/%3E%3C/g%3E%3C/g%3E%3Cdefs%3E%3Cfilter id='filter0_d_322_719' x='0.000167847' y='0' width='37.7069' height='44' filterUnits='userSpaceOnUse' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-opacity='0' result='BackgroundImageFix'/%3E%3CfeColorMatrix in='SourceAlpha' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0' result='hardAlpha'/%3E%3CfeOffset dy='1'/%3E%3CfeGaussianBlur stdDeviation='1.5'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0'/%3E%3CfeBlend mode='normal' in2='BackgroundImageFix' result='effect1_dropShadow_322_719'/%3E%3CfeBlend mode='normal' in='SourceGraphic' in2='effect1_dropShadow_322_719' result='shape'/%3E%3C/filter%3E%3C/defs%3E%3C/svg%3E%0A"), auto !important;
+  }
 
   :host .panel-right, :host .panel-left {
     display: flex;
@@ -56,7 +88,7 @@ const STYLE_TEMPLATE$5 = `
     flex: 1;
     border-right: 1px solid #3f3f3f;
   }
-  
+
   :host .panel-right {
     padding: 0 0.5rem;
     width: max-content;
@@ -64,7 +96,7 @@ const STYLE_TEMPLATE$5 = `
     border-radius: 2px;
   }
 
-  :host  button {
+  :host button {
     width: 2.4rem;
     height: 2.4rem;
     transform: scale(0.8);
@@ -74,7 +106,7 @@ const STYLE_TEMPLATE$5 = `
     align-items: center;
     border-radius: 0.3rem;
     cursor: pointer;
-    transition: background 0.2s linear;
+    transition: background 0.2s linear, transform 0.2s ease;
   }
 
   :host button:not(.active):hover {
@@ -124,7 +156,6 @@ const STYLE_TEMPLATE$5 = `
     white-space: nowrap;
     border-width: 0;
   }
-
 `;
 class ActionPane extends HTMLElement {
   constructor() {
@@ -133,6 +164,23 @@ class ActionPane extends HTMLElement {
   }
   connectedCallback() {
     this.render();
+    this.setupListeners();
+  }
+  setupListeners() {
+    const kebabToggle = __privateGet(this, _shadow).querySelector("#btn-kebab-toggle");
+    const subpane = __privateGet(this, _shadow).querySelector("#kebab-subpane");
+    if (!kebabToggle || !subpane) return;
+    kebabToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = subpane.classList.toggle("open");
+      kebabToggle.classList.toggle("active", isOpen);
+    });
+    document.addEventListener("click", (e) => {
+      if (!this.contains(e.target)) {
+        subpane.classList.remove("open");
+        kebabToggle.classList.remove("active");
+      }
+    });
   }
   render() {
     __privateGet(this, _shadow).innerHTML = `
@@ -146,6 +194,24 @@ class ActionPane extends HTMLElement {
   getChildrenTemplate() {
     return `
     <div class="root" part="root">
+      <!-- Popping Sub-pane for nested items -->
+      <div id="kebab-subpane" class="kebab-subpane">
+        <button id="btn-create-subgraph" title="Create Subgraph">
+          <svg width="100%" height="60%" viewBox="0 0 18 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.11429 7.89474C4.11429 9.05744 3.19327 10 2.05714 10C0.921014 10 0 9.05744 0 7.89474C0 6.73203 0.921014 5.78947 2.05714 5.78947C3.19327 5.78947 4.11429 6.73203 4.11429 7.89474Z" fill="#D9D9D9"/>
+            <path d="M18 4.73684C18 5.89955 17.079 6.84211 15.9429 6.84211C14.8067 6.84211 13.8857 5.89955 13.8857 4.73684C13.8857 3.57414 14.8067 2.63158 15.9429 2.63158C17.079 2.63158 18 3.57414 18 4.73684Z" fill="#D9D9D9"/>
+            <path d="M9.77143 1.84211C9.77143 2.85947 8.96554 3.68421 7.97143 3.68421C6.97732 3.68421 6.17143 2.85947 6.17143 1.84211C6.17143 0.824739 6.97732 0 7.97143 0C8.96554 0 9.77143 0.824739 9.77143 1.84211Z" fill="#D9D9D9"/>
+            <path d="M0.514286 8.55963L6.61481 2.31641L7.54414 3.26749L1.44362 9.51071L0.514286 8.55963Z" fill="#D9D9D9"/>
+            <path d="M16.2689 5.85032L8.31142 2.43907L8.8192 1.19849L16.7767 4.60974L16.2689 5.85032Z" fill="#D9D9D9"/>
+          </svg>
+        </button>
+        <button id="btn-add-branch" title="Add Branch Node">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 3V15M6 15C4.34315 15 3 16.3431 3 18C3 19.6569 4.34315 21 6 21C7.65685 21 9 19.6569 9 18C9 16.3431 7.65685 15 6 15ZM18 9C19.6569 9 21 7.65685 21 6C21 4.34315 19.6569 3 18 3C16.3431 3 15 4.34315 15 6C15 7.65685 16.3431 9 18 9ZM6 9C9.5 9 12 12 18 12V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
       <div class="panel-left">
         <span class="active">
           <svg
@@ -294,18 +360,13 @@ class ActionPane extends HTMLElement {
           </svg>
         </button>
 
-
-        <button id="btn-create-subgraph">
-        <svg width="100%" height="60%" viewBox="0 0 18 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4.11429 7.89474C4.11429 9.05744 3.19327 10 2.05714 10C0.921014 10 0 9.05744 0 7.89474C0 6.73203 0.921014 5.78947 2.05714 5.78947C3.19327 5.78947 4.11429 6.73203 4.11429 7.89474Z" fill="#D9D9D9"/>
-          <path d="M18 4.73684C18 5.89955 17.079 6.84211 15.9429 6.84211C14.8067 6.84211 13.8857 5.89955 13.8857 4.73684C13.8857 3.57414 14.8067 2.63158 15.9429 2.63158C17.079 2.63158 18 3.57414 18 4.73684Z" fill="#D9D9D9"/>
-          <path d="M9.77143 1.84211C9.77143 2.85947 8.96554 3.68421 7.97143 3.68421C6.97732 3.68421 6.17143 2.85947 6.17143 1.84211C6.17143 0.824739 6.97732 0 7.97143 0C8.96554 0 9.77143 0.824739 9.77143 1.84211Z" fill="#D9D9D9"/>
-          <path d="M0.514286 8.55963L6.61481 2.31641L7.54414 3.26749L1.44362 9.51071L0.514286 8.55963Z" fill="#D9D9D9"/>
-          <path d="M16.2689 5.85032L8.31142 2.43907L8.8192 1.19849L16.7767 4.60974L16.2689 5.85032Z" fill="#D9D9D9"/>
-        </svg>
-
+        <button id="btn-kebab-toggle" title="More Primitives">
+          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="5" cy="12" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="19" cy="12" r="2" />
+          </svg>
         </button>
-
       </div>
       <div class="panel-right">
         <button id="btn-play-sim">
@@ -1686,7 +1747,8 @@ const NODE_LAYOUT = {
 };
 const HANDLE_LAYOUT = {
   sideInset: 8,
-  offsetX: -2
+  offsetX: -2,
+  offsetY: -2
 };
 const DEFAULT_HANDLE_STYLE = {
   shape: "circle",
@@ -1699,6 +1761,7 @@ const DEFAULT_HANDLE_STYLE = {
 const NODE_SIZE = {
   node: { width: 190, height: 150 },
   hub: { width: 240, height: 100 },
+  branch: { width: 140, height: 120 },
   nodeCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
   group: { width: 220, height: 200 },
   composition: { width: 140, height: 200 },
@@ -1712,14 +1775,14 @@ function isContainerNodeType(nodeType, registry) {
 }
 function isLeafNodeType(nodeType, registry) {
   if (registry) return registry.isLeaf(nodeType);
-  return nodeType === "node" || nodeType === "hub" || nodeType === "composition-child";
+  return nodeType === "node" || nodeType === "hub" || nodeType === "branch" || nodeType === "composition-child";
 }
 function isNodePrimitiveType(nodeType, registry) {
   if (registry) {
     const desc = registry.get(nodeType);
     return desc ? desc.category === "leaf" && desc.handles.always : false;
   }
-  return nodeType === "node" || nodeType === "hub";
+  return nodeType === "node" || nodeType === "hub" || nodeType === "branch";
 }
 function isCandidateNodeType(nodeType, connectionMode, registry) {
   if (registry) return registry.isConnectionCandidate(nodeType, connectionMode);
@@ -1740,6 +1803,8 @@ function getDefaultNodeSize(nodeType, isCollapsed = false, registry) {
       return NODE_SIZE.compositionChild;
     case "hub":
       return NODE_SIZE.hub;
+    case "branch":
+      return NODE_SIZE.branch;
     case "node":
       return isCollapsed ? NODE_SIZE.nodeCollapsed : NODE_SIZE.node;
     default:
@@ -2115,6 +2180,10 @@ const NODE_ID_TEXTURE_LOOKUP = {
     head: "gg-node-head-default"
   },
   hub: {
+    body: "gg-node-body-default",
+    head: "gg-node-head-default"
+  },
+  branch: {
     body: "gg-node-body-default",
     head: "gg-node-head-default"
   },
@@ -3980,7 +4049,7 @@ class Vector4 {
   }
 }
 class Camera {
-  constructor() {
+  constructor(editor) {
     __publicField(this, "panX", 0);
     __publicField(this, "panY", 0);
     __publicField(this, "zoom", 1);
@@ -3989,6 +4058,7 @@ class Camera {
     __publicField(this, "_targetPanY", 0);
     __publicField(this, "_targetZoom", 1);
     __publicField(this, "_viewMatrix", new Matrix4());
+    this.editor = editor;
   }
   /** Translate the viewport by (dx, dy) in screen pixels. */
   pan(dx, dy) {
@@ -4041,6 +4111,8 @@ class Camera {
     this._targetPanY = panY;
     this._targetZoom = Math.max(0.1, Math.min(zoom, 5));
     this._animating = true;
+    if (this.editor)
+      this.editor.cameraDirty = true;
   }
   /**
    * Compute and return the current view matrix.
@@ -4057,6 +4129,8 @@ class Camera {
         this.panX = this._targetPanX;
         this.panY = this._targetPanY;
         this.zoom = this._targetZoom;
+        if (this.editor)
+          this.editor.cameraDirty = false;
         this._animating = false;
       }
     }
@@ -4227,9 +4301,46 @@ function getHandleScreenGeometry(worldX, worldY, node, handle, zoom, panX, panY)
   const originX = worldX * zoom + panX;
   const originY = worldY * zoom + panY;
   const radius = handle.style.size / 2;
+  let centerX = originX + node.width * zoom / 2;
+  let centerY = originY + node.height * zoom / 2;
+  if (node.nodeType === "branch") {
+    switch (handle.side) {
+      case "top":
+        centerX = originX + node.width * zoom / 2;
+        centerY = originY + 8 * zoom - HANDLE_LAYOUT.offsetY;
+        break;
+      case "left":
+        centerX = originX + node.width * zoom * 0.2 - HANDLE_LAYOUT.offsetX;
+        centerY = originY + node.height * zoom * 0.55;
+        break;
+      case "right":
+        centerX = originX + node.width * zoom * 0.8 + HANDLE_LAYOUT.offsetX;
+        centerY = originY + node.height * zoom * 0.55;
+        break;
+      case "bottom":
+        centerX = originX + node.width * zoom / 2;
+        centerY = originY + node.height * zoom + HANDLE_LAYOUT.offsetY;
+        break;
+    }
+  } else {
+    switch (handle.side) {
+      case "left":
+        centerX = originX - HANDLE_LAYOUT.offsetX;
+        break;
+      case "right":
+        centerX = originX + node.width * zoom + HANDLE_LAYOUT.offsetX;
+        break;
+      case "top":
+        centerY = originY - HANDLE_LAYOUT.offsetY;
+        break;
+      case "bottom":
+        centerY = originY + node.height * zoom + HANDLE_LAYOUT.offsetY;
+        break;
+    }
+  }
   return {
-    centerX: handle.side === "left" ? originX - HANDLE_LAYOUT.offsetX : originX + node.width * zoom + HANDLE_LAYOUT.offsetX,
-    centerY: originY + node.height * zoom / 2,
+    centerX,
+    centerY,
     radius,
     size: handle.style.size,
     shape: handle.style.shape
@@ -4391,7 +4502,7 @@ function buildConnectionPreviewGeometry(sourceNodeId, sourceHandleSide, screenX,
   if (!sourceHandle) return null;
   const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera);
   const targetWorld = camera.screenToWorld(screenX, screenY);
-  const oppositeSide = sourceHandleSide === "left" ? "right" : "left";
+  const oppositeSide = getOppositeSide(sourceHandleSide);
   const route = buildOrthogonalRoute(sourceWorld, sourceHandleSide, targetWorld, oppositeSide);
   const screenPoints = route.worldPoints.map((point) => camera.worldToScreen(point.x, point.y));
   const labelWorldPoint = getPolylineMidpoint(route.worldPoints);
@@ -4473,35 +4584,77 @@ function getPolylineMidpoint(points) {
   }
   return points[points.length - 1];
 }
-function sideDirection(side) {
-  return side === "left" ? -1 : 1;
+function getOppositeSide(side) {
+  switch (side) {
+    case "left":
+      return "right";
+    case "right":
+      return "left";
+    case "top":
+      return "bottom";
+    case "bottom":
+      return "top";
+  }
+}
+function sideVector(side) {
+  switch (side) {
+    case "left":
+      return { x: -1, y: 0 };
+    case "right":
+      return { x: 1, y: 0 };
+    case "top":
+      return { x: 0, y: -1 };
+    case "bottom":
+      return { x: 0, y: 1 };
+  }
 }
 function buildOrthogonalRoute(sourceWorld, sourceSide, targetWorld, targetSide) {
   const padding = 32;
-  const sourceDir = sideDirection(sourceSide);
-  const targetDir = sideDirection(targetSide);
-  const p1 = { x: sourceWorld.x + sourceDir * padding, y: sourceWorld.y };
-  const p2 = { x: targetWorld.x + targetDir * padding, y: targetWorld.y };
+  const v1 = sideVector(sourceSide);
+  const v2 = sideVector(targetSide);
+  const p1 = { x: sourceWorld.x + v1.x * padding, y: sourceWorld.y + v1.y * padding };
+  const p2 = { x: targetWorld.x + v2.x * padding, y: targetWorld.y + v2.y * padding };
   const points = [sourceWorld];
-  if (sourceDir === 1 && targetDir === -1) {
-    if (p1.x <= p2.x) {
-      const midX = (p1.x + p2.x) / 2;
-      points.push({ x: midX, y: p1.y }, { x: midX, y: p2.y });
+  const sourceIsHoriz = sourceSide === "left" || sourceSide === "right";
+  const targetIsHoriz = targetSide === "left" || targetSide === "right";
+  if (sourceIsHoriz && targetIsHoriz) {
+    if (v1.x !== v2.x) {
+      if ((p2.x - p1.x) * v1.x >= 0) {
+        const midX = (p1.x + p2.x) / 2;
+        points.push({ x: midX, y: p1.y }, { x: midX, y: p2.y });
+      } else {
+        const midY = (p1.y + p2.y) / 2;
+        points.push(p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2);
+      }
     } else {
-      const midY = (p1.y + p2.y) / 2;
-      points.push(p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2);
+      const outX = v1.x === 1 ? Math.max(p1.x, p2.x) : Math.min(p1.x, p2.x);
+      points.push({ x: outX, y: p1.y }, { x: outX, y: p2.y });
     }
-  } else if (sourceDir === -1 && targetDir === 1) {
-    if (p1.x >= p2.x) {
-      const midX = (p1.x + p2.x) / 2;
-      points.push({ x: midX, y: p1.y }, { x: midX, y: p2.y });
+  } else if (!sourceIsHoriz && !targetIsHoriz) {
+    if (v1.y !== v2.y) {
+      if ((p2.y - p1.y) * v1.y >= 0) {
+        const midY = (p1.y + p2.y) / 2;
+        points.push({ x: p1.x, y: midY }, { x: p2.x, y: midY });
+      } else {
+        const midX = (p1.x + p2.x) / 2;
+        points.push(p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2);
+      }
     } else {
-      const midY = (p1.y + p2.y) / 2;
-      points.push(p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2);
+      const outY = v1.y === 1 ? Math.max(p1.y, p2.y) : Math.min(p1.y, p2.y);
+      points.push({ x: p1.x, y: outY }, { x: p2.x, y: outY });
+    }
+  } else if (sourceIsHoriz && !targetIsHoriz) {
+    if ((p2.x - p1.x) * v1.x >= 0 && (p1.y - p2.y) * v2.y >= 0) {
+      points.push({ x: p2.x, y: p1.y });
+    } else {
+      points.push(p1, { x: p2.x, y: p1.y }, p2);
     }
   } else {
-    const outX = sourceDir === 1 ? Math.max(p1.x, p2.x) : Math.min(p1.x, p2.x);
-    points.push({ x: outX, y: p1.y }, { x: outX, y: p2.y });
+    if ((p2.y - p1.y) * v1.y >= 0 && (p1.x - p2.x) * v2.x >= 0) {
+      points.push({ x: p1.x, y: p2.y });
+    } else {
+      points.push(p1, { x: p1.x, y: p2.y }, p2);
+    }
   }
   points.push(targetWorld);
   const worldPoints = filletPolyline(points, 16);
@@ -5186,7 +5339,7 @@ class NodeStore {
       }
       return getDefaultNodeSize("composition");
     }
-    const defaultSize = getDefaultNodeSize(node.nodeType, shouldCollapse);
+    const defaultSize = getDefaultNodeSize(node.nodeType, shouldCollapse, this.registry);
     if (node.nodeType === "node" && !shouldCollapse && node.props) {
       return { width: defaultSize.width, height: this.calculatePropHeight(node.props) };
     }
@@ -5211,6 +5364,17 @@ class NodeStore {
       if (!this.registry.hasHandles(nodeType, this.connectionMode)) return [];
       const desc = this.registry.get(nodeType);
       return desc.handles.sides.map((side) => {
+        var _a2;
+        return {
+          candidateId,
+          side,
+          isConnected: ((_a2 = existingHandles.find((handle) => handle.side === side)) == null ? void 0 : _a2.isConnected) ?? false,
+          style: { ...this.handleStyle }
+        };
+      });
+    }
+    if (nodeType === "branch") {
+      return ["top", "left", "right"].map((side) => {
         var _a2;
         return {
           candidateId,
@@ -6697,7 +6861,15 @@ class Renderer {
         if (desc.rawDraw(ctx)) return;
       }
       if ((desc == null ? void 0 : desc.renderMode) === "rounded-rect") {
+        if (node.nodeType === "hub") {
+          this.drawHubNode(node, worldX, worldY, z, picking);
+          return;
+        }
         this.drawGenericRoundedRect(node, worldX, worldY, z, desc);
+        return;
+      }
+      if ((desc == null ? void 0 : desc.renderMode) === "rounded-triangle") {
+        this.drawBranchNode(node, worldX, worldY, z, picking, desc);
         return;
       }
     } else {
@@ -6707,6 +6879,10 @@ class Renderer {
       }
       if (node.nodeType === "hub") {
         this.drawHubNode(node, worldX, worldY, z, picking);
+        return;
+      }
+      if (node.nodeType === "branch") {
+        this.drawBranchNode(node, worldX, worldY, z, picking);
         return;
       }
     }
@@ -7310,14 +7486,14 @@ class Renderer {
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
       gl.uniform1i(this.locations.u_RenderMode, 0);
       this.iconRenderer.addText(
-        "",
+        "",
         iconCenterX,
         iconCenterY,
-        Math.max(18, Math.min(28, iconSlotHeight * 0.48)),
+        Math.min(iconSlotWidth, iconSlotHeight) * 0.55,
         1,
         1,
         1,
-        1,
+        0.92,
         "center",
         "middle"
       );
@@ -7437,6 +7613,98 @@ class Renderer {
         fontColor: [r, g, b]
       });
     }
+  }
+  drawBranchNode(node, worldX, worldY, z, picking, desc) {
+    const gl = this.gl;
+    const config = desc == null ? void 0 : desc.renderConfig;
+    const radius = (config == null ? void 0 : config.radius) ?? 10;
+    const borderWidth = (config == null ? void 0 : config.borderWidth) ?? 1.8;
+    const [fillR, fillG, fillB, fillA] = (config == null ? void 0 : config.fillColor) ?? [0.1, 0.11, 0.13, 0.95];
+    const [borderR, borderG, borderB, borderA] = (config == null ? void 0 : config.borderColor) ?? [0.45, 0.5, 0.58, 0.9];
+    if (picking) {
+      gl.uniform1i(this.locations.u_UseTexture, 0);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 2);
+      gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+      gl.uniform4f(
+        this.locations.u_Color,
+        node.pickColor[0],
+        node.pickColor[1],
+        node.pickColor[2],
+        1
+      );
+      gl.uniform4f(this.locations.u_BorderColor, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1);
+      gl.uniform1f(this.locations.u_BorderWidth, 0);
+      gl.uniform1f(this.locations.u_Radius, radius);
+      this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 0);
+      return;
+    }
+    const [r, g, b, _] = this.getFontColor();
+    if (node.isDropTarget || node.isSelected) {
+      this.setModelMatrix(
+        worldX - 4,
+        worldY - 4,
+        node.width + 8,
+        node.height + 8,
+        z
+      );
+      gl.uniform1i(this.locations.u_UseTexture, 0);
+      gl.uniform1i(this.locations.u_Use9Slice, 0);
+      gl.uniform1i(this.locations.u_RenderMode, 2);
+      gl.uniform2f(this.locations.u_Dimensions, node.width + 8, node.height + 8);
+      gl.uniform4f(
+        this.locations.u_Color,
+        node.isDropTarget ? 0.04 : 0.08,
+        node.isDropTarget ? 0.38 : 0.14,
+        node.isDropTarget ? 0.16 : 0.68,
+        0.09
+      );
+      gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1, 0.95);
+      gl.uniform1f(this.locations.u_BorderWidth, 2.5);
+      gl.uniform1f(this.locations.u_Radius, radius);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    }
+    this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+    gl.uniform1i(this.locations.u_UseTexture, 0);
+    gl.uniform1i(this.locations.u_Use9Slice, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 2);
+    gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+    gl.uniform4f(this.locations.u_Color, fillR, fillG, fillB, fillA);
+    gl.uniform4f(this.locations.u_BorderColor, borderR, borderG, borderB, borderA);
+    gl.uniform1f(this.locations.u_BorderWidth, borderWidth);
+    gl.uniform1f(this.locations.u_Radius, radius);
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+    gl.uniform1i(this.locations.u_RenderMode, 0);
+    const iconCenterX = worldX + node.width / 2;
+    const iconCenterY = worldY + node.height * 0.45;
+    const iconSize = Math.min(node.width, node.height) * 0.22;
+    this.iconRenderer.addText(
+      "",
+      iconCenterX,
+      iconCenterY,
+      iconSize,
+      1,
+      1,
+      1,
+      0.85,
+      "center",
+      "middle"
+    );
+    const titleY = worldY + node.height * 0.68;
+    this.textRenderer.addText(
+      node.text,
+      worldX + node.width / 2,
+      titleY,
+      12,
+      r,
+      g,
+      b,
+      1,
+      "center",
+      "middle"
+    );
   }
   drawSubgraphNode(node, worldX, worldY, z) {
     const gl = this.gl;
@@ -7612,6 +7880,7 @@ class Renderer {
 class UIControls {
   constructor(canvas, container, historyPane, toolPane, callbacks) {
     __publicField(this, "addNodeButton");
+    __publicField(this, "addBranchButton");
     __publicField(this, "createSubgraphButton");
     __publicField(this, "addGroupButton");
     __publicField(this, "addCompositionButton");
@@ -7624,7 +7893,7 @@ class UIControls {
     __publicField(this, "nodeProperties");
     __publicField(this, "nodeLabelInput");
     __publicField(this, "nodePropGroup");
-    var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+    var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
     this.sidebar = container;
     this.addNodeButton = (_a2 = toolPane.shadowRoot) == null ? void 0 : _a2.querySelector(
       "#btn-add-node"
@@ -7641,25 +7910,28 @@ class UIControls {
     this.createSubgraphButton = (_e = toolPane.shadowRoot) == null ? void 0 : _e.querySelector(
       "#btn-create-subgraph"
     );
-    this.undoButton = (_f = historyPane.shadowRoot) == null ? void 0 : _f.querySelector(
+    this.addBranchButton = (_f = toolPane.shadowRoot) == null ? void 0 : _f.querySelector(
+      "#btn-add-branch"
+    );
+    this.undoButton = (_g = historyPane.shadowRoot) == null ? void 0 : _g.querySelector(
       "#btn-undo"
     );
-    this.redoButton = (_g = historyPane.shadowRoot) == null ? void 0 : _g.querySelector(
+    this.redoButton = (_h = historyPane.shadowRoot) == null ? void 0 : _h.querySelector(
       "#btn-redo"
     );
-    this.deleteNodeButton = (_h = toolPane.shadowRoot) == null ? void 0 : _h.querySelector(
+    this.deleteNodeButton = (_i = toolPane.shadowRoot) == null ? void 0 : _i.querySelector(
       "#btn-delete-node"
     );
-    this.sidebarToggle = (_i = container.shadowRoot) == null ? void 0 : _i.querySelector(
+    this.sidebarToggle = (_j = container.shadowRoot) == null ? void 0 : _j.querySelector(
       "#sidebar-toggle"
     );
-    this.nodeProperties = (_j = container.shadowRoot) == null ? void 0 : _j.querySelector(
+    this.nodeProperties = (_k = container.shadowRoot) == null ? void 0 : _k.querySelector(
       "#node-properties"
     );
-    this.nodeLabelInput = (_k = container.shadowRoot) == null ? void 0 : _k.querySelector(
+    this.nodeLabelInput = (_l = container.shadowRoot) == null ? void 0 : _l.querySelector(
       "#node-label-input"
     );
-    this.nodePropGroup = (_l = container.shadowRoot) == null ? void 0 : _l.querySelector(
+    this.nodePropGroup = (_m = container.shadowRoot) == null ? void 0 : _m.querySelector(
       "#node-prop-group"
     );
     this.addNodeButton.addEventListener("click", () => callbacks.onAddNode());
@@ -7675,6 +7947,13 @@ class UIControls {
     this.createSubgraphButton.addEventListener(
       "click",
       () => callbacks.onSubgraphCreate()
+    );
+    (_n = this.addBranchButton) == null ? void 0 : _n.addEventListener(
+      "click",
+      () => {
+        var _a3;
+        return (_a3 = callbacks.onAddBranch) == null ? void 0 : _a3.call(callbacks);
+      }
     );
     this.undoButton.addEventListener("click", () => callbacks.onUndo());
     this.redoButton.addEventListener("click", () => callbacks.onRedo());
@@ -7692,7 +7971,7 @@ class UIControls {
         (_b2 = callbacks.onExport) == null ? void 0 : _b2.call(callbacks);
       }
     });
-    const bgPicker = (_m = container.shadowRoot) == null ? void 0 : _m.querySelector(
+    const bgPicker = (_o = container.shadowRoot) == null ? void 0 : _o.querySelector(
       "#bg-color-picker"
     );
     bgPicker == null ? void 0 : bgPicker.addEventListener("input", (e) => {
@@ -7702,7 +7981,7 @@ class UIControls {
       const b = parseInt(hex.slice(5, 7), 16) / 255;
       callbacks.onBgColorChange(r, g, b, 1);
     });
-    const fontColorPicker = (_n = container.shadowRoot) == null ? void 0 : _n.querySelector(
+    const fontColorPicker = (_p = container.shadowRoot) == null ? void 0 : _p.querySelector(
       "#font-color-picker"
     );
     fontColorPicker == null ? void 0 : fontColorPicker.addEventListener("input", (e) => {
@@ -7712,7 +7991,7 @@ class UIControls {
       const b = parseInt(hex.slice(5, 7), 16) / 255;
       callbacks.onFontColorChange(r, g, b, 1);
     });
-    const themeSelect = (_o = container.shadowRoot) == null ? void 0 : _o.querySelector(
+    const themeSelect = (_q = container.shadowRoot) == null ? void 0 : _q.querySelector(
       "#theme-selector"
     );
     themeSelect == null ? void 0 : themeSelect.addEventListener("gg-select-change", (e) => {
@@ -7720,7 +7999,7 @@ class UIControls {
         e.target.value
       );
     });
-    const textureSelect = (_p = container.shadowRoot) == null ? void 0 : _p.querySelector(
+    const textureSelect = (_r = container.shadowRoot) == null ? void 0 : _r.querySelector(
       "#texture-selector"
     );
     textureSelect == null ? void 0 : textureSelect.refresh();
@@ -8701,9 +8980,46 @@ const subgraphDescriptor = {
   lockable: false,
   contributesToChildWorldPosition: false
 };
+const branchDescriptor = {
+  type: "branch",
+  category: "leaf",
+  zTier: 0.4,
+  defaultSize: { width: 140, height: 120 },
+  handles: {
+    always: true,
+    sides: ["top", "left", "right"],
+    multiConnect: false,
+    outputSides: ["left", "right"],
+    inputSides: ["top"]
+  },
+  isConnectionCandidate: () => true,
+  allowedParents: ["subgraph"],
+  canBeRoot: true,
+  defaultTextureIds: { body: "gg-node-body-default", head: "gg-node-head-default" },
+  textureKinds: ["node-body", "node-head"],
+  renderMode: "rounded-triangle",
+  renderConfig: {
+    fillColor: [0.1, 0.11, 0.13, 0.95],
+    borderColor: [0.45, 0.5, 0.58, 0.9],
+    borderWidth: 1.8,
+    radius: 10
+  },
+  overlayConfig: {
+    titlePosition: "center",
+    showTitle: false,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: false,
+    showCompositionRef: false
+  },
+  toolbarActions: ["edit", "delete"],
+  collapsible: false,
+  lockable: false
+};
 const BUILTIN_DESCRIPTORS = [
   nodeDescriptor,
   hubDescriptor,
+  branchDescriptor,
   groupDescriptor,
   compositionDescriptor,
   compositionChildDescriptor,
@@ -8922,6 +9238,7 @@ const _NodeEditor = class _NodeEditor {
   constructor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, IconBGVsSource, IconBGFsSource, options = {}, nodeTextureUploadList) {
     __publicField(this, "events", new GraphEventEmitter());
     __publicField(this, "typeRegistry", new NodeTypeRegistry());
+    __publicField(this, "cameraDirty", false);
     __publicField(this, "camera");
     __publicField(this, "store");
     __publicField(this, "edgeStore");
@@ -9000,7 +9317,7 @@ const _NodeEditor = class _NodeEditor {
     for (const descriptor of BUILTIN_DESCRIPTORS) {
       this.typeRegistry.register(descriptor);
     }
-    this.camera = new Camera();
+    this.camera = new Camera(this);
     this.store = new NodeStore(
       gl,
       this.connectionMode,
@@ -9127,6 +9444,7 @@ const _NodeEditor = class _NodeEditor {
     this.controls = new UIControls(canvas, container, historyPane, toolPane, {
       onAddNode: () => this.handleAddNode(canvas, "node"),
       onAddGroup: () => this.handleAddNode(canvas, "group"),
+      onAddBranch: () => this.handleAddNode(canvas, "branch"),
       onAddComposition: () => this.handleAddComposition(canvas),
       onToggleMultiSelect: () => this.toggleMultiSelectMode(),
       onUndo: () => this.undo(),
@@ -9415,6 +9733,7 @@ const _NodeEditor = class _NodeEditor {
         overlay.element.style.transformOrigin = "0 0";
       }
     }
+    if (!this.cameraDirty) return;
     this.events.dispatch("camera:change", { panX, panY, zoom });
   }
   handleExport() {
@@ -10960,6 +11279,7 @@ const _NodeEditor = class _NodeEditor {
     this.isPanning = true;
     this.lastMouseX = clientX;
     this.lastMouseY = clientY;
+    this.cameraDirty = true;
   }
   handlePointerMove(e, canvas) {
     if (e.pointerType !== "mouse") {
@@ -11074,6 +11394,7 @@ const _NodeEditor = class _NodeEditor {
       this.gestureMode = false;
       this.pinchDistance = null;
       this.isPanning = false;
+      this.cameraDirty = false;
     }
     if (this.activeTouches.size === 0) {
       await this.handleMouseUp(e, canvas);
@@ -11100,6 +11421,7 @@ const _NodeEditor = class _NodeEditor {
   }
   async handleMouseUp(e, canvas) {
     this.isPanning = false;
+    this.cameraDirty = false;
     if (this.activeConnectionDrag) {
       const source = this.activeConnectionDrag;
       const target = this.hoveredHandle;
@@ -11483,7 +11805,7 @@ const _NodeEditor = class _NodeEditor {
   }
   createHubFromConnectionDrop(source, canvas, clientX, clientY) {
     const sourceNode = this.store.get(source.sourceNodeId);
-    if ((sourceNode == null ? void 0 : sourceNode.nodeType) === "composition") {
+    if ((sourceNode == null ? void 0 : sourceNode.nodeType) === "composition" || (sourceNode == null ? void 0 : sourceNode.nodeType) === "branch") {
       return false;
     }
     const { left, top } = canvas.getBoundingClientRect();
@@ -11689,10 +12011,12 @@ const _NodeEditor = class _NodeEditor {
   }
   triggerZoomThrottle() {
     this.renderer.isZooming = true;
+    this.cameraDirty = true;
     if (this.zoomThrottleTimer) {
       clearTimeout(this.zoomThrottleTimer);
     }
     this.zoomThrottleTimer = setTimeout(() => {
+      this.cameraDirty = false;
       this.renderer.isZooming = false;
       this.zoomThrottleTimer = null;
     }, this.ZOOM_THROTTLE_MS);
@@ -11798,6 +12122,27 @@ float roundedBoxDistance(vec2 p, vec2 halfSize, float radius) {
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
 }
 
+// SDF for an equilateral triangle pointing UPWARD, centered at origin.
+// Uses padX and padY accounting for corner rounding expansion (r / sin(theta/2))
+// so the outer border and rounded corners never get clipped/cropped by the quad bounding box.
+float roundedTriangleDistance(vec2 p, vec2 halfSize, float radius, float borderWidth) {
+  float padY = radius * 2.2 + borderWidth + 4.0;
+  float padX = radius * 1.5 + borderWidth + 4.0;
+  vec2 innerHalf = max(halfSize - vec2(padX, padY), vec2(1.0));
+  float w = innerHalf.x;
+  float h = innerHalf.y;
+
+  vec2 q = vec2(abs(p.x), p.y);
+  // Sloped edge from (0, -h) to (w, h)
+  // Normal pointing outward (towards positive x, positive y): (2h, -w) / sqrt(4h^2 + w^2)
+  float len = length(vec2(2.0 * h, w));
+  float edgeDist = (q.x * 2.0 * h - (q.y + h) * w) / len;
+  float bottomDist = q.y - h;
+  float triDist = max(edgeDist, bottomDist);
+
+  return triDist - radius;
+}
+
 void main() {
   if (u_RenderMode == 1) {
     vec2 size = max(u_Dimensions, vec2(1.0));
@@ -11805,6 +12150,23 @@ void main() {
     vec2 centered = pos - size * 0.5;
     float radius = min(u_Radius, min(size.x, size.y) * 0.5);
     float dist = roundedBoxDistance(centered, size * 0.5, radius);
+    float aa = max(fwidth(dist), 1.0);
+    float outerAlpha = 1.0 - smoothstep(0.0, aa, dist);
+    if (outerAlpha <= 0.0) discard;
+
+    float borderMix = 1.0 - smoothstep(u_BorderWidth - aa, u_BorderWidth + aa, -dist);
+    vec4 color = mix(u_Color, u_BorderColor, borderMix);
+    fragColor = vec4(color.rgb, color.a * outerAlpha);
+    return;
+  }
+
+  if (u_RenderMode == 2) {
+    // Rounded triangle (pointing UP)
+    vec2 size = max(u_Dimensions, vec2(1.0));
+    vec2 pos = v_TexCoord * size;
+    vec2 centered = pos - size * 0.5;
+    float radius = min(u_Radius, min(size.x, size.y) * 0.25);
+    float dist = roundedTriangleDistance(centered, size * 0.5, radius, u_BorderWidth);
     float aa = max(fwidth(dist), 1.0);
     float outerAlpha = 1.0 - smoothstep(0.0, aa, dist);
     if (outerAlpha <= 0.0) discard;

@@ -76,6 +76,27 @@ float roundedBoxDistance(vec2 p, vec2 halfSize, float radius) {
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
 }
 
+// SDF for an equilateral triangle pointing UPWARD, centered at origin.
+// Uses padX and padY accounting for corner rounding expansion (r / sin(theta/2))
+// so the outer border and rounded corners never get clipped/cropped by the quad bounding box.
+float roundedTriangleDistance(vec2 p, vec2 halfSize, float radius, float borderWidth) {
+  float padY = radius * 2.2 + borderWidth + 4.0;
+  float padX = radius * 1.5 + borderWidth + 4.0;
+  vec2 innerHalf = max(halfSize - vec2(padX, padY), vec2(1.0));
+  float w = innerHalf.x;
+  float h = innerHalf.y;
+
+  vec2 q = vec2(abs(p.x), p.y);
+  // Sloped edge from (0, -h) to (w, h)
+  // Normal pointing outward (towards positive x, positive y): (2h, -w) / sqrt(4h^2 + w^2)
+  float len = length(vec2(2.0 * h, w));
+  float edgeDist = (q.x * 2.0 * h - (q.y + h) * w) / len;
+  float bottomDist = q.y - h;
+  float triDist = max(edgeDist, bottomDist);
+
+  return triDist - radius;
+}
+
 void main() {
   if (u_RenderMode == 1) {
     vec2 size = max(u_Dimensions, vec2(1.0));
@@ -83,6 +104,23 @@ void main() {
     vec2 centered = pos - size * 0.5;
     float radius = min(u_Radius, min(size.x, size.y) * 0.5);
     float dist = roundedBoxDistance(centered, size * 0.5, radius);
+    float aa = max(fwidth(dist), 1.0);
+    float outerAlpha = 1.0 - smoothstep(0.0, aa, dist);
+    if (outerAlpha <= 0.0) discard;
+
+    float borderMix = 1.0 - smoothstep(u_BorderWidth - aa, u_BorderWidth + aa, -dist);
+    vec4 color = mix(u_Color, u_BorderColor, borderMix);
+    fragColor = vec4(color.rgb, color.a * outerAlpha);
+    return;
+  }
+
+  if (u_RenderMode == 2) {
+    // Rounded triangle (pointing UP)
+    vec2 size = max(u_Dimensions, vec2(1.0));
+    vec2 pos = v_TexCoord * size;
+    vec2 centered = pos - size * 0.5;
+    float radius = min(u_Radius, min(size.x, size.y) * 0.25);
+    float dist = roundedTriangleDistance(centered, size * 0.5, radius, u_BorderWidth);
     float aa = max(fwidth(dist), 1.0);
     float outerAlpha = 1.0 - smoothstep(0.0, aa, dist);
     if (outerAlpha <= 0.0) discard;

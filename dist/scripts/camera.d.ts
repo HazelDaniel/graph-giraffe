@@ -1,4 +1,5 @@
 import { Matrix4 } from '../vendor/cuon-matrix.js';
+import { NodeEditor } from './node-editor.js';
 /**
  * Manages all viewport camera state: pan (translation) and zoom (scale).
  * The view matrix produced here is applied per-frame as u_ViewMatrix in the shader.
@@ -7,6 +8,7 @@ import { Matrix4 } from '../vendor/cuon-matrix.js';
  * The orthographic projection handles the flip; the camera only deals in pixels.
  */
 export declare class Camera {
+    private readonly editor?;
     panX: number;
     panY: number;
     zoom: number;
@@ -15,6 +17,7 @@ export declare class Camera {
     private _targetPanY;
     private _targetZoom;
     private _viewMatrix;
+    constructor(editor?: NodeEditor | undefined);
     /** Translate the viewport by (dx, dy) in screen pixels. */
     pan(dx: number, dy: number): void;
     /**

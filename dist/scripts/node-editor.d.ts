@@ -21,6 +21,7 @@ export declare class NodeEditor {
     private nodeTextureUploadList;
     readonly events: GraphEventEmitter;
     readonly typeRegistry: NodeTypeRegistry;
+    cameraDirty: boolean;
     get debug(): boolean | null;
     set debug(value: boolean | null);
     private camera;

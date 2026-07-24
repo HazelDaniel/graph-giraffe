@@ -7,6 +7,7 @@ import { NodeData, ThemeName } from "./types";
 export interface ControlCallbacks {
   onAddNode(): void;
   onAddGroup(): void;
+  onAddBranch?(): void;
   onAddComposition(): void;
   onToggleMultiSelect(): void;
   onUndo(): void;
@@ -37,6 +38,7 @@ export interface ControlCallbacks {
  */
 export class UIControls {
   private addNodeButton: HTMLButtonElement;
+  private addBranchButton?: HTMLButtonElement;
   private createSubgraphButton: HTMLButtonElement;
   private addGroupButton: HTMLButtonElement;
   private addCompositionButton: HTMLButtonElement;
@@ -74,6 +76,9 @@ export class UIControls {
     this.createSubgraphButton = toolPane.shadowRoot?.querySelector(
       "#btn-create-subgraph"
     )! as HTMLButtonElement;
+    this.addBranchButton = toolPane.shadowRoot?.querySelector(
+      "#btn-add-branch"
+    ) as HTMLButtonElement;
     this.undoButton = historyPane.shadowRoot?.querySelector(
       "#btn-undo"
     )! as HTMLButtonElement;
@@ -106,6 +111,9 @@ export class UIControls {
     );
     this.createSubgraphButton.addEventListener("click", () =>
       callbacks.onSubgraphCreate()
+    );
+    this.addBranchButton?.addEventListener("click", () =>
+      callbacks.onAddBranch?.()
     );
     this.undoButton.addEventListener("click", () => callbacks.onUndo());
     this.redoButton.addEventListener("click", () => callbacks.onRedo());

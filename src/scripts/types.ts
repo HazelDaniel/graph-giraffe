@@ -13,12 +13,12 @@ export interface ThemeStyle {
 export type GeometryMeshType = "rounded-square";
 export type BGGeometryMeshType = "dotted" | "grid";
 export type GeometryType = "circle" | "square" | "rounded-square";
-export type NodeType = "node" | "hub" | "group" | "composition" | "composition-child" | "subgraph";
+export type NodeType = "node" | "hub" | "branch" | "group" | "composition" | "composition-child" | "subgraph";
 export type ContainerNodeType = "group" | "composition" | "subgraph";
-export type LeafNodeType = "node" | "hub" | "composition-child";
+export type LeafNodeType = "node" | "hub" | "branch" | "composition-child";
 export type CandidateNodeType = Exclude<NodeType, "composition-child">;
 export type ConnectionMode = "group" | "node";
-export type HandleSide = "left" | "right";
+export type HandleSide = "left" | "right" | "top" | "bottom";
 export type HandleShape = "circle" | "square";
 export type EdgeType = "line" | "cubic" | "line-curve" | "orthogonal";
 export type EdgeHeadType = "none" | "arrow";
@@ -122,6 +122,7 @@ export const NODE_LAYOUT = {
 export const HANDLE_LAYOUT = {
   sideInset: 8,
   offsetX: -2,
+  offsetY: -2,
 };
 
 export const DEFAULT_HANDLE_STYLE: HandleStyle = {
@@ -136,6 +137,7 @@ export const DEFAULT_HANDLE_STYLE: HandleStyle = {
 export const NODE_SIZE = {
   node: { width: 190, height: 150 },
   hub: { width: 240, height: 100 },
+  branch: { width: 140, height: 120 },
   nodeCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
   group: { width: 220, height: 200 },
   composition: { width: 140, height: 200 },
@@ -157,18 +159,18 @@ export function isLeafNodeType(
   registry?: NodeTypeRegistry
 ): nodeType is LeafNodeType {
   if (registry) return registry.isLeaf(nodeType);
-  return nodeType === "node" || nodeType === "hub" || nodeType === "composition-child";
+  return nodeType === "node" || nodeType === "hub" || nodeType === "branch" || nodeType === "composition-child";
 }
 
 export function isNodePrimitiveType(
   nodeType: NodeType | string,
   registry?: NodeTypeRegistry
-): nodeType is "node" | "hub" {
+): nodeType is "node" | "hub" | "branch" {
   if (registry) {
     const desc = registry.get(nodeType);
     return desc ? desc.category === "leaf" && desc.handles.always : false;
   }
-  return nodeType === "node" || nodeType === "hub";
+  return nodeType === "node" || nodeType === "hub" || nodeType === "branch";
 }
 
 export function isCandidateNodeType(
@@ -200,6 +202,8 @@ export function getDefaultNodeSize(
       return NODE_SIZE.compositionChild;
     case "hub":
       return NODE_SIZE.hub;
+    case "branch":
+      return NODE_SIZE.branch;
     case "node":
       return isCollapsed ? NODE_SIZE.nodeCollapsed : NODE_SIZE.node;
     default:

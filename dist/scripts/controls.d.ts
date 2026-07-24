@@ -4,6 +4,7 @@ import { NodeData, ThemeName } from "./types";
 export interface ControlCallbacks {
     onAddNode(): void;
     onAddGroup(): void;
+    onAddBranch?(): void;
     onAddComposition(): void;
     onToggleMultiSelect(): void;
     onUndo(): void;
@@ -32,6 +33,7 @@ export interface ControlCallbacks {
  */
 export declare class UIControls {
     private addNodeButton;
+    private addBranchButton?;
     private createSubgraphButton;
     private addGroupButton;
     private addCompositionButton;

@@ -18,7 +18,7 @@ echo "Generating icon charset..."
 # ✕ (U+2715), ✎ (U+270E), + (U+002B)
 # Note: we use node to write to ensure correct utf8 encoding
 node -e "
-require('fs').writeFileSync('tools/icon-charset.txt', '');
+require('fs').writeFileSync('tools/icon-charset.txt','');
 "
 
 echo "Running msdf-bmfont for text atlas..."

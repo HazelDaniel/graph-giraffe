@@ -84,7 +84,7 @@ export function buildConnectionPreviewGeometry(
 
   const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera);
   const targetWorld = camera.screenToWorld(screenX, screenY);
-  const oppositeSide: HandleSide = sourceHandleSide === 'left' ? 'right' : 'left';
+  const oppositeSide: HandleSide = getOppositeSide(sourceHandleSide);
   const route = buildOrthogonalRoute(sourceWorld, sourceHandleSide, targetWorld, oppositeSide);
   const screenPoints = route.worldPoints.map((point) => camera.worldToScreen(point.x, point.y));
   const labelWorldPoint = getPolylineMidpoint(route.worldPoints);
@@ -148,22 +148,21 @@ function buildCubicRoute(
     return buildOrthogonalRoute(sourceWorld, sourceSide, targetWorld, targetSide);
   }
 
-  const sourceDirection = sideDirection(sourceSide);
-  const targetDirection = sideDirection(targetSide);
+  const sourceVec = sideVector(sourceSide);
+  const targetVec = sideVector(targetSide);
   const dx = targetWorld.x - sourceWorld.x;
   const dy = targetWorld.y - sourceWorld.y;
   const distance = Math.hypot(dx, dy);
   const bend = clamp(distance * (edgeType === 'line-curve' ? 0.24 : 0.34), 64, 260);
-  const verticalBias = clamp(dy * 0.12, -80, 80);
 
   const control1: Point2D = {
-    x: sourceWorld.x + sourceDirection * bend,
-    y: sourceWorld.y + verticalBias,
+    x: sourceWorld.x + sourceVec.x * bend + (sourceVec.x === 0 ? clamp(dx * 0.12, -80, 80) : 0),
+    y: sourceWorld.y + sourceVec.y * bend + (sourceVec.y === 0 ? clamp(dy * 0.12, -80, 80) : 0),
   };
 
   const control2: Point2D = {
-    x: targetWorld.x + targetDirection * bend,
-    y: targetWorld.y - verticalBias,
+    x: targetWorld.x + targetVec.x * bend - (targetVec.x === 0 ? clamp(dx * 0.12, -80, 80) : 0),
+    y: targetWorld.y + targetVec.y * bend - (targetVec.y === 0 ? clamp(dy * 0.12, -80, 80) : 0),
   };
 
   const sampleCount = clamp(
@@ -281,8 +280,26 @@ function sampleCubic(
   };
 }
 
+function getOppositeSide(side: HandleSide): HandleSide {
+  switch (side) {
+    case 'left': return 'right';
+    case 'right': return 'left';
+    case 'top': return 'bottom';
+    case 'bottom': return 'top';
+  }
+}
+
+function sideVector(side: HandleSide): { x: number; y: number } {
+  switch (side) {
+    case 'left': return { x: -1, y: 0 };
+    case 'right': return { x: 1, y: 0 };
+    case 'top': return { x: 0, y: -1 };
+    case 'bottom': return { x: 0, y: 1 };
+  }
+}
+
 function sideDirection(side: HandleSide): number {
-  return side === 'left' ? -1 : 1;
+  return side === 'left' || side === 'top' ? -1 : 1;
 }
 
 function buildOrthogonalRoute(
@@ -292,36 +309,57 @@ function buildOrthogonalRoute(
   targetSide: HandleSide
 ): { worldPoints: Point2D[]; arrowhead: ArrowheadGeometry | null } {
   const padding = 32;
-  const sourceDir = sideDirection(sourceSide);
-  const targetDir = sideDirection(targetSide);
+  const v1 = sideVector(sourceSide);
+  const v2 = sideVector(targetSide);
 
-  const p1 = { x: sourceWorld.x + sourceDir * padding, y: sourceWorld.y };
-  const p2 = { x: targetWorld.x + targetDir * padding, y: targetWorld.y };
+  const p1 = { x: sourceWorld.x + v1.x * padding, y: sourceWorld.y + v1.y * padding };
+  const p2 = { x: targetWorld.x + v2.x * padding, y: targetWorld.y + v2.y * padding };
 
   const points: Point2D[] = [sourceWorld];
 
-  if (sourceDir === 1 && targetDir === -1) {
-    // Standard left-to-right connection
-    if (p1.x <= p2.x) {
-      const midX = (p1.x + p2.x) / 2;
-      points.push({ x: midX, y: p1.y }, { x: midX, y: p2.y });
+  const sourceIsHoriz = sourceSide === 'left' || sourceSide === 'right';
+  const targetIsHoriz = targetSide === 'left' || targetSide === 'right';
+
+  if (sourceIsHoriz && targetIsHoriz) {
+    if (v1.x !== v2.x) {
+      if ((p2.x - p1.x) * v1.x >= 0) {
+        const midX = (p1.x + p2.x) / 2;
+        points.push({ x: midX, y: p1.y }, { x: midX, y: p2.y });
+      } else {
+        const midY = (p1.y + p2.y) / 2;
+        points.push(p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2);
+      }
     } else {
-      const midY = (p1.y + p2.y) / 2;
-      points.push(p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2);
+      const outX = v1.x === 1 ? Math.max(p1.x, p2.x) : Math.min(p1.x, p2.x);
+      points.push({ x: outX, y: p1.y }, { x: outX, y: p2.y });
     }
-  } else if (sourceDir === -1 && targetDir === 1) {
-    // Right-to-left connection (backwards)
-    if (p1.x >= p2.x) {
-      const midX = (p1.x + p2.x) / 2;
-      points.push({ x: midX, y: p1.y }, { x: midX, y: p2.y });
+  } else if (!sourceIsHoriz && !targetIsHoriz) {
+    if (v1.y !== v2.y) {
+      if ((p2.y - p1.y) * v1.y >= 0) {
+        const midY = (p1.y + p2.y) / 2;
+        points.push({ x: p1.x, y: midY }, { x: p2.x, y: midY });
+      } else {
+        const midX = (p1.x + p2.x) / 2;
+        points.push(p1, { x: midX, y: p1.y }, { x: midX, y: p2.y }, p2);
+      }
     } else {
-      const midY = (p1.y + p2.y) / 2;
-      points.push(p1, { x: p1.x, y: midY }, { x: p2.x, y: midY }, p2);
+      const outY = v1.y === 1 ? Math.max(p1.y, p2.y) : Math.min(p1.y, p2.y);
+      points.push({ x: p1.x, y: outY }, { x: p2.x, y: outY });
+    }
+  } else if (sourceIsHoriz && !targetIsHoriz) {
+    // Source moves horizontally, target moves vertically (e.g. -> top handle)
+    if ((p2.x - p1.x) * v1.x >= 0 && (p1.y - p2.y) * v2.y >= 0) {
+      points.push({ x: p2.x, y: p1.y });
+    } else {
+      points.push(p1, { x: p2.x, y: p1.y }, p2);
     }
   } else {
-    // Same side connection
-    const outX = sourceDir === 1 ? Math.max(p1.x, p2.x) : Math.min(p1.x, p2.x);
-    points.push({ x: outX, y: p1.y }, { x: outX, y: p2.y });
+    // Source moves vertically, target moves horizontally (e.g. top handle -> )
+    if ((p2.y - p1.y) * v1.y >= 0 && (p1.x - p2.x) * v2.x >= 0) {
+      points.push({ x: p1.x, y: p2.y });
+    } else {
+      points.push(p1, { x: p1.x, y: p2.y }, p2);
+    }
   }
 
   points.push(targetWorld);

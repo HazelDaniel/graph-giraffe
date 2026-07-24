@@ -246,9 +246,52 @@ export const subgraphDescriptor: NodeTypeDescriptor = {
   contributesToChildWorldPosition: false,
 };
 
+export const branchDescriptor: NodeTypeDescriptor = {
+  type: "branch",
+  category: "leaf",
+  zTier: 0.4,
+  defaultSize: { width: 140, height: 120 },
+
+  handles: {
+    always: true,
+    sides: ["top", "left", "right"],
+    multiConnect: false,
+    outputSides: ["left", "right"],
+    inputSides: ["top"],
+  },
+  isConnectionCandidate: () => true,
+
+  allowedParents: ["subgraph"],
+  canBeRoot: true,
+
+  defaultTextureIds: { body: "gg-node-body-default", head: "gg-node-head-default" },
+  textureKinds: ["node-body", "node-head"],
+
+  renderMode: "rounded-triangle",
+  renderConfig: {
+    fillColor: [0.10, 0.11, 0.13, 0.95],
+    borderColor: [0.45, 0.50, 0.58, 0.9],
+    borderWidth: 1.8,
+    radius: 10,
+  },
+  overlayConfig: {
+    titlePosition: "center",
+    showTitle: false,
+    showLockIcon: false,
+    showAddIcon: false,
+    showProps: false,
+    showCompositionRef: false,
+  },
+
+  toolbarActions: ["edit", "delete"],
+  collapsible: false,
+  lockable: false,
+};
+
 export const BUILTIN_DESCRIPTORS: NodeTypeDescriptor[] = [
   nodeDescriptor,
   hubDescriptor,
+  branchDescriptor,
   groupDescriptor,
   compositionDescriptor,
   compositionChildDescriptor,

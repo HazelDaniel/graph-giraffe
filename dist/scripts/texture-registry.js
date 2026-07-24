@@ -198,6 +198,10 @@ const NODE_ID_TEXTURE_LOOKUP = {
         body: "gg-node-body-default",
         head: "gg-node-head-default",
     },
+    branch: {
+        body: "gg-node-body-default",
+        head: "gg-node-head-default",
+    },
     group: {
         body: "gg-group-body-default",
         head: "gg-group-head-default",

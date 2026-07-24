@@ -19,6 +19,7 @@ export const NODE_LAYOUT = {
 export const HANDLE_LAYOUT = {
     sideInset: 8,
     offsetX: -2,
+    offsetY: -2,
 };
 export const DEFAULT_HANDLE_STYLE = {
     shape: "circle",
@@ -31,6 +32,7 @@ export const DEFAULT_HANDLE_STYLE = {
 export const NODE_SIZE = {
     node: { width: 190, height: 150 },
     hub: { width: 240, height: 100 },
+    branch: { width: 140, height: 120 },
     nodeCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
     group: { width: 220, height: 200 },
     composition: { width: 140, height: 200 },
@@ -46,14 +48,14 @@ export function isContainerNodeType(nodeType, registry) {
 export function isLeafNodeType(nodeType, registry) {
     if (registry)
         return registry.isLeaf(nodeType);
-    return nodeType === "node" || nodeType === "hub" || nodeType === "composition-child";
+    return nodeType === "node" || nodeType === "hub" || nodeType === "branch" || nodeType === "composition-child";
 }
 export function isNodePrimitiveType(nodeType, registry) {
     if (registry) {
         const desc = registry.get(nodeType);
         return desc ? desc.category === "leaf" && desc.handles.always : false;
     }
-    return nodeType === "node" || nodeType === "hub";
+    return nodeType === "node" || nodeType === "hub" || nodeType === "branch";
 }
 export function isCandidateNodeType(nodeType, connectionMode, registry) {
     if (registry)
@@ -76,6 +78,8 @@ export function getDefaultNodeSize(nodeType, isCollapsed = false, registry) {
             return NODE_SIZE.compositionChild;
         case "hub":
             return NODE_SIZE.hub;
+        case "branch":
+            return NODE_SIZE.branch;
         case "node":
             return isCollapsed ? NODE_SIZE.nodeCollapsed : NODE_SIZE.node;
         default:

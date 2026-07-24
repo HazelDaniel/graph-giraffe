@@ -9,6 +9,12 @@ export interface RoundedRectConfig {
     borderWidth: number;
     radius: number;
 }
+export interface RoundedTriangleConfig {
+    fillColor: [number, number, number, number];
+    borderColor: [number, number, number, number];
+    borderWidth: number;
+    radius: number;
+}
 export interface FlatConfig {
     color: [number, number, number, number];
 }
@@ -75,8 +81,8 @@ export interface NodeTypeDescriptor {
     textureKinds?: string[];
     createDefaultProps?: () => NodePropType | undefined;
     calculateHeight?: (node: NodeData) => number;
-    renderMode?: "textured" | "rounded-rect" | "flat";
-    renderConfig?: RoundedRectConfig | FlatConfig;
+    renderMode?: "textured" | "rounded-rect" | "rounded-triangle" | "flat";
+    renderConfig?: RoundedRectConfig | RoundedTriangleConfig | FlatConfig;
     rawDraw?: (ctx: NodeDrawContext) => boolean;
     drawOverlay?: (ctx: NodeOverlayContext) => void;
     overlayConfig?: NodeOverlayConfig;

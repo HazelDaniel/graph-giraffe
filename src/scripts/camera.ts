@@ -1,4 +1,5 @@
 import { Matrix4 } from '../vendor/cuon-matrix.js';
+import { NodeEditor } from './node-editor.js';
 
 /**
  * Manages all viewport camera state: pan (translation) and zoom (scale).
@@ -18,6 +19,8 @@ export class Camera {
   private _targetZoom: number = 1;
 
   private _viewMatrix: Matrix4 = new Matrix4();
+
+  constructor(private readonly editor?: NodeEditor) {}
 
   /** Translate the viewport by (dx, dy) in screen pixels. */
   pan(dx: number, dy: number): void {
@@ -75,6 +78,8 @@ export class Camera {
     this._targetPanY = panY;
     this._targetZoom = Math.max(0.1, Math.min(zoom, 5.0));
     this._animating = true;
+    if (this.editor)
+    this.editor.cameraDirty = true;
   }
 
   /**
@@ -97,10 +102,12 @@ export class Camera {
         this.panX = this._targetPanX;
         this.panY = this._targetPanY;
         this.zoom = this._targetZoom;
+        if (this.editor)
+        this.editor.cameraDirty = false;
         this._animating = false;
       }
     }
-
+    
     this._viewMatrix.setIdentity();
     this._viewMatrix.translate(this.panX, this.panY, 0);
     this._viewMatrix.scale(this.zoom, this.zoom, 1.0);

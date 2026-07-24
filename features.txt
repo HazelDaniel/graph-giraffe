@@ -17,7 +17,7 @@
 
  7[]. subgraphs — a re-usable family of primitives that can be collapsed/viewed as ordinary primitives
  8[]. hubs — primitives that support many to many connections on their two ports
- 9. branches — primitives that allow for conditional branching. they look like rounded tiangles with two handles on both sides, and one on the top, supporting only outbound connections on both side and inbound connections on the top 
+ 9[]. branches — primitives that allow for conditional branching. they look like rounded tiangles with two handles on both sides, and one on the top, supporting only outbound connections on both side and inbound connections on the top 
  10. type propagation — input and output types are inferred on connection to determine compatible types, validations rules are then inferred by the editor before runtime
  11. event handling — 
  12[]. import and export deliverables — this keeps the state of all primitives currently drawn on screen and exports it to a format that only the platform understands - perhaps a json (to avoid writing our own parser). the exported deliverable could then be imported and loaded to restore the states of all primitives and draw them on the screen

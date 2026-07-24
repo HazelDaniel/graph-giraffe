@@ -168,6 +168,7 @@ interface SelectionDragState {
 export class NodeEditor {
   public readonly events = new GraphEventEmitter();
   public readonly typeRegistry = new NodeTypeRegistry();
+  public cameraDirty: boolean = false;
 
   public get debug(): boolean | null {
     return this.events.debug;
@@ -303,7 +304,7 @@ export class NodeEditor {
 
     // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
 
-    this.camera = new Camera();
+    this.camera = new Camera(this);
     this.store = new NodeStore(
       gl,
       this.connectionMode,
@@ -420,6 +421,7 @@ export class NodeEditor {
     this.controls = new UIControls(canvas, container, historyPane, toolPane, {
       onAddNode: () => this.handleAddNode(canvas, "node"),
       onAddGroup: () => this.handleAddNode(canvas, "group"),
+      onAddBranch: () => this.handleAddNode(canvas, "branch"),
       onAddComposition: () => this.handleAddComposition(canvas),
       onToggleMultiSelect: () => this.toggleMultiSelectMode(),
       onUndo: () => this.undo(),
@@ -759,6 +761,7 @@ export class NodeEditor {
       }
     }
 
+    if (!this.cameraDirty) return;
     this.events.dispatch("camera:change", { panX, panY, zoom });
   }
 
@@ -2776,6 +2779,7 @@ export class NodeEditor {
     this.isPanning = true;
     this.lastMouseX = clientX;
     this.lastMouseY = clientY;
+    this.cameraDirty = true;
   }
 
   private handlePointerMove(e: PointerEvent, canvas: HTMLCanvasElement): void {
@@ -2926,6 +2930,7 @@ export class NodeEditor {
       this.gestureMode = false;
       this.pinchDistance = null;
       this.isPanning = false;
+      this.cameraDirty = false;
     }
     if (this.activeTouches.size === 0) {
       await this.handleMouseUp(e as MouseEvent, canvas);
@@ -2965,6 +2970,7 @@ export class NodeEditor {
     canvas: HTMLCanvasElement
   ): Promise<void> {
     this.isPanning = false;
+    this.cameraDirty = false;
 
     if (this.activeConnectionDrag) {
       const source = this.activeConnectionDrag;
@@ -3431,7 +3437,7 @@ export class NodeEditor {
     clientY: number
   ): boolean {
     const sourceNode = this.store.get(source.sourceNodeId);
-    if (sourceNode?.nodeType === "composition") {
+    if (sourceNode?.nodeType === "composition" || sourceNode?.nodeType === "branch") {
       return false;
     }
 
@@ -3720,10 +3726,12 @@ export class NodeEditor {
 
   private triggerZoomThrottle(): void {
     this.renderer.isZooming = true;
+    this.cameraDirty = true;
     if (this.zoomThrottleTimer) {
       clearTimeout(this.zoomThrottleTimer);
     }
     this.zoomThrottleTimer = setTimeout(() => {
+      this.cameraDirty = false;
       this.renderer.isZooming = false;
       this.zoomThrottleTimer = null;
     }, this.ZOOM_THROTTLE_MS);
