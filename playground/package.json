@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@graph-giraffe/react": "^0.1.4",
+    "@graph-giraffe/react": "^0.1.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@graph-giraffe/react':
-        specifier: ^0.1.4
-        version: 0.1.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.1.5
+        version: 0.1.5(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
         specifier: ^19.2.7
         version: 19.2.7
@@ -54,8 +54,8 @@ packages:
   '@graph-giraffe/core@0.5.2':
     resolution: {integrity: sha512-VGhrM59y/wyukmJa69yh7RsGdXq4Pd9YRlL6KDW/1V1xJJYJagL+3r0GuAWatymaHAs/dIRlpaB2BO2UuCfHoQ==}
 
-  '@graph-giraffe/react@0.1.4':
-    resolution: {integrity: sha512-piLvZraMx/LP9YCG2P6LnsUIrN4Zk+lGkbPI2xUeafso65JtG6wFXhD0YYPppqOUQHQmelXsE+2IqDaqomR2FA==}
+  '@graph-giraffe/react@0.1.5':
+    resolution: {integrity: sha512-l+5ox9G5gJRsUD1dDLMI/3ff1gYXVi6JJiCyf//u2XiiWpfl5e09HJ4BELt0mJuX616VnzoNMIjAPNCGe94u6g==}
     peerDependencies:
       react: ^18 || ^19
       react-dom: ^18 || ^19
@@ -521,7 +521,7 @@ snapshots:
 
   '@graph-giraffe/core@0.5.2': {}
 
-  '@graph-giraffe/react@0.1.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@graph-giraffe/react@0.1.5(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@graph-giraffe/core': 0.5.2
       react: 19.2.7
