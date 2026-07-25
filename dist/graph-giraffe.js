@@ -545,7 +545,7 @@ const STYLE_TEMPLATE$3 = `
   .dropdown-menu {
     position: absolute;
     top: calc(100% + 0.5rem);
-    left: 0;
+    left: -280%;
     min-width: 150px;
     background: rgba(22, 22, 22, 0.94);
     backdrop-filter: blur(12px);

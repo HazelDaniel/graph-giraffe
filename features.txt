@@ -8,7 +8,7 @@
  4[]. Command-based history system — replaces closures with serializable command objects + snapshots. This is foundational: it unblocks simulation (you
 		can replay command streams), persistence (serialize state), and multiplayer (sync commands). There's already a skill for this.
 
- 5. Node type plugin/registry system — open up NodeType to a registry where each type declares its own: layout rules, handle config, rendering
+ 5[). Node type plugin/registry system — open up NodeType to a registry where each type declares its own: layout rules, handle config, rendering
 		delegate, prop schema, reparenting constraints, default textures. This is the single most important architectural change for adding
 		sliders/dropdowns/etc without touching 6 files each time.
 
@@ -19,10 +19,9 @@
  8[]. hubs — primitives that support many to many connections on their two ports
  9[]. branches — primitives that allow for conditional branching. they look like rounded tiangles with two handles on both sides, and one on the top, supporting only outbound connections on both side and inbound connections on the top 
  10. type propagation — input and output types are inferred on connection to determine compatible types, validations rules are then inferred by the editor before runtime
- 11. event handling — 
+ 11[]. event handling — 
  12[]. import and export deliverables — this keeps the state of all primitives currently drawn on screen and exports it to a format that only the platform understands - perhaps a json (to avoid writing our own parser). the exported deliverable could then be imported and loaded to restore the states of all primitives and draw them on the screen
- 13. plugin based system to accomodate the definitions and use of new primitives. 
- 14. sandboxing + (ts-wasm or ts-web-worker) rpc
+ 13. sandboxing + (ts-wasm or ts-web-worker) rpc
 
 - EVENT ACTIONS (undoable/redoable):
 	* connection
@@ -36,7 +35,4 @@
 	* group node locking/unlocking
     * [others not yet mapped out]
 
-- TEXTURE BUTTON ACTIONS (the events that canvas triggers)
-	* edit
-	* delete
 
