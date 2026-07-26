@@ -88,6 +88,11 @@ import { NodeTypeRegistry } from "./node-type-registry.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import { LoadingScreen } from "../components/loading-screen.js";
 import {
+  GGMinimap,
+  computeCameraStateFromWorldPoint,
+  type MinimapNavigateDetail,
+} from "../components/minimap.js";
+import {
   SelectionToolbar,
   SelectionToolbarAction,
   SelectionToolbarButtonSpec,
@@ -230,6 +235,11 @@ export class NodeEditor {
   private activeTouches = new Map<number, PointerEvent>();
   private gestureMode = false;
   private pinchDistance: number | null = null;
+  private minimap: GGMinimap | null = null;
+  private minimapEnabled: boolean = true;
+  private minimapRevision: number = 0;
+  private canvas!: HTMLCanvasElement;
+  private backgroundCanvas!: HTMLCanvasElement;
 
   private static _instance: NodeEditor | null = null;
 
@@ -287,6 +297,8 @@ export class NodeEditor {
     const backgroundCanvas = document.getElementById(
       backgroundCanvasId
     ) as HTMLCanvasElement;
+    this.canvas = canvas;
+    this.backgroundCanvas = backgroundCanvas;
 
     if (!canvas) throw new Error(`Canvas "${canvasId}" not found`);
     if (!backgroundCanvas)
@@ -297,6 +309,7 @@ export class NodeEditor {
 
     this.connectionMode = options.connectionMode ?? "node";
     this.assetsPath = options.assetsPath ?? "assets";
+    this.minimapEnabled = options.minimap ?? true;
 
     for (const descriptor of BUILTIN_DESCRIPTORS) {
       this.typeRegistry.register(descriptor);
@@ -388,6 +401,7 @@ export class NodeEditor {
       () => {
         this.updateSelectionToolbarPosition();
         this.updateOverlays();
+        this.refreshMinimap();
       },
       msdfProgram,
       iconBGProgam,
@@ -417,6 +431,18 @@ export class NodeEditor {
         this.handleSelectionToolbarAction(customEvent.detail.action);
       }
     );
+
+    this.minimap = document.getElementById("minimap") as GGMinimap | null;
+    if (this.minimap) {
+      this.minimap.setEnabled(this.minimapEnabled);
+      this.minimap.addEventListener(
+        "gg-minimap-navigate",
+        (e: Event) => {
+          const customEvent = e as CustomEvent<MinimapNavigateDetail>;
+          this.handleMinimapNavigate(customEvent.detail);
+        }
+      );
+    }
 
     this.controls = new UIControls(canvas, container, historyPane, toolPane, {
       onAddNode: () => this.handleAddNode(canvas, "node"),
@@ -471,6 +497,7 @@ export class NodeEditor {
 
     this.handleResize(canvas);
     this.syncToolbarState();
+    this.refreshMinimap();
   }
 
   private setupPropGroupListener(): void {
@@ -557,6 +584,7 @@ export class NodeEditor {
       connectionMode: config.connectionMode ?? "node",
       handleStyle: config.handleStyle ?? DEFAULT_HANDLE_STYLE,
       assetsPath: config.assetsPath ?? "assets",
+      minimap: config.minimap ?? true,
     };
   }
 
@@ -643,14 +671,18 @@ export class NodeEditor {
     this.bgColor = [...editorState.bgColor];
     this.fontColor = [...editorState.fontColor];
 
-    this.camera.panX = editorState.camera.panX;
-    this.camera.panY = editorState.camera.panY;
-    this.camera.zoom = editorState.camera.zoom;
+    this.camera.setState(
+      editorState.camera.panX,
+      editorState.camera.panY,
+      editorState.camera.zoom
+    );
 
     // Clear selection and history (import is a fresh baseline)
     this.clearSelectionState();
     this.history.clear();
     this.syncToolbarState();
+    this.markMinimapDirty();
+    this.refreshMinimap();
   }
 
   /**
@@ -882,10 +914,40 @@ export class NodeEditor {
 
     this.renderer.resize(physicalWidth, physicalHeight, this.dpr);
     this.pickFBO.resize(physicalWidth, physicalHeight);
+    this.refreshMinimap();
+  }
+
+  private markMinimapDirty(): void {
+    this.minimapRevision++;
+  }
+
+  private refreshMinimap(): void {
+    if (!this.minimap || !this.minimapEnabled) return;
+
+    this.minimap.updateScene({
+      store: this.store,
+      edgeStore: this.edgeStore,
+      camera: this.camera,
+      canvas: this.canvas,
+    }, this.minimapRevision);
+  }
+
+  private handleMinimapNavigate(detail: MinimapNavigateDetail): void {
+    const rect = this.canvas.getBoundingClientRect();
+    const next = computeCameraStateFromWorldPoint(
+      this.camera,
+      { width: rect.width, height: rect.height },
+      detail.bounds,
+      detail.worldX,
+      detail.worldY
+    );
+    this.camera.setState(next.panX, next.panY, next.zoom);
+    this.refreshMinimap();
   }
 
   private pushCommand(command: Command): void {
     this.history.push(command);
+    this.markMinimapDirty();
     this.events.dispatch("history:command", { command, action: "do" });
     this.syncToolbarState();
   }
@@ -1157,6 +1219,8 @@ export class NodeEditor {
         hoveredContainer.isDropTarget = true;
       }
     }
+
+    this.markMinimapDirty();
   }
 
   private inferSelectionDropTarget(
@@ -1636,6 +1700,7 @@ export class NodeEditor {
     );
     node.width = snapshot.width;
     node.height = snapshot.height;
+    this.markMinimapDirty();
   }
 
   private restoreNodeSnapshots(snapshots: NodeHistorySnapshot[]): void {
@@ -1668,6 +1733,7 @@ export class NodeEditor {
         this.applyCompositionReferenceForEdge(edge);
       }
     }
+    this.markMinimapDirty();
   }
 
   private isCompositionReferenceEdge(
@@ -2523,6 +2589,7 @@ export class NodeEditor {
       }
       currentId = current.parentId;
     }
+    this.markMinimapDirty();
   }
 
   private refreshContainerChains(containerIds: Iterable<number | null>): void {
@@ -2542,6 +2609,7 @@ export class NodeEditor {
         currentId = current.parentId;
       }
     }
+    this.markMinimapDirty();
   }
 
   private handlePointerDown(e: PointerEvent, canvas: HTMLCanvasElement): void {
@@ -2909,6 +2977,8 @@ export class NodeEditor {
         hoveredContainer.isDropTarget = true;
       }
     }
+
+    this.markMinimapDirty();
 
     this.events.dispatch("node:drag", {
       nodeIds: [this.draggingNode.id],
@@ -3694,10 +3764,12 @@ export class NodeEditor {
     for (const affectedNodeId of affectedNodeIds) {
       this.syncHandleStates(affectedNodeId);
     }
+    this.markMinimapDirty();
   }
 
   private removeContainerOnly(nodeId: number): void {
     this.store.removeContainerOnly(nodeId);
+    this.markMinimapDirty();
   }
 
   private removeNodeAndIncidentEdges(nodeId: number): void {

@@ -346,7 +346,7 @@ export class ActionPane extends HTMLElement {
           </svg>
         </button>
 
-        <button id="btn-kebab-toggle" title="More Primitives">
+        <button id="btn-kebab-toggle" title="More Actions">
           <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <circle cx="5" cy="12" r="2" />
             <circle cx="12" cy="12" r="2" />

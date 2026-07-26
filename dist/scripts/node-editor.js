@@ -18,6 +18,7 @@ import { getParentFrameWorldPosition, getWorldPosition, } from "./scene-graph.js
 import { TextureRegistry } from "./texture-registry.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
+import { computeCameraStateFromWorldPoint, } from "../components/minimap.js";
 import { CLONE, COLLAPSE, DELETE, EDIT, EXPAND, SPOTLIGHT, UNGRAPH, } from "../sprite.js";
 import { serializeGraph, deserializeGraph, } from "./graph-serialization.js";
 const baseButtons = (items) => items.map(([action, glyph, label]) => ({ action, glyph, label }));
@@ -104,6 +105,11 @@ export class NodeEditor {
     activeTouches = new Map();
     gestureMode = false;
     pinchDistance = null;
+    minimap = null;
+    minimapEnabled = true;
+    minimapRevision = 0;
+    canvas;
+    backgroundCanvas;
     static _instance = null;
     static async create(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, IconBGVsSource, IconBGFsSource, options = {}, nodeTextureUploadList = []) {
         if (this._instance)
@@ -128,6 +134,8 @@ export class NodeEditor {
         this.nodeTextureUploadList = nodeTextureUploadList;
         const canvas = document.getElementById(canvasId);
         const backgroundCanvas = document.getElementById(backgroundCanvasId);
+        this.canvas = canvas;
+        this.backgroundCanvas = backgroundCanvas;
         if (!canvas)
             throw new Error(`Canvas "${canvasId}" not found`);
         if (!backgroundCanvas)
@@ -137,6 +145,7 @@ export class NodeEditor {
             throw new Error("WebGL2 is not supported in this browser");
         this.connectionMode = options.connectionMode ?? "node";
         this.assetsPath = options.assetsPath ?? "assets";
+        this.minimapEnabled = options.minimap ?? true;
         for (const descriptor of BUILTIN_DESCRIPTORS) {
             this.typeRegistry.register(descriptor);
         }
@@ -183,6 +192,7 @@ export class NodeEditor {
         this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, () => this.selectedNodeIds, () => {
             this.updateSelectionToolbarPosition();
             this.updateOverlays();
+            this.refreshMinimap();
         }, msdfProgram, iconBGProgam, this.msdfAtlas, this.iconAtlas, this.typeRegistry);
         const container = document.getElementById("sidebar");
         const historyPane = document.getElementById("undo-redo-wrapper");
@@ -198,6 +208,14 @@ export class NodeEditor {
             const customEvent = e;
             this.handleSelectionToolbarAction(customEvent.detail.action);
         });
+        this.minimap = document.getElementById("minimap");
+        if (this.minimap) {
+            this.minimap.setEnabled(this.minimapEnabled);
+            this.minimap.addEventListener("gg-minimap-navigate", (e) => {
+                const customEvent = e;
+                this.handleMinimapNavigate(customEvent.detail);
+            });
+        }
         this.controls = new UIControls(canvas, container, historyPane, toolPane, {
             onAddNode: () => this.handleAddNode(canvas, "node"),
             onAddGroup: () => this.handleAddNode(canvas, "group"),
@@ -246,6 +264,7 @@ export class NodeEditor {
         this.setupPropGroupListener();
         this.handleResize(canvas);
         this.syncToolbarState();
+        this.refreshMinimap();
     }
     setupPropGroupListener() {
         this.controls.nodePropGroup.addEventListener("gg-prop-change", (e) => {
@@ -313,6 +332,7 @@ export class NodeEditor {
             connectionMode: config.connectionMode ?? "node",
             handleStyle: config.handleStyle ?? DEFAULT_HANDLE_STYLE,
             assetsPath: config.assetsPath ?? "assets",
+            minimap: config.minimap ?? true,
         };
     }
     distance(p1, p2) {
@@ -384,13 +404,13 @@ export class NodeEditor {
         this.store.setConnectionMode(editorState.connectionMode);
         this.bgColor = [...editorState.bgColor];
         this.fontColor = [...editorState.fontColor];
-        this.camera.panX = editorState.camera.panX;
-        this.camera.panY = editorState.camera.panY;
-        this.camera.zoom = editorState.camera.zoom;
+        this.camera.setState(editorState.camera.panX, editorState.camera.panY, editorState.camera.zoom);
         // Clear selection and history (import is a fresh baseline)
         this.clearSelectionState();
         this.history.clear();
         this.syncToolbarState();
+        this.markMinimapDirty();
+        this.refreshMinimap();
     }
     /**
      * Add a custom DOM overlay component to the canvas.
@@ -596,9 +616,30 @@ export class NodeEditor {
         canvas.height = physicalHeight;
         this.renderer.resize(physicalWidth, physicalHeight, this.dpr);
         this.pickFBO.resize(physicalWidth, physicalHeight);
+        this.refreshMinimap();
+    }
+    markMinimapDirty() {
+        this.minimapRevision++;
+    }
+    refreshMinimap() {
+        if (!this.minimap || !this.minimapEnabled)
+            return;
+        this.minimap.updateScene({
+            store: this.store,
+            edgeStore: this.edgeStore,
+            camera: this.camera,
+            canvas: this.canvas,
+        }, this.minimapRevision);
+    }
+    handleMinimapNavigate(detail) {
+        const rect = this.canvas.getBoundingClientRect();
+        const next = computeCameraStateFromWorldPoint(this.camera, { width: rect.width, height: rect.height }, detail.bounds, detail.worldX, detail.worldY);
+        this.camera.setState(next.panX, next.panY, next.zoom);
+        this.refreshMinimap();
     }
     pushCommand(command) {
         this.history.push(command);
+        this.markMinimapDirty();
         this.events.dispatch("history:command", { command, action: "do" });
         this.syncToolbarState();
     }
@@ -818,6 +859,7 @@ export class NodeEditor {
                 hoveredContainer.isDropTarget = true;
             }
         }
+        this.markMinimapDirty();
     }
     inferSelectionDropTarget(screenX, screenY, selectionDrag) {
         if (!this.selectionRep || this.selectionRep.nodeType === "group") {
@@ -1196,6 +1238,7 @@ export class NodeEditor {
         this.store.forceRestoreNodePlacement(snapshot.id, snapshot.localX, snapshot.localY, snapshot.parentId);
         node.width = snapshot.width;
         node.height = snapshot.height;
+        this.markMinimapDirty();
     }
     restoreNodeSnapshots(snapshots) {
         for (const snapshot of snapshots) {
@@ -1225,6 +1268,7 @@ export class NodeEditor {
                 this.applyCompositionReferenceForEdge(edge);
             }
         }
+        this.markMinimapDirty();
     }
     isCompositionReferenceEdge(edge) {
         const source = this.store.get(edge.sourceNodeId);
@@ -1892,6 +1936,7 @@ export class NodeEditor {
             }
             currentId = current.parentId;
         }
+        this.markMinimapDirty();
     }
     refreshContainerChains(containerIds) {
         const visited = new Set();
@@ -1909,6 +1954,7 @@ export class NodeEditor {
                 currentId = current.parentId;
             }
         }
+        this.markMinimapDirty();
     }
     handlePointerDown(e, canvas) {
         if (e.pointerType !== "mouse") {
@@ -2204,6 +2250,7 @@ export class NodeEditor {
                 hoveredContainer.isDropTarget = true;
             }
         }
+        this.markMinimapDirty();
         this.events.dispatch("node:drag", {
             nodeIds: [this.draggingNode.id],
             event: e,
@@ -2798,9 +2845,11 @@ export class NodeEditor {
         for (const affectedNodeId of affectedNodeIds) {
             this.syncHandleStates(affectedNodeId);
         }
+        this.markMinimapDirty();
     }
     removeContainerOnly(nodeId) {
         this.store.removeContainerOnly(nodeId);
+        this.markMinimapDirty();
     }
     removeNodeAndIncidentEdges(nodeId) {
         this.removeNodesAndEdges([nodeId], []);

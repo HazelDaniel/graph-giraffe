@@ -91,6 +91,7 @@ export interface NodeEditorConfig {
   connectionMode?: ConnectionMode;
   handleStyle?: HandleStyle;
   assetsPath?: string;
+  minimap?: boolean;
 }
 
 export interface ConnectionPreviewData {

@@ -10,6 +10,7 @@ export * from './components/action-pane.js';
 export * from './components/history-pane.js';
 export * from './components/kebab-menu.js';
 export * from './components/loading-screen.js';
+export * from './components/minimap.js';
 export * from './components/prop-group.js';
 export * from './components/select.js';
 export * from './components/selection-toolbar.js';

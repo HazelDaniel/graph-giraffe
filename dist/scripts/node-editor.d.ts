@@ -62,6 +62,11 @@ export declare class NodeEditor {
     private activeTouches;
     private gestureMode;
     private pinchDistance;
+    private minimap;
+    private minimapEnabled;
+    private minimapRevision;
+    private canvas;
+    private backgroundCanvas;
     private static _instance;
     static create(canvasId: string, backgroundCanvasId: string, vsSource: string, fsSource: string, bgVsSource: string, bgFsSource: string, msdfVsSource: string, msdfFsSource: string, IconBGVsSource: string, IconBGFsSource: string, options?: NodeEditorConfig, nodeTextureUploadList?: AddUploadedTextureParams[]): Promise<NodeEditor>;
     private msdfAtlas;
@@ -141,6 +146,9 @@ export declare class NodeEditor {
     private redo;
     private dpr;
     private handleResize;
+    private markMinimapDirty;
+    private refreshMinimap;
+    private handleMinimapNavigate;
     private pushCommand;
     private get commandContext();
     private captureSelectionSnapshot;

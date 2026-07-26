@@ -55,6 +55,10 @@ export class NodeStore {
     restoreIdCounter(value) {
         this._nextId = Math.max(this._nextId, value);
     }
+    /** Expose the registry for renderer-adjacent views like the minimap. */
+    getRegistry() {
+        return this.registry;
+    }
     /** The id that the next call to add() will assign. Useful for labelling. */
     get nextNodeId() {
         return this._nextId + 1;

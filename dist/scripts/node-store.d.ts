@@ -33,6 +33,8 @@ export declare class NodeStore {
      * Called after graph import so new nodes get IDs above the imported max.
      */
     restoreIdCounter(value: number): void;
+    /** Expose the registry for renderer-adjacent views like the minimap. */
+    getRegistry(): NodeTypeRegistry | undefined;
     /** The id that the next call to add() will assign. Useful for labelling. */
     get nextNodeId(): number;
     /**

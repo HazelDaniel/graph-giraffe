@@ -46,6 +46,19 @@ export class Camera {
   }
 
   /**
+   * Immediately set the camera state and cancel any in-flight animation.
+   */
+  setState(panX: number, panY: number, zoom: number): void {
+    this._animating = false;
+    this.panX = panX;
+    this.panY = panY;
+    this.zoom = Math.max(0.1, Math.min(zoom, 5.0));
+    if (this.editor) {
+      this.editor.cameraDirty = true;
+    }
+  }
+
+  /**
    * Convert a screen-space coordinate to a world-space coordinate.
    * Used to correctly place nodes when adding or dragging, regardless of pan/zoom.
    */
@@ -78,8 +91,7 @@ export class Camera {
     this._targetPanY = panY;
     this._targetZoom = Math.max(0.1, Math.min(zoom, 5.0));
     this._animating = true;
-    if (this.editor)
-    this.editor.cameraDirty = true;
+    if (this.editor) this.editor.cameraDirty = true;
   }
 
   /**
@@ -102,12 +114,11 @@ export class Camera {
         this.panX = this._targetPanX;
         this.panY = this._targetPanY;
         this.zoom = this._targetZoom;
-        if (this.editor)
-        this.editor.cameraDirty = false;
+        if (this.editor) this.editor.cameraDirty = false;
         this._animating = false;
       }
     }
-    
+
     this._viewMatrix.setIdentity();
     this._viewMatrix.translate(this.panX, this.panY, 0);
     this._viewMatrix.scale(this.zoom, this.zoom, 1.0);

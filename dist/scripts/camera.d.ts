@@ -26,6 +26,10 @@ export declare class Camera {
      */
     zoomAt(mouseX: number, mouseY: number, deltaY: number): void;
     /**
+     * Immediately set the camera state and cancel any in-flight animation.
+     */
+    setState(panX: number, panY: number, zoom: number): void;
+    /**
      * Convert a screen-space coordinate to a world-space coordinate.
      * Used to correctly place nodes when adding or dragging, regardless of pan/zoom.
      */

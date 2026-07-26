@@ -24,6 +24,8 @@ const STYLE_TEMPLATE = `
   :host button {
     border-radius: 1rem;
     cursor: pointer;
+    backdrop-filter: blur(20px);
+    // mix-blend-mode: darken;
   }
 
   :host button::selection {

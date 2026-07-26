@@ -27,6 +27,9 @@ const SHELL = `
   <!-- History Pane -->
   <gg-history-pane id="undo-redo-wrapper"></gg-history-pane>
 
+  <!-- Minimap -->
+  <gg-minimap id="minimap"></gg-minimap>
+
   <!-- Kebab Menu (Options) -->
   <gg-kebab-menu id="kebab-menu"></gg-kebab-menu>
 

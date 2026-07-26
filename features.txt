@@ -1,5 +1,5 @@
 # OPEN FEATURES
- 1. minimap/radar view (desktop only)
+ 1.[] minimap/radar view (desktop only)
 
  2. simulation
 
