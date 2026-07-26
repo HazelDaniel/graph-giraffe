@@ -1611,7 +1611,6 @@ class GGMinimap extends MinimapBase {
     ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
     const paddingX = 40;
     const paddingY = 40;
-    Number(viewport.width > paddingX && viewport.height > paddingY) || 2;
     ctx.roundRect(viewport.x - paddingX / 2, viewport.y - paddingY / 2, paddingX, paddingY, 8);
     ctx.fill();
     ctx.stroke();
