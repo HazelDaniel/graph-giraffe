@@ -213,7 +213,15 @@ export class NodeEditor {
   private lastMouseX: number = 0;
   private lastMouseY: number = 0;
   private connectionMode: ConnectionMode;
-  private activeConnectionDrag: ConnectionDragState | null = null;
+
+  /**
+   * The editor-wide rendering pipeline. `"webgl"` (default) draws every
+   * primitive on the GPU; `"dom"` renders every node as a DOM view and is set
+   * via `NodeEditorConfig.renderMode`. The two pipelines are mutually
+   * exclusive — the DOM layer only exists in dom mode and the renderer skips
+   * WebGL node bodies in dom mode.
+   */
+  public readonly renderMode: "webgl" | "dom";  private activeConnectionDrag: ConnectionDragState | null = null;
   private hoveredHandle: HandleHit | null = null;
   private assetsPath: string;
   private selectedNodeIds: Set<number> = new Set();
@@ -312,9 +320,16 @@ export class NodeEditor {
     this.connectionMode = options.connectionMode ?? "node";
     this.assetsPath = options.assetsPath ?? "assets";
     this.minimapEnabled = options.minimap ?? true;
+    this.renderMode = options.renderMode ?? "webgl";
 
-    for (const descriptor of BUILTIN_DESCRIPTORS) {
-      this.typeRegistry.register(descriptor);
+    // Bind the registry to the editor's rendering mode so "replacing, not
+    // additive" is enforced: built-in WebGL types only exist in webgl mode,
+    // and DOM plugins replace them (same type names) in dom mode.
+    this.typeRegistry.setRenderMode(this.renderMode);
+    if (this.renderMode !== "dom") {
+      for (const descriptor of BUILTIN_DESCRIPTORS) {
+        this.typeRegistry.register(descriptor);
+      }
     }
 
     // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
@@ -382,13 +397,18 @@ export class NodeEditor {
     if (scalingContainer) this.scalingOverlayContainer = scalingContainer;
     if (fixedContainer) this.fixedOverlayContainer = fixedContainer;
 
-    this.domNodeLayer = new DomNodeLayer({
-      store: this.store,
-      registry: this.typeRegistry,
-      events: this.events,
-      container: this.scalingOverlayContainer,
-    });
-    this.domNodeLayer.syncAll();
+    // The DOM layer only exists in dom mode. In webgl mode ALL primitives are
+    // drawn on the WebGL context and no DOM node views are ever created, so the
+    // two pipelines can never coexist on a page.
+    if (this.renderMode === "dom") {
+      this.domNodeLayer = new DomNodeLayer({
+        store: this.store,
+        registry: this.typeRegistry,
+        events: this.events,
+        container: this.scalingOverlayContainer,
+      });
+      this.domNodeLayer.syncAll();
+    }
 
     this.renderer = new Renderer(
       gl,
@@ -418,7 +438,8 @@ export class NodeEditor {
       iconBGProgam,
       this.msdfAtlas,
       this.iconAtlas,
-      this.typeRegistry
+      this.typeRegistry,
+      this.renderMode
     );
 
     // DOM views mirror the WebGL draw pass: hide views outside the viewport
@@ -602,6 +623,7 @@ export class NodeEditor {
       handleStyle: config.handleStyle ?? DEFAULT_HANDLE_STYLE,
       assetsPath: config.assetsPath ?? "assets",
       minimap: config.minimap ?? true,
+      renderMode: config.renderMode ?? "webgl",
     };
   }
 

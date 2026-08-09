@@ -32,35 +32,33 @@ function domRendererFor(tag: string): DomNodeRenderer {
 }
 
 /**
- * Re-create every built-in node type as a custom DOM element.
+ * Swap every built-in node type for a custom DOM element rendering.
  *
- * Each descriptor is derived from its built-in counterpart (inheriting
- * handles, connection rules, parent rules, toolbar actions, z-tier) and only
- * swaps the renderer: `renderMode: "dom"` routes the visual to DomNodeLayer
- * while WebGL keeps doing picking, handles, and hit-testing.
+ * This is a REPLACING, not additive, plugin: each descriptor keeps the built-in
+ * type name (`node`, `hub`, …) and only swaps the renderer — `renderMode: "dom"`
+ * routes the visual to DomNodeLayer while WebGL keeps doing picking, handles,
+ * and hit-testing. Because the type names are unchanged, imported snapshots
+ * resolve against the editor's current registry and therefore always render in
+ * the editor's configured mode (dom here).
  */
-function toDomDescriptor(
-  base: NodeTypeDescriptor,
-  type: string
-): NodeTypeDescriptor {
+function toDomDescriptor(base: NodeTypeDescriptor): NodeTypeDescriptor {
   return {
     ...base,
-    type,
     renderMode: "dom",
-    domRenderer: domRendererFor(DOM_VIEW_TAGS[type]),
+    domRenderer: domRendererFor(DOM_VIEW_TAGS[base.type]),
     // The WebGL path never draws these, so no texture lookup is needed.
     defaultTextureIds: { body: "", head: "" },
   };
 }
 
 export const DOM_NODE_DESCRIPTORS: NodeTypeDescriptor[] = [
-  toDomDescriptor(nodeDescriptor, "dom-node"),
-  toDomDescriptor(hubDescriptor, "dom-hub"),
-  toDomDescriptor(branchDescriptor, "dom-branch"),
-  toDomDescriptor(groupDescriptor, "dom-group"),
-  toDomDescriptor(compositionDescriptor, "dom-composition"),
-  toDomDescriptor(compositionChildDescriptor, "dom-child"),
-  toDomDescriptor(subgraphDescriptor, "dom-subgraph"),
+  toDomDescriptor(nodeDescriptor),
+  toDomDescriptor(hubDescriptor),
+  toDomDescriptor(branchDescriptor),
+  toDomDescriptor(groupDescriptor),
+  toDomDescriptor(compositionDescriptor),
+  toDomDescriptor(compositionChildDescriptor),
+  toDomDescriptor(subgraphDescriptor),
 ];
 
 registerDomViews();

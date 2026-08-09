@@ -334,6 +334,77 @@ describe("NodeTypeRegistry", () => {
     });
   });
 
+  describe("replace + renderMode enforcement", () => {
+    it("replace() swaps an existing descriptor under the same type name", () => {
+      const reg = createRegistry();
+      const domNode = {
+        ...nodeDescriptor,
+        renderMode: "dom" as const,
+        defaultTextureIds: { body: "", head: "" },
+        domRenderer: { createView: () => document.createElement("div") },
+      };
+      reg.replace(domNode);
+      expect(reg.get("node")).toBe(domNode);
+      expect(reg.isDomRendered("node")).toBe(true);
+      expect(reg.isLeaf("node")).toBe(true);
+    });
+
+    it("replace() registers a brand-new type when none exists", () => {
+      const reg = createRegistry();
+      const custom = makeCustomDescriptor({ type: "fresh" });
+      reg.replace(custom);
+      expect(reg.get("fresh")).toBe(custom);
+    });
+
+    it("replace() keeps container classification in sync", () => {
+      const reg = createRegistry();
+      const domGroup = {
+        ...groupDescriptor,
+        renderMode: "dom" as const,
+        defaultTextureIds: { body: "", head: "" },
+        domRenderer: { createView: () => document.createElement("div") },
+      };
+      reg.replace(domGroup);
+      expect(reg.isContainer("group")).toBe(true);
+      expect(reg.isLeaf("group")).toBe(false);
+    });
+
+    it("rejects DOM descriptors in webgl mode", () => {
+      const reg = createRegistry();
+      reg.setRenderMode("webgl");
+      const domDesc = {
+        ...nodeDescriptor,
+        type: "dom-extra",
+        renderMode: "dom" as const,
+        defaultTextureIds: { body: "", head: "" },
+        domRenderer: { createView: () => document.createElement("div") },
+      };
+      expect(() => reg.register(domDesc)).toThrow(/webgl mode/);
+      expect(() => reg.replace(domDesc)).toThrow(/webgl mode/);
+    });
+
+    it("rejects non-DOM descriptors in dom mode", () => {
+      const reg = new NodeTypeRegistry();
+      reg.setRenderMode("dom");
+      const webglDesc = makeCustomDescriptor({ type: "gl-only" });
+      expect(() => reg.register(webglDesc)).toThrow(/dom mode/);
+      expect(() => reg.replace(webglDesc)).toThrow(/dom mode/);
+    });
+
+    it("allows DOM descriptors in dom mode", () => {
+      const reg = new NodeTypeRegistry();
+      reg.setRenderMode("dom");
+      const domDesc = {
+        ...nodeDescriptor,
+        renderMode: "dom" as const,
+        defaultTextureIds: { body: "", head: "" },
+        domRenderer: { createView: () => document.createElement("div") },
+      };
+      reg.register(domDesc);
+      expect(reg.isDomRendered("node")).toBe(true);
+    });
+  });
+
   describe("built-in descriptor integrity", () => {
     it("all 6 built-in descriptors have overlayConfig", () => {
       for (const desc of BUILTIN_DESCRIPTORS) {

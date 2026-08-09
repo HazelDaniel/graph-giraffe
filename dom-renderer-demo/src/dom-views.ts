@@ -229,11 +229,11 @@ export function registerDomViews(): void {
 }
 
 export const DOM_VIEW_TAGS: Record<string, string> = {
-  "dom-node": "gg-dom-node",
-  "dom-hub": "gg-dom-hub",
-  "dom-branch": "gg-dom-branch",
-  "dom-group": "gg-dom-group",
-  "dom-composition": "gg-dom-composition",
-  "dom-child": "gg-dom-child",
-  "dom-subgraph": "gg-dom-subgraph",
+  node: "gg-dom-node",
+  hub: "gg-dom-hub",
+  branch: "gg-dom-branch",
+  group: "gg-dom-group",
+  composition: "gg-dom-composition",
+  "composition-child": "gg-dom-child",
+  subgraph: "gg-dom-subgraph",
 };

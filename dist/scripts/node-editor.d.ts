@@ -42,6 +42,14 @@ export declare class NodeEditor {
     private lastMouseX;
     private lastMouseY;
     private connectionMode;
+    /**
+     * The editor-wide rendering pipeline. `"webgl"` (default) draws every
+     * primitive on the GPU; `"dom"` renders every node as a DOM view and is set
+     * via `NodeEditorConfig.renderMode`. The two pipelines are mutually
+     * exclusive — the DOM layer only exists in dom mode and the renderer skips
+     * WebGL node bodies in dom mode.
+     */
+    readonly renderMode: "webgl" | "dom";
     private activeConnectionDrag;
     private hoveredHandle;
     private assetsPath;

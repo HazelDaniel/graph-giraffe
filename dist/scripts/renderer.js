@@ -38,11 +38,12 @@ export class Renderer {
     msdfAtlas;
     iconAtlas;
     registry;
+    renderMode;
     modelMatrix = new Matrix4();
     projMatrix = new Matrix4();
     constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, 
     /** Callback so Renderer never stores bgColor itself — it belongs to the editor. */
-    getBgColor, getFontColor, getSelectedNodeIds, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry) {
+    getBgColor, getFontColor, getSelectedNodeIds, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry, renderMode = "webgl") {
         this.gl = gl;
         this.canvas = canvas;
         this.bgCanvas = bgCanvas;
@@ -66,6 +67,7 @@ export class Renderer {
         this.msdfAtlas = msdfAtlas;
         this.iconAtlas = iconAtlas;
         this.registry = registry;
+        this.renderMode = renderMode;
         this.labelCtx = labelCanvas.getContext("2d");
         this.edgeVertexBuffer = gl.createBuffer();
         this.edgeHeadBuffer = gl.createBuffer();
@@ -159,7 +161,7 @@ export class Renderer {
         for (const node of this.store.visibleNodes()) {
             this.drawHandles(node);
         }
-        if (!this.isZooming)
+        if (!this.isZooming && this.renderMode !== "dom")
             this.drawGroupLabels();
     }
     drawConnectionPreview() {
@@ -548,6 +550,16 @@ export class Renderer {
             gl.uniform4f(this.locations.u_Color, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1.0);
             this.setModelMatrix(worldX, worldY, node.width, node.height, z);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+            return;
+        }
+        // ─── DOM mode ────────────────────────────────────────
+        // In dom mode the editor owns NO WebGL node visuals: every node body,
+        // title and overlay is rendered as a DOM view by DomNodeLayer. The pick
+        // silhouette above is still drawn (GPU hit-testing stays authoritative),
+        // as are edges, connection handles and the background. We therefore skip
+        // the entire WebGL body pass for every node — regardless of descriptor —
+        // so the two pipelines can never coexist on a page.
+        if (this.renderMode === "dom") {
             return;
         }
         // ─── Registry-driven dispatch ───────────────────────────

@@ -6828,7 +6828,7 @@ class IconBackgroundRenderer {
   }
 }
 class Renderer {
-  constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, getBgColor, getFontColor, getSelectedNodeIds, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry) {
+  constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, getBgColor, getFontColor, getSelectedNodeIds, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry, renderMode = "webgl") {
     __publicField(this, "modelMatrix", new Matrix4());
     __publicField(this, "projMatrix", new Matrix4());
     __publicField(this, "textRenderer");
@@ -6865,6 +6865,7 @@ class Renderer {
     this.msdfAtlas = msdfAtlas;
     this.iconAtlas = iconAtlas;
     this.registry = registry;
+    this.renderMode = renderMode;
     this.labelCtx = labelCanvas.getContext("2d");
     this.edgeVertexBuffer = gl.createBuffer();
     this.edgeHeadBuffer = gl.createBuffer();
@@ -6961,7 +6962,7 @@ class Renderer {
     for (const node of this.store.visibleNodes()) {
       this.drawHandles(node);
     }
-    if (!this.isZooming) this.drawGroupLabels();
+    if (!this.isZooming && this.renderMode !== "dom") this.drawGroupLabels();
   }
   drawConnectionPreview() {
     if (!this.labelCtx) return;
@@ -7463,6 +7464,9 @@ class Renderer {
       );
       this.setModelMatrix(worldX, worldY, node.width, node.height, z);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+      return;
+    }
+    if (this.renderMode === "dom") {
       return;
     }
     if (this.registry) {
@@ -9305,6 +9309,28 @@ class NodeTypeRegistry {
     __publicField(this, "descriptors", /* @__PURE__ */ new Map());
     __publicField(this, "containerTypes", /* @__PURE__ */ new Set());
     __publicField(this, "leafTypes", /* @__PURE__ */ new Set());
+    __publicField(this, "renderMode", null);
+  }
+  /**
+   * Bind the registry to an editor-wide rendering mode. Once set, `register`
+   * and `replace` enforce "replacing, not additive": in `"dom"` mode every
+   * registered type must be DOM-backed, and in `"webgl"` mode a DOM descriptor
+   * is rejected. This is what keeps the two pipelines from coexisting.
+   */
+  setRenderMode(renderMode) {
+    this.renderMode = renderMode;
+  }
+  assertMode(descriptor) {
+    if (this.renderMode === "webgl" && descriptor.renderMode === "dom") {
+      throw new Error(
+        `NodeTypeRegistry: type "${descriptor.type}" is a DOM descriptor but the editor is in webgl mode. DOM descriptors require renderMode: "dom" on the editor.`
+      );
+    }
+    if (this.renderMode === "dom" && descriptor.renderMode !== "dom") {
+      throw new Error(
+        `NodeTypeRegistry: type "${descriptor.type}" is not a DOM descriptor but the editor is in dom mode. All primitives must be DOM-backed in dom mode.`
+      );
+    }
   }
   register(descriptor) {
     if (this.descriptors.has(descriptor.type)) {
@@ -9312,11 +9338,26 @@ class NodeTypeRegistry {
         `NodeTypeRegistry: type "${descriptor.type}" is already registered`
       );
     }
+    this.assertMode(descriptor);
+    this.put(descriptor);
+  }
+  /**
+   * Replace an already-registered descriptor (or add a new one). DOM plugins
+   * use this to swap a built-in WebGL type for a DOM-backed descriptor under
+   * the SAME type name, so snapshots stay portable across rendering modes.
+   */
+  replace(descriptor) {
+    this.assertMode(descriptor);
+    this.put(descriptor);
+  }
+  put(descriptor) {
     this.descriptors.set(descriptor.type, descriptor);
     if (descriptor.category === "container") {
       this.containerTypes.add(descriptor.type);
+      this.leafTypes.delete(descriptor.type);
     } else {
       this.leafTypes.add(descriptor.type);
+      this.containerTypes.delete(descriptor.type);
     }
   }
   get(type) {
@@ -10161,6 +10202,14 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "lastMouseX", 0);
     __publicField(this, "lastMouseY", 0);
     __publicField(this, "connectionMode");
+    /**
+     * The editor-wide rendering pipeline. `"webgl"` (default) draws every
+     * primitive on the GPU; `"dom"` renders every node as a DOM view and is set
+     * via `NodeEditorConfig.renderMode`. The two pipelines are mutually
+     * exclusive — the DOM layer only exists in dom mode and the renderer skips
+     * WebGL node bodies in dom mode.
+     */
+    __publicField(this, "renderMode");
     __publicField(this, "activeConnectionDrag", null);
     __publicField(this, "hoveredHandle", null);
     __publicField(this, "assetsPath");
@@ -10217,8 +10266,12 @@ const _NodeEditor = class _NodeEditor {
     this.connectionMode = options.connectionMode ?? "node";
     this.assetsPath = options.assetsPath ?? "assets";
     this.minimapEnabled = options.minimap ?? true;
-    for (const descriptor of BUILTIN_DESCRIPTORS) {
-      this.typeRegistry.register(descriptor);
+    this.renderMode = options.renderMode ?? "webgl";
+    this.typeRegistry.setRenderMode(this.renderMode);
+    if (this.renderMode !== "dom") {
+      for (const descriptor of BUILTIN_DESCRIPTORS) {
+        this.typeRegistry.register(descriptor);
+      }
     }
     this.camera = new Camera(this);
     this.store = new NodeStore(
@@ -10300,13 +10353,15 @@ const _NodeEditor = class _NodeEditor {
     const fixedContainer = document.getElementById("gg-overlays-fixed");
     if (scalingContainer) this.scalingOverlayContainer = scalingContainer;
     if (fixedContainer) this.fixedOverlayContainer = fixedContainer;
-    this.domNodeLayer = new DomNodeLayer({
-      store: this.store,
-      registry: this.typeRegistry,
-      events: this.events,
-      container: this.scalingOverlayContainer
-    });
-    this.domNodeLayer.syncAll();
+    if (this.renderMode === "dom") {
+      this.domNodeLayer = new DomNodeLayer({
+        store: this.store,
+        registry: this.typeRegistry,
+        events: this.events,
+        container: this.scalingOverlayContainer
+      });
+      this.domNodeLayer.syncAll();
+    }
     this.renderer = new Renderer(
       gl,
       canvas,
@@ -10336,7 +10391,8 @@ const _NodeEditor = class _NodeEditor {
       iconBGProgam,
       this.msdfAtlas,
       this.iconAtlas,
-      this.typeRegistry
+      this.typeRegistry,
+      this.renderMode
     );
     (_a2 = this.domNodeLayer) == null ? void 0 : _a2.setCull(
       (x, y, w, h) => this.renderer.isRectInViewport(x, y, w, h)
@@ -10490,7 +10546,8 @@ const _NodeEditor = class _NodeEditor {
       connectionMode: config.connectionMode ?? "node",
       handleStyle: config.handleStyle ?? DEFAULT_HANDLE_STYLE,
       assetsPath: config.assetsPath ?? "assets",
-      minimap: config.minimap ?? true
+      minimap: config.minimap ?? true,
+      renderMode: config.renderMode ?? "webgl"
     };
   }
   distance(p1, p2) {

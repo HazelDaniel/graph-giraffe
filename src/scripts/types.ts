@@ -98,6 +98,20 @@ export interface NodeEditorConfig {
   handleStyle?: HandleStyle;
   assetsPath?: string;
   minimap?: boolean;
+  /**
+   * Rendering pipeline for the whole editor — mutually exclusive by design.
+   *
+   * - `"webgl"` (default): every primitive is drawn in the WebGL context. No
+   *   DOM node layer exists; descriptors carrying a `domRenderer` are rejected.
+   * - `"dom"`: every primitive is drawn as a DOM view via `DomNodeLayer`. The
+   *   renderer skips all WebGL node bodies (picking silhouettes, handles,
+   *   edges and the background stay on GPU).
+   *
+   * The two pipelines can never coexist on a page. Because node types are
+   * resolved against the registry at render time, imported snapshots always
+   * adopt the editor's configured mode regardless of how they were authored.
+   */
+  renderMode?: "webgl" | "dom";
 }
 
 export interface ConnectionPreviewData {

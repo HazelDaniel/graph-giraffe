@@ -159,6 +159,30 @@ export class NodeTypeRegistry {
   private descriptors = new Map<string, NodeTypeDescriptor>();
   private containerTypes = new Set<string>();
   private leafTypes = new Set<string>();
+  private renderMode: "webgl" | "dom" | null = null;
+
+  /**
+   * Bind the registry to an editor-wide rendering mode. Once set, `register`
+   * and `replace` enforce "replacing, not additive": in `"dom"` mode every
+   * registered type must be DOM-backed, and in `"webgl"` mode a DOM descriptor
+   * is rejected. This is what keeps the two pipelines from coexisting.
+   */
+  setRenderMode(renderMode: "webgl" | "dom"): void {
+    this.renderMode = renderMode;
+  }
+
+  private assertMode(descriptor: NodeTypeDescriptor): void {
+    if (this.renderMode === "webgl" && descriptor.renderMode === "dom") {
+      throw new Error(
+        `NodeTypeRegistry: type "${descriptor.type}" is a DOM descriptor but the editor is in webgl mode. DOM descriptors require renderMode: "dom" on the editor.`
+      );
+    }
+    if (this.renderMode === "dom" && descriptor.renderMode !== "dom") {
+      throw new Error(
+        `NodeTypeRegistry: type "${descriptor.type}" is not a DOM descriptor but the editor is in dom mode. All primitives must be DOM-backed in dom mode.`
+      );
+    }
+  }
 
   register(descriptor: NodeTypeDescriptor): void {
     if (this.descriptors.has(descriptor.type)) {
@@ -166,11 +190,28 @@ export class NodeTypeRegistry {
         `NodeTypeRegistry: type "${descriptor.type}" is already registered`
       );
     }
+    this.assertMode(descriptor);
+    this.put(descriptor);
+  }
+
+  /**
+   * Replace an already-registered descriptor (or add a new one). DOM plugins
+   * use this to swap a built-in WebGL type for a DOM-backed descriptor under
+   * the SAME type name, so snapshots stay portable across rendering modes.
+   */
+  replace(descriptor: NodeTypeDescriptor): void {
+    this.assertMode(descriptor);
+    this.put(descriptor);
+  }
+
+  private put(descriptor: NodeTypeDescriptor): void {
     this.descriptors.set(descriptor.type, descriptor);
     if (descriptor.category === "container") {
       this.containerTypes.add(descriptor.type);
+      this.leafTypes.delete(descriptor.type);
     } else {
       this.leafTypes.add(descriptor.type);
+      this.containerTypes.delete(descriptor.type);
     }
   }
 

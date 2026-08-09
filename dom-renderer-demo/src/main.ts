@@ -24,25 +24,32 @@ async function boot(): Promise<void> {
     shaders.msdfFragmentShader,
     shaders.iconBGVertexShader,
     shaders.iconBGFragmentShader,
-    { connectionMode: "node", minimap: true, assetsPath: "/assets" }
+    {
+      connectionMode: "node",
+      minimap: true,
+      assetsPath: "/assets",
+      renderMode: "dom",
+    }
   );
 
 
-  // Register all 7 DOM node types against the live editor registry.
+  // REPLACING, not additive: swap every built-in WebGL type for its DOM
+  // rendering under the SAME type name. Snapshot imports then always adopt the
+  // editor's mode (dom) because type strings resolve against this registry.
   for (const descriptor of DOM_NODE_DESCRIPTORS) {
-    editor.typeRegistry.register(descriptor);
+    editor.typeRegistry.replace(descriptor);
   }
 
-  // Sample graph: one of each DOM node type, loosely connected by hand so the
+  // Sample graph: one of each built-in type, loosely connected by hand so the
   // editor's WebGL handles stay interactive (drag to connect).
   const sample = [
-    ["dom-node", -420, -60, "Compute"],
-    ["dom-hub", -120, -80, "Bus"],
-    ["dom-branch", 140, -20, "Route"],
-    ["dom-group", -420, 220, "Cluster"],
-    ["dom-composition", 60, 260, "Template"],
-    ["dom-child", 60, 180, "Slot A"],
-    ["dom-subgraph", 320, 200, "Nested"],
+    ["node", -420, -60, "Compute"],
+    ["hub", -120, -80, "Bus"],
+    ["branch", 140, -20, "Route"],
+    ["group", -420, 220, "Cluster"],
+    ["composition", 60, 260, "Template"],
+    ["composition-child", 60, 180, "Slot A"],
+    ["subgraph", 320, 200, "Nested"],
   ] as const;
 
   // Event-driven rendering: instead of `editor.render()`'s perpetual 60fps

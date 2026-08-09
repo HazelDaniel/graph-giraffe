@@ -70,7 +70,8 @@ export class Renderer {
     private iconBGProgram: WebGLProgram,
     private msdfAtlas: MsdfAtlas,
     private iconAtlas: MsdfAtlas,
-    private registry?: NodeTypeRegistry
+    private registry?: NodeTypeRegistry,
+    private renderMode: "webgl" | "dom" = "webgl"
   ) {
     this.labelCtx = labelCanvas.getContext("2d");
     this.edgeVertexBuffer = gl.createBuffer();
@@ -199,7 +200,7 @@ export class Renderer {
       this.drawHandles(node);
     }
 
-    if (!this.isZooming) this.drawGroupLabels();
+    if (!this.isZooming && this.renderMode !== "dom") this.drawGroupLabels();
   }
 
   private drawConnectionPreview(): void {
@@ -797,6 +798,17 @@ export class Renderer {
       this.setModelMatrix(worldX, worldY, node.width, node.height, z);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 
+      return;
+    }
+
+    // ─── DOM mode ────────────────────────────────────────
+    // In dom mode the editor owns NO WebGL node visuals: every node body,
+    // title and overlay is rendered as a DOM view by DomNodeLayer. The pick
+    // silhouette above is still drawn (GPU hit-testing stays authoritative),
+    // as are edges, connection handles and the background. We therefore skip
+    // the entire WebGL body pass for every node — regardless of descriptor —
+    // so the two pipelines can never coexist on a page.
+    if (this.renderMode === "dom") {
       return;
     }
 

@@ -15,18 +15,19 @@
           <span class="demo-header-badge">DOM Node Types</span>
         </div>
         <p class="demo-header-desc">
-          Every node type re-created as a custom DOM element via the plugin
-          registry (<code>renderMode: "dom"</code>). Hit-testing, dragging,
-          handles, and connections still run through WebGL.
+          Editor-wide DOM mode (<code>renderMode: "dom"</code>): every built-in
+          type is <em>replaced</em> by a custom DOM element under the same type
+          name. Hit-testing, dragging, handles, and connections still run
+          through WebGL.
         </p>
         <nav class="demo-toolbar" id="demo-toolbar">
-          <button data-type="dom-node">+ Node</button>
-          <button data-type="dom-hub">+ Hub</button>
-          <button data-type="dom-branch">+ Branch</button>
-          <button data-type="dom-group">+ Group</button>
-          <button data-type="dom-composition">+ Composition</button>
-          <button data-type="dom-child">+ Child</button>
-          <button data-type="dom-subgraph">+ Subgraph</button>
+          <button data-type="node">+ Node</button>
+          <button data-type="hub">+ Hub</button>
+          <button data-type="branch">+ Branch</button>
+          <button data-type="group">+ Group</button>
+          <button data-type="composition">+ Composition</button>
+          <button data-type="composition-child">+ Child</button>
+          <button data-type="subgraph">+ Subgraph</button>
           <button id="demo-reset" class="danger">Reset</button>
         </nav>
       </header>

@@ -127,7 +127,23 @@ export declare class NodeTypeRegistry {
     private descriptors;
     private containerTypes;
     private leafTypes;
+    private renderMode;
+    /**
+     * Bind the registry to an editor-wide rendering mode. Once set, `register`
+     * and `replace` enforce "replacing, not additive": in `"dom"` mode every
+     * registered type must be DOM-backed, and in `"webgl"` mode a DOM descriptor
+     * is rejected. This is what keeps the two pipelines from coexisting.
+     */
+    setRenderMode(renderMode: "webgl" | "dom"): void;
+    private assertMode;
     register(descriptor: NodeTypeDescriptor): void;
+    /**
+     * Replace an already-registered descriptor (or add a new one). DOM plugins
+     * use this to swap a built-in WebGL type for a DOM-backed descriptor under
+     * the SAME type name, so snapshots stay portable across rendering modes.
+     */
+    replace(descriptor: NodeTypeDescriptor): void;
+    private put;
     get(type: string): NodeTypeDescriptor | undefined;
     has(type: string): boolean;
     getAll(): IterableIterator<NodeTypeDescriptor>;
