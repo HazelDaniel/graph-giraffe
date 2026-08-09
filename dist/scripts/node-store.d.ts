@@ -117,7 +117,9 @@ export declare class NodeStore {
     translateDescendants(rootId: number, deltaX: number, deltaY: number): void;
     /**
      * All visible nodes in render order:
-     * subgraphs first, then groups, compositions, and leaves.
+     * containers back-to-front (by z-tier, e.g. subgraph < group < composition),
+     * then leaves. Container classification is registry-driven so custom node
+     * types registered through the plugin mirror the built-in containers.
      */
     visibleNodes(): NodeData[];
     isEffectivelyVisible(nodeId: number): boolean;

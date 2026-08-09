@@ -5822,19 +5822,30 @@ class NodeStore {
   }
   /**
    * All visible nodes in render order:
-   * subgraphs first, then groups, compositions, and leaves.
+   * containers back-to-front (by z-tier, e.g. subgraph < group < composition),
+   * then leaves. Container classification is registry-driven so custom node
+   * types registered through the plugin mirror the built-in containers.
    */
   visibleNodes() {
     const result = [];
-    this.groups.forEach((node) => {
-      if (node.visible && node.nodeType === "subgraph" && this.isEffectivelyVisible(node.id)) result.push(node);
-    });
-    this.groups.forEach((node) => {
-      if (node.visible && node.nodeType === "group" && this.isEffectivelyVisible(node.id)) result.push(node);
-    });
-    this.groups.forEach((node) => {
-      if (node.visible && node.nodeType === "composition" && this.isEffectivelyVisible(node.id)) result.push(node);
-    });
+    const registry = this.registry;
+    const isVisible = (node) => node.visible && this.isEffectivelyVisible(node.id);
+    if (registry) {
+      const containers = [...this.groups.values()].filter(isVisible).sort(
+        (a, b) => registry.getZTier(a.nodeType) - registry.getZTier(b.nodeType)
+      );
+      result.push(...containers);
+    } else {
+      this.groups.forEach((node) => {
+        if (node.visible && node.nodeType === "subgraph" && this.isEffectivelyVisible(node.id)) result.push(node);
+      });
+      this.groups.forEach((node) => {
+        if (node.visible && node.nodeType === "group" && this.isEffectivelyVisible(node.id)) result.push(node);
+      });
+      this.groups.forEach((node) => {
+        if (node.visible && node.nodeType === "composition" && this.isEffectivelyVisible(node.id)) result.push(node);
+      });
+    }
     this.nodes.forEach((node) => {
       if (node.visible && this.isEffectivelyVisible(node.id)) result.push(node);
     });
