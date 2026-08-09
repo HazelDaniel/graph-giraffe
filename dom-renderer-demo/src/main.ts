@@ -63,10 +63,14 @@ async function boot(): Promise<void> {
     });
   };
 
-  // Semantic changes: structural edits, undo/redo, camera, selection, motion.
+  // Semantic changes: structural edits, undo/redo, selection, motion.
+  // NB: `camera:change` is deliberately NOT listed — canvas pan/zoom already
+  // schedules via the coarse pointer/wheel hooks below, and the minimap via
+  // `gg-minimap-navigate`. The editor only clears its `cameraDirty` flag on
+  // throttled/animated paths, so listening to it would feed a render loop
+  // after a sticky camera change (e.g. minimap setState).
   for (const event of [
     "history:command",
-    "camera:change",
     "selection:change",
     "node:drag",
     "node:dragStart",
@@ -86,6 +90,12 @@ async function boot(): Promise<void> {
   for (const type of ["pointerdown", "pointermove", "pointerup", "wheel"]) {
     canvas.addEventListener(type, scheduleRender, { passive: true });
   }
+
+  // The minimap navigates the camera from its own canvas (gg-minimap-navigate,
+  // bubbles/composed from the minimap element), so no main-canvas event fires.
+  // The editor only surfaces that as camera:change once a frame actually
+  // renders, so route the navigate event straight into the scheduler.
+  document.addEventListener("gg-minimap-navigate", scheduleRender);
 
   // Canvas size changes must repaint (the pick FBO and canvases are resized).
   new ResizeObserver(scheduleRender).observe(host);
