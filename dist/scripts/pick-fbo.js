@@ -24,6 +24,12 @@ export class PickFBO extends CustomFBO {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0);
+        // Unbind the texture from texture unit 0 immediately. Leaving the FBO's
+        // color attachment bound as a sampler creates a feedback loop on the next
+        // draw (a sampler reading the same texture being rendered into), which
+        // WebGL rejects at draw time with GL_INVALID_OPERATION — silently breaking
+        // every subsequent pick on pages where nothing re-binds the unit.
+        gl.bindTexture(gl.TEXTURE_2D, null);
         // Depth attachment - required for depth testing during pick render
         this.renderBuffer = gl.createRenderbuffer();
         gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderBuffer);
