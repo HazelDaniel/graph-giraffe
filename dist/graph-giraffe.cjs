@@ -6918,10 +6918,19 @@ class Renderer {
   startLoop() {
     requestAnimationFrame(this.tick.bind(this));
   }
-  tick() {
+  /**
+   * Render a single frame on demand (background, nodes, edges, overlays, and
+   * the per-frame `onFrame` callback). Continuous animation is provided by
+   * `startLoop()`; event-driven consumers should call this once after any
+   * meaningful change and let an idle graph cost nothing.
+   */
+  renderFrame() {
     this.drawBGFrame();
     this.drawFrame();
     this.onFrame();
+  }
+  tick() {
+    this.renderFrame();
     requestAnimationFrame(this.tick.bind(this));
   }
   invalidateTextures() {
@@ -10504,6 +10513,17 @@ const _NodeEditor = class _NodeEditor {
   }
   render() {
     this.renderer.startLoop();
+  }
+  /**
+   * Draw a single frame on demand instead of starting the continuous 60fps
+   * loop. Coalesce calls on the caller's side (e.g. subscribe to
+   * `history:command`, `camera:change`, `selection:change`, `node:drag`, and
+   * interaction events, then render once per frame). An editor rendered this
+   * way costs ~0% CPU while idle. Does not affect editors that use the
+   * default continuous `render()` loop.
+   */
+  requestRender() {
+    this.renderer.renderFrame();
   }
   setConnectionMode(connectionMode) {
     this.connectionMode = connectionMode;

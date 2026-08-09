@@ -146,10 +146,20 @@ export class Renderer {
     requestAnimationFrame(this.tick.bind(this));
   }
 
-  private tick(): void {
+  /**
+   * Render a single frame on demand (background, nodes, edges, overlays, and
+   * the per-frame `onFrame` callback). Continuous animation is provided by
+   * `startLoop()`; event-driven consumers should call this once after any
+   * meaningful change and let an idle graph cost nothing.
+   */
+  renderFrame(): void {
     this.drawBGFrame();
     this.drawFrame();
     this.onFrame();
+  }
+
+  private tick(): void {
+    this.renderFrame();
     requestAnimationFrame(this.tick.bind(this));
   }
 

@@ -632,6 +632,18 @@ export class NodeEditor {
     this.renderer.startLoop();
   }
 
+  /**
+   * Draw a single frame on demand instead of starting the continuous 60fps
+   * loop. Coalesce calls on the caller's side (e.g. subscribe to
+   * `history:command`, `camera:change`, `selection:change`, `node:drag`, and
+   * interaction events, then render once per frame). An editor rendered this
+   * way costs ~0% CPU while idle. Does not affect editors that use the
+   * default continuous `render()` loop.
+   */
+  requestRender(): void {
+    this.renderer.renderFrame();
+  }
+
   setConnectionMode(connectionMode: ConnectionMode): void {
     this.connectionMode = connectionMode;
     this.store.setConnectionMode(connectionMode);

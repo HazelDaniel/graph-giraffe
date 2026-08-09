@@ -54,6 +54,13 @@ export declare class Renderer {
     resize(width: number, height: number, dpr?: number): void;
     /** Start the RAF-driven render loop. */
     startLoop(): void;
+    /**
+     * Render a single frame on demand (background, nodes, edges, overlays, and
+     * the per-frame `onFrame` callback). Continuous animation is provided by
+     * `startLoop()`; event-driven consumers should call this once after any
+     * meaningful change and let an idle graph cost nothing.
+     */
+    renderFrame(): void;
     private tick;
     invalidateTextures(): void;
     private drawFrame;

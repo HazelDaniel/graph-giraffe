@@ -27,6 +27,7 @@ async function boot(): Promise<void> {
     { connectionMode: "node", minimap: true, assetsPath: "/assets" }
   );
 
+
   // Register all 7 DOM node types against the live editor registry.
   for (const descriptor of DOM_NODE_DESCRIPTORS) {
     editor.typeRegistry.register(descriptor);
@@ -44,17 +45,63 @@ async function boot(): Promise<void> {
     ["dom-subgraph", 320, 200, "Nested"],
   ] as const;
 
+  // Event-driven rendering: instead of `editor.render()`'s perpetual 60fps
+  // loop, draw one frame only when something actually changed, so an idle
+  // graph costs ~0% CPU. All change signals funnel into a single coalesced
+  // rAF — bursts of signals (one per drag tick) collapse into one draw.
+  let dirty = false;
+  let scheduled = false;
+  const scheduleRender = (): void => {
+    dirty = true;
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      if (!dirty) return;
+      dirty = false;
+      editor.requestRender();
+    });
+  };
+
+  // Semantic changes: structural edits, undo/redo, camera, selection, motion.
+  for (const event of [
+    "history:command",
+    "camera:change",
+    "selection:change",
+    "node:drag",
+    "node:dragStart",
+    "node:dragStop",
+    "connect",
+    "subgraph:collapseToggle",
+    "node:reparent",
+    "node:labelChange",
+    "node:propChange",
+  ] as const) {
+    editor.events.on(event, scheduleRender);
+  }
+
+  // Coarse interaction hooks for canvas state that emits no editor event:
+  // panning, connection preview, hovered-handle highlight, box selection.
+  const canvas = document.getElementById("webgl-canvas")!;
+  for (const type of ["pointerdown", "pointermove", "pointerup", "wheel"]) {
+    canvas.addEventListener(type, scheduleRender, { passive: true });
+  }
+
+  // Canvas size changes must repaint (the pick FBO and canvases are resized).
+  new ResizeObserver(scheduleRender).observe(host);
+  window.addEventListener("resize", scheduleRender);
+
   for (const [type, x, y, label] of sample) {
     await editor.addNode(type, x, y, null, label);
   }
 
-  // Start the render loop — without it nothing composites and the DOM layer's
-  // per-frame sync (camera transform, selection reflection) never updates.
-  editor.render();
+  wireToolbar(editor);
 
   (globalThis as unknown as { __ggEditor?: NodeEditor }).__ggEditor = editor;
 
-  wireToolbar(editor);
+  // First frame — guarantees the canvas + DOM views paint even if no event
+  // fired during setup.
+  editor.requestRender();
 }
 
 function wireToolbar(editor: NodeEditor): void {
