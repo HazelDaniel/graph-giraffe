@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graph Giraffe — DOM Node Types</title>
+    <link rel="stylesheet" href="/assets/index.css" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="demo-header">
+        <div class="demo-header-brand">
+          <span class="demo-header-title">Graph Giraffe</span>
+          <span class="demo-header-badge">DOM Node Types</span>
+        </div>
+        <p class="demo-header-desc">
+          Every node type re-created as a custom DOM element via the plugin
+          registry (<code>renderMode: "dom"</code>). Hit-testing, dragging,
+          handles, and connections still run through WebGL.
+        </p>
+        <nav class="demo-toolbar" id="demo-toolbar">
+          <button data-type="dom-node">+ Node</button>
+          <button data-type="dom-hub">+ Hub</button>
+          <button data-type="dom-branch">+ Branch</button>
+          <button data-type="dom-group">+ Group</button>
+          <button data-type="dom-composition">+ Composition</button>
+          <button data-type="dom-child">+ Child</button>
+          <button data-type="dom-subgraph">+ Subgraph</button>
+          <button id="demo-reset" class="danger">Reset</button>
+        </nav>
+      </header>
+
+      <main class="demo-canvas" id="editor">
+        <canvas id="2d-bg-canvas"></canvas>
+        <canvas id="webgl-canvas"></canvas>
+
+        <canvas id="2d-text-canvas" class="hidden"></canvas>
+
+        <canvas
+          id="2d-label-canvas"
+          style="pointer-events: none; z-index: 5"
+        ></canvas>
+
+        <div
+          id="gg-overlays-scaling"
+          style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; z-index: 6; transform-origin: 0 0"
+        ></div>
+        <div
+          id="gg-overlays-fixed"
+          style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; z-index: 6; transform-origin: 0 0"
+        ></div>
+
+        <ul
+          id="sr-node-list"
+          class="sr-only"
+          aria-label="Workflow graph nodes"
+          role="list"
+        ></ul>
+
+        <gg-history-pane id="undo-redo-wrapper"></gg-history-pane>
+        <gg-minimap id="minimap"></gg-minimap>
+        <gg-kebab-menu id="kebab-menu"></gg-kebab-menu>
+        <gg-ui-controls id="sidebar" class="sidebar collapsed" part="gg-ui-control-host"></gg-ui-controls>
+        <gg-action-pane id="tool-panel"></gg-action-pane>
+        <gg-loading-screen></gg-loading-screen>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

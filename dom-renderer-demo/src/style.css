@@ -1,0 +1,89 @@
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-dark, #0f172a);
+  color: #e2e8f0;
+}
+
+.demo-header {
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.demo-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.demo-header-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.demo-header-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(96, 165, 250, 0.18);
+  color: #93c5fd;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+}
+
+.demo-header-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  max-width: 520px;
+}
+
+.demo-header-desc code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.demo-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.demo-toolbar button {
+  font: inherit;
+  font-size: 12px;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.demo-toolbar button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+.demo-toolbar button.danger {
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.demo-toolbar button.danger:hover {
+  background: rgba(248, 113, 113, 0.15);
+}
+
+.demo-canvas {
+  flex: 1;
+  min-height: 72vh;
+  position: relative;
+  overflow: hidden;
+}

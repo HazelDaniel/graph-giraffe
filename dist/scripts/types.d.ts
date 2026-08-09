@@ -11,7 +11,13 @@ export interface ThemeStyle {
 export type GeometryMeshType = "rounded-square";
 export type BGGeometryMeshType = "dotted" | "grid";
 export type GeometryType = "circle" | "square" | "rounded-square";
-export type NodeType = "node" | "hub" | "branch" | "group" | "composition" | "composition-child" | "subgraph";
+/**
+ * A node type identifier. Built-in types are `"node" | "hub" | "branch" |
+ * "group" | "composition" | "composition-child" | "subgraph"`, but the plugin
+ * registry accepts any registered custom type name, so this is widened to
+ * `string`. Use the predicate helpers (e.g. `isContainerNodeType`) to narrow.
+ */
+export type NodeType = "node" | "hub" | "branch" | "group" | "composition" | "composition-child" | "subgraph" | string;
 export type ContainerNodeType = "group" | "composition" | "subgraph";
 export type LeafNodeType = "node" | "hub" | "branch" | "composition-child";
 export type CandidateNodeType = Exclude<NodeType, "composition-child">;

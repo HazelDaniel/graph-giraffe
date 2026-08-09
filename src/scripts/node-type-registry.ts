@@ -61,6 +61,37 @@ export interface NodeOverlayContext {
   fontColor: [number, number, number];
 }
 
+// ─── DOM Rendering ────────────────────────────────────────
+
+export interface DomNodeViewContext {
+  node: NodeData;
+  element: HTMLElement;
+  worldX: number;
+  worldY: number;
+  width: number;
+  height: number;
+  isCollapsed: boolean;
+  isSelected: boolean;
+  isLocked: boolean;
+  isDropTarget: boolean;
+}
+
+/**
+ * Declarative DOM rendering hook for a node type.
+ *
+ * When a descriptor sets `renderMode: "dom"`, the editor instantiates a DOM
+ * view per node via `createView`, keeps it in sync via `updateView`, and
+ * tears it down via `destroyView`. The view is purely presentational:
+ * hit-testing, dragging, handles and connection routing keep flowing through
+ * the WebGL pipeline (GPU picking stays authoritative), so views must leave
+ * pointer events alone (`pointer-events: none` is applied by the layer).
+ */
+export interface DomNodeRenderer {
+  createView(ctx: DomNodeViewContext): HTMLElement;
+  updateView?(ctx: DomNodeViewContext): void;
+  destroyView?(ctx: DomNodeViewContext): void;
+}
+
 // ─── Overlay Config ──────────────────────────────────────
 
 export interface NodeOverlayConfig {
@@ -100,11 +131,13 @@ export interface NodeTypeDescriptor {
   createDefaultProps?: () => NodePropType | undefined;
   calculateHeight?: (node: NodeData) => number;
 
-  renderMode?: "textured" | "rounded-rect" | "rounded-triangle" | "flat";
+  renderMode?: "textured" | "rounded-rect" | "rounded-triangle" | "flat" | "dom";
   renderConfig?: RoundedRectConfig | RoundedTriangleConfig | FlatConfig;
   rawDraw?: (ctx: NodeDrawContext) => boolean;
   drawOverlay?: (ctx: NodeOverlayContext) => void;
   overlayConfig?: NodeOverlayConfig;
+  /** DOM rendering hook — required when `renderMode` is `"dom"`. */
+  domRenderer?: DomNodeRenderer;
 
   layoutChildren?: (
     container: NodeData,
@@ -233,5 +266,14 @@ export class NodeTypeRegistry {
     const desc = this.descriptors.get(type);
     if (!desc) return true;
     return desc.contributesToChildWorldPosition ?? true;
+  }
+
+  /** Whether a type's visual body is rendered as a DOM element (renderMode "dom"). */
+  isDomRendered(type: string): boolean {
+    return this.descriptors.get(type)?.renderMode === "dom";
+  }
+
+  getDomRenderer(type: string): DomNodeRenderer | undefined {
+    return this.descriptors.get(type)?.domRenderer;
   }
 }

@@ -44,6 +44,33 @@ export interface NodeOverlayContext {
     iconBackgroundRenderer: IconBackgroundRenderer;
     fontColor: [number, number, number];
 }
+export interface DomNodeViewContext {
+    node: NodeData;
+    element: HTMLElement;
+    worldX: number;
+    worldY: number;
+    width: number;
+    height: number;
+    isCollapsed: boolean;
+    isSelected: boolean;
+    isLocked: boolean;
+    isDropTarget: boolean;
+}
+/**
+ * Declarative DOM rendering hook for a node type.
+ *
+ * When a descriptor sets `renderMode: "dom"`, the editor instantiates a DOM
+ * view per node via `createView`, keeps it in sync via `updateView`, and
+ * tears it down via `destroyView`. The view is purely presentational:
+ * hit-testing, dragging, handles and connection routing keep flowing through
+ * the WebGL pipeline (GPU picking stays authoritative), so views must leave
+ * pointer events alone (`pointer-events: none` is applied by the layer).
+ */
+export interface DomNodeRenderer {
+    createView(ctx: DomNodeViewContext): HTMLElement;
+    updateView?(ctx: DomNodeViewContext): void;
+    destroyView?(ctx: DomNodeViewContext): void;
+}
 export interface NodeOverlayConfig {
     titlePosition: "header" | "container-top" | "center";
     showTitle: boolean;
@@ -81,11 +108,13 @@ export interface NodeTypeDescriptor {
     textureKinds?: string[];
     createDefaultProps?: () => NodePropType | undefined;
     calculateHeight?: (node: NodeData) => number;
-    renderMode?: "textured" | "rounded-rect" | "rounded-triangle" | "flat";
+    renderMode?: "textured" | "rounded-rect" | "rounded-triangle" | "flat" | "dom";
     renderConfig?: RoundedRectConfig | RoundedTriangleConfig | FlatConfig;
     rawDraw?: (ctx: NodeDrawContext) => boolean;
     drawOverlay?: (ctx: NodeOverlayContext) => void;
     overlayConfig?: NodeOverlayConfig;
+    /** DOM rendering hook — required when `renderMode` is `"dom"`. */
+    domRenderer?: DomNodeRenderer;
     layoutChildren?: (container: NodeData, children: NodeData[], allNodes: Map<number, NodeData>) => void;
     contributesToChildWorldPosition?: boolean;
     toolbarActions?: string[];
@@ -116,4 +145,7 @@ export declare class NodeTypeRegistry {
     isValidConnectionSide(type: string, side: HandleSide, role: "source" | "target"): boolean;
     getToolbarActions(type: string, isCollapsed?: boolean): string[];
     contributesToChildWorldPosition(type: string): boolean;
+    /** Whether a type's visual body is rendered as a DOM element (renderMode "dom"). */
+    isDomRendered(type: string): boolean;
+    getDomRenderer(type: string): DomNodeRenderer | undefined;
 }

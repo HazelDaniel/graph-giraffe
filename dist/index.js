@@ -19,7 +19,8 @@ export * from './components/ui-controls.js';
 export { NodeEditor } from './scripts/node-editor.js';
 // ─── Node Type Registry ─────────────────────────────────
 export { NodeTypeRegistry } from './scripts/node-type-registry.js';
-export { BUILTIN_DESCRIPTORS, nodeDescriptor, hubDescriptor, groupDescriptor, compositionDescriptor, compositionChildDescriptor, subgraphDescriptor, } from './scripts/builtin-types.js';
+export { DomNodeLayer } from './scripts/dom-node-layer.js';
+export { BUILTIN_DESCRIPTORS, nodeDescriptor, hubDescriptor, branchDescriptor, groupDescriptor, compositionDescriptor, compositionChildDescriptor, subgraphDescriptor, } from './scripts/builtin-types.js';
 export { NODE_LAYOUT, NODE_SIZE, HANDLE_LAYOUT, DEFAULT_HANDLE_STYLE, isContainerNodeType, isLeafNodeType, isNodePrimitiveType, isCandidateNodeType, getDefaultNodeSize, } from './scripts/types.js';
 export { GraphEventEmitter } from './scripts/events.js';
 // ─── Texture Utilities ───────────────────────────────────

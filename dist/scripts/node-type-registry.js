@@ -95,5 +95,12 @@ export class NodeTypeRegistry {
             return true;
         return desc.contributesToChildWorldPosition ?? true;
     }
+    /** Whether a type's visual body is rendered as a DOM element (renderMode "dom"). */
+    isDomRendered(type) {
+        return this.descriptors.get(type)?.renderMode === "dom";
+    }
+    getDomRenderer(type) {
+        return this.descriptors.get(type)?.domRenderer;
+    }
 }
 //# sourceMappingURL=node-type-registry.js.map

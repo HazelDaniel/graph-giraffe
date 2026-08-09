@@ -552,6 +552,13 @@ export class Renderer {
                 if (desc.rawDraw(ctx))
                     return;
             }
+            if (desc?.renderMode === "dom") {
+                // The visual body is owned by a DOM view (see DomNodeLayer).
+                // The picking pass above already drew the pick silhouette, and
+                // connection handles are drawn independently by drawHandles(),
+                // so GPU hit-testing, drag, and connect all keep working.
+                return;
+            }
             if (desc?.renderMode === "rounded-rect") {
                 if (node.nodeType === "hub") {
                     this.drawHubNode(node, worldX, worldY, z, picking);

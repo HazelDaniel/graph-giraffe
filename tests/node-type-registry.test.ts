@@ -369,5 +369,25 @@ describe("NodeTypeRegistry", () => {
       expect(subgraphDescriptor.renderMode).toBe("rounded-rect");
       expect(subgraphDescriptor.renderConfig).toBeDefined();
     });
+
+    it("dom node types are queryable via isDomRendered / getDomRenderer", () => {
+      const reg = createRegistry({
+        ...nodeDescriptor,
+        type: "dom-slider",
+        renderMode: "dom",
+        defaultTextureIds: { body: "", head: "" },
+        domRenderer: {
+          createView: () => document.createElement("div"),
+          updateView: () => {},
+          destroyView: () => {},
+        },
+      });
+
+      expect(reg.isDomRendered("dom-slider")).toBe(true);
+      expect(reg.isDomRendered("node")).toBe(false);
+      expect(reg.isDomRendered("unknown")).toBe(false);
+      expect(reg.getDomRenderer("dom-slider")).toBeDefined();
+      expect(reg.getDomRenderer("node")).toBeUndefined();
+    });
   });
 });

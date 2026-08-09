@@ -7469,6 +7469,9 @@ class Renderer {
         };
         if (desc.rawDraw(ctx)) return;
       }
+      if ((desc == null ? void 0 : desc.renderMode) === "dom") {
+        return;
+      }
       if ((desc == null ? void 0 : desc.renderMode) === "rounded-rect") {
         if (node.nodeType === "hub") {
           this.drawHubNode(node, worldX, worldY, z, picking);
@@ -9378,6 +9381,279 @@ class NodeTypeRegistry {
     if (!desc) return true;
     return desc.contributesToChildWorldPosition ?? true;
   }
+  /** Whether a type's visual body is rendered as a DOM element (renderMode "dom"). */
+  isDomRendered(type) {
+    var _a2;
+    return ((_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.renderMode) === "dom";
+  }
+  getDomRenderer(type) {
+    var _a2;
+    return (_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.domRenderer;
+  }
+}
+const Z_GROUP = 1e6;
+const Z_COMPOSITION = 2e6;
+const Z_LEAF = 3e6;
+const Z_SELECTED_BOOST = 1e8;
+class DomNodeLayer {
+  constructor(options) {
+    __publicField(this, "views", /* @__PURE__ */ new Map());
+    __publicField(this, "root", null);
+    __publicField(this, "unsubscribers", []);
+    this.options = options;
+    const { container, events } = options;
+    if (container) {
+      this.root = document.createElement("div");
+      this.root.id = "gg-dom-nodes";
+      this.root.style.cssText = "position:absolute; top:0; left:0; width:0; height:0; overflow:visible; pointer-events:none;";
+      container.appendChild(this.root);
+    }
+    this.unsubscribers.push(
+      events.on("history:command", () => this.reconcile()),
+      events.on("subgraph:collapseToggle", () => this.reconcile())
+    );
+  }
+  /**
+   * Attach a viewport-culling predicate (late-bound because the renderer is
+   * created after the layer). Views whose world rect is rejected are dropped
+   * from per-frame diffing until they scroll back into view.
+   */
+  setCull(cull) {
+    this.options.cull = cull;
+  }
+  /**
+   * Reconcile the view map against the store: create missing views, destroy
+   * orphaned ones, and refresh geometry + state of everything else.
+   */
+  reconcile() {
+    const { store, registry } = this.options;
+    const alive = /* @__PURE__ */ new Set();
+    for (const node of store.allNodesMap.values()) {
+      if (!registry.isDomRendered(node.nodeType)) continue;
+      if (!store.isEffectivelyVisible(node.id)) continue;
+      alive.add(node.id);
+      this.ensureView(node);
+    }
+    for (const id of [...this.views.keys()]) {
+      if (!alive.has(id)) this.destroyView(id);
+    }
+  }
+  /**
+   * Diff every mounted view against its last-known snapshot and only touch
+   * the element when a slot changed. Call this from the renderer's per-frame
+   * callback so DOM views mirror the WebGL "shadow" at frame granularity.
+   */
+  syncFrame() {
+    var _a2, _b;
+    if (this.views.size === 0) return;
+    const { store, cull } = this.options;
+    for (const [id, view] of this.views) {
+      const node = store.get(id);
+      if (!node) continue;
+      const { x, y } = getWorldPosition(id, store.allNodesMap);
+      const width = node.width;
+      const height = node.height;
+      if (cull && !cull(x, y, width, height)) {
+        if (!view.culled) {
+          view.culled = true;
+          view.element.style.display = "none";
+        }
+        continue;
+      }
+      const snapshot = view.snapshot;
+      let changed = false;
+      if (view.culled) {
+        view.culled = false;
+        view.element.style.display = "";
+        this.updateView(id);
+        continue;
+      }
+      if (x !== snapshot.x || y !== snapshot.y || width !== snapshot.width || height !== snapshot.height) {
+        snapshot.x = x;
+        snapshot.y = y;
+        snapshot.width = width;
+        snapshot.height = height;
+        view.element.style.left = `${x}px`;
+        view.element.style.top = `${y}px`;
+        view.element.style.width = `${width}px`;
+        view.element.style.height = `${height}px`;
+        changed = true;
+      }
+      const zIndex = this.computeZIndex(node);
+      if (snapshot.zIndex !== zIndex) {
+        snapshot.zIndex = zIndex;
+        view.element.style.zIndex = zIndex;
+      }
+      if (this.syncState(view, node)) changed = true;
+      if (changed) {
+        (_b = (_a2 = view.renderer).updateView) == null ? void 0 : _b.call(
+          _a2,
+          this.createContext(node, x, y, view.element)
+        );
+      }
+    }
+  }
+  /** Destroy every view and rebuild from the store (used after graph import). */
+  syncAll() {
+    for (const id of [...this.views.keys()]) this.destroyView(id);
+    this.reconcile();
+  }
+  dispose() {
+    var _a2;
+    for (const unsubscribe of this.unsubscribers) unsubscribe();
+    this.unsubscribers = [];
+    for (const id of [...this.views.keys()]) this.destroyView(id);
+    (_a2 = this.root) == null ? void 0 : _a2.remove();
+    this.root = null;
+  }
+  ensureView(node) {
+    const existing = this.views.get(node.id);
+    if (existing) {
+      this.updateView(node.id);
+      return;
+    }
+    const renderer = this.options.registry.getDomRenderer(node.nodeType);
+    if (!renderer) return;
+    const { x, y } = getWorldPosition(node.id, this.options.store.allNodesMap);
+    const placeholder = document.createElement("div");
+    const ctx = this.createContext(node, x, y, placeholder);
+    const element = renderer.createView(ctx) ?? placeholder;
+    element.dataset.nodeId = String(node.id);
+    element.dataset.nodeType = node.nodeType;
+    element.style.position = "absolute";
+    element.style.pointerEvents = "none";
+    element.style.boxSizing = "border-box";
+    element.style.transformOrigin = "0 0";
+    element.style.left = `${x}px`;
+    element.style.top = `${y}px`;
+    element.style.width = `${node.width}px`;
+    element.style.height = `${node.height}px`;
+    const view = {
+      element,
+      renderer,
+      node,
+      snapshot: this.createSnapshot(node, x, y),
+      culled: false
+    };
+    this.views.set(node.id, view);
+    this.applyZIndex(view, node);
+    this.applyState(view, node);
+    if (this.root) this.root.appendChild(element);
+    this.updateView(node.id);
+  }
+  destroyView(nodeId) {
+    const view = this.views.get(nodeId);
+    if (!view) return;
+    const node = this.options.store.get(nodeId) ?? view.node;
+    if (view.renderer.destroyView) {
+      view.renderer.destroyView(this.createContext(node, 0, 0, view.element));
+    }
+    view.element.remove();
+    this.views.delete(nodeId);
+  }
+  /** Full unconditional refresh, used on lifecycle events (not per-frame). */
+  updateView(nodeId) {
+    var _a2, _b;
+    const view = this.views.get(nodeId);
+    const node = this.options.store.get(nodeId);
+    if (!view || !node) return;
+    const snapshot = view.snapshot;
+    const { x, y } = getWorldPosition(node.id, this.options.store.allNodesMap);
+    snapshot.x = x;
+    snapshot.y = y;
+    snapshot.width = node.width;
+    snapshot.height = node.height;
+    view.element.style.left = `${x}px`;
+    view.element.style.top = `${y}px`;
+    view.element.style.width = `${node.width}px`;
+    view.element.style.height = `${node.height}px`;
+    this.applyZIndex(view, node);
+    this.applyState(view, node);
+    (_b = (_a2 = view.renderer).updateView) == null ? void 0 : _b.call(_a2, this.createContext(node, x, y, view.element));
+  }
+  createSnapshot(node, x, y) {
+    return {
+      x,
+      y,
+      width: node.width,
+      height: node.height,
+      zIndex: this.computeZIndex(node),
+      selected: !!node.isSelected,
+      locked: !!node.isLocked,
+      collapsed: !!node.isCollapsed,
+      dropTarget: !!node.isDropTarget
+    };
+  }
+  computeZIndex(node) {
+    const zTier = this.options.registry.getZTier(node.nodeType);
+    let base;
+    if (zTier < 0.1) base = Z_GROUP;
+    else if (zTier < 0.3) base = Z_COMPOSITION;
+    else base = Z_LEAF;
+    base += node.id;
+    if (node.isSelected) base += Z_SELECTED_BOOST;
+    return String(base);
+  }
+  applyZIndex(view, node) {
+    const zIndex = this.computeZIndex(node);
+    view.snapshot.zIndex = zIndex;
+    view.element.style.zIndex = zIndex;
+  }
+  applyState(view, node) {
+    const snapshot = view.snapshot;
+    snapshot.selected = !!node.isSelected;
+    snapshot.locked = !!node.isLocked;
+    snapshot.collapsed = !!node.isCollapsed;
+    snapshot.dropTarget = !!node.isDropTarget;
+    view.element.toggleAttribute("data-selected", snapshot.selected);
+    view.element.toggleAttribute("data-locked", snapshot.locked);
+    view.element.toggleAttribute("data-collapsed", snapshot.collapsed);
+    view.element.toggleAttribute("data-drop-target", snapshot.dropTarget);
+  }
+  /** Diff-based state sync; returns true when any slot changed. */
+  syncState(view, node) {
+    const snapshot = view.snapshot;
+    let changed = false;
+    const selected = !!node.isSelected;
+    if (snapshot.selected !== selected) {
+      snapshot.selected = selected;
+      view.element.toggleAttribute("data-selected", selected);
+      changed = true;
+    }
+    const locked = !!node.isLocked;
+    if (snapshot.locked !== locked) {
+      snapshot.locked = locked;
+      view.element.toggleAttribute("data-locked", locked);
+      changed = true;
+    }
+    const collapsed = !!node.isCollapsed;
+    if (snapshot.collapsed !== collapsed) {
+      snapshot.collapsed = collapsed;
+      view.element.toggleAttribute("data-collapsed", collapsed);
+      changed = true;
+    }
+    const dropTarget = !!node.isDropTarget;
+    if (snapshot.dropTarget !== dropTarget) {
+      snapshot.dropTarget = dropTarget;
+      view.element.toggleAttribute("data-drop-target", dropTarget);
+      changed = true;
+    }
+    return changed;
+  }
+  createContext(node, worldX, worldY, element) {
+    return {
+      node,
+      element,
+      worldX,
+      worldY,
+      width: node.width,
+      height: node.height,
+      isCollapsed: !!node.isCollapsed,
+      isSelected: !!node.isSelected,
+      isLocked: !!node.isLocked,
+      isDropTarget: !!node.isDropTarget
+    };
+  }
 }
 function createDefaultProps() {
   return {
@@ -9892,6 +10168,7 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "overlays", /* @__PURE__ */ new Map());
     __publicField(this, "scalingOverlayContainer");
     __publicField(this, "fixedOverlayContainer");
+    __publicField(this, "domNodeLayer", null);
     __publicField(this, "resizeObserver");
     __publicField(this, "activeTouches", /* @__PURE__ */ new Map());
     __publicField(this, "gestureMode", false);
@@ -9971,6 +10248,7 @@ const _NodeEditor = class _NodeEditor {
     return this._instance;
   }
   async init() {
+    var _a2;
     const canvas = document.getElementById(this.canvasId);
     const gl = canvas.getContext("webgl2");
     const program = createProgram(gl, this.vsSource, this.fsSource);
@@ -10013,6 +10291,13 @@ const _NodeEditor = class _NodeEditor {
     const fixedContainer = document.getElementById("gg-overlays-fixed");
     if (scalingContainer) this.scalingOverlayContainer = scalingContainer;
     if (fixedContainer) this.fixedOverlayContainer = fixedContainer;
+    this.domNodeLayer = new DomNodeLayer({
+      store: this.store,
+      registry: this.typeRegistry,
+      events: this.events,
+      container: this.scalingOverlayContainer
+    });
+    this.domNodeLayer.syncAll();
     this.renderer = new Renderer(
       gl,
       canvas,
@@ -10032,7 +10317,9 @@ const _NodeEditor = class _NodeEditor {
       () => this.fontColor,
       () => this.selectedNodeIds,
       () => {
+        var _a3;
         this.updateSelectionToolbarPosition();
+        (_a3 = this.domNodeLayer) == null ? void 0 : _a3.syncFrame();
         this.updateOverlays();
         this.refreshMinimap();
       },
@@ -10041,6 +10328,9 @@ const _NodeEditor = class _NodeEditor {
       this.msdfAtlas,
       this.iconAtlas,
       this.typeRegistry
+    );
+    (_a2 = this.domNodeLayer) == null ? void 0 : _a2.setCull(
+      (x, y, w, h) => this.renderer.isRectInViewport(x, y, w, h)
     );
     const container = document.getElementById("sidebar");
     const historyPane = document.getElementById("undo-redo-wrapper");
@@ -10243,6 +10533,7 @@ const _NodeEditor = class _NodeEditor {
    * entire editor state as a fresh baseline.
    */
   importGraph(snapshot) {
+    var _a2;
     const editorState = deserializeGraph({
       snapshot,
       store: this.store,
@@ -10270,6 +10561,7 @@ const _NodeEditor = class _NodeEditor {
     this.syncToolbarState();
     this.markMinimapDirty();
     this.refreshMinimap();
+    (_a2 = this.domNodeLayer) == null ? void 0 : _a2.syncAll();
   }
   /**
    * Add a custom DOM overlay component to the canvas.
@@ -10350,6 +10642,20 @@ const _NodeEditor = class _NodeEditor {
       panY: this.camera.panY,
       zoom: this.camera.zoom
     };
+  }
+  /**
+   * Create a node of any registered type (built-in or custom) at a world
+   * coordinate. Routes through the command/history system, so the action is
+   * undoable and emits `history:command` (and any `before:nodeCreate` hooks
+   * can block it). Returns the created node, or `null` if blocked.
+   */
+  async addNode(nodeType, worldX, worldY, parentId = null, label) {
+    if (!this.typeRegistry.has(nodeType)) {
+      throw new Error(
+        `NodeEditor.addNode: unknown node type "${nodeType}" — register it first via typeRegistry.register()`
+      );
+    }
+    return this.createNodeWithHistory(nodeType, worldX, worldY, parentId, label);
   }
   /**
    * Synchronize overlay container transforms with current camera pan and zoom.
@@ -10523,6 +10829,13 @@ const _NodeEditor = class _NodeEditor {
     this.selectionKind = null;
     this.selectionRep = null;
     this.syncSelectionToolbar();
+    this.dispatchSelectionChange();
+  }
+  dispatchSelectionChange() {
+    this.events.dispatch("selection:change", {
+      nodeIds: [...this.selectedNodeIds],
+      edgeIds: [...this.selectedEdgeIds]
+    });
   }
   syncSelectionKind() {
     if (this.selectedNodeIds.size > 0 && this.selectedEdgeIds.size > 0) {
@@ -10549,6 +10862,7 @@ const _NodeEditor = class _NodeEditor {
     }
     this.syncSelectionKind();
     this.syncSelectionToolbar();
+    this.dispatchSelectionChange();
   }
   setEdgeSelected(edgeId, isSelected) {
     const edge = this.edgeStore.get(edgeId);
@@ -11330,7 +11644,7 @@ const _NodeEditor = class _NodeEditor {
       })
     );
   }
-  async createNodeWithHistory(nodeType, worldX, worldY, parentId = null) {
+  async createNodeWithHistory(nodeType, worldX, worldY, parentId = null, label) {
     var _a2;
     let parentType = null;
     if (parentId !== null) {
@@ -11345,8 +11659,8 @@ const _NodeEditor = class _NodeEditor {
     });
     if (!allowed) return null;
     const selectionBefore = this.captureSelectionSnapshot();
-    const label = nodeType === "group" ? `Group ${this.store.nextNodeId}` : nodeType === "hub" ? `Hub ${this.store.nextNodeId}` : `Node ${this.store.nextNodeId}`;
-    const node = this.store.add(worldX, worldY, label, this.theme, nodeType);
+    const resolvedLabel = label ?? (nodeType === "group" ? `Group ${this.store.nextNodeId}` : nodeType === "hub" ? `Hub ${this.store.nextNodeId}` : `Node ${this.store.nextNodeId}`);
+    const node = this.store.add(worldX, worldY, resolvedLabel, this.theme, nodeType);
     if (parentId !== null && !this.store.setParent(node.id, parentId)) {
       this.store.remove(node.id);
       return null;
@@ -13048,6 +13362,7 @@ export {
   BUILTIN_DESCRIPTORS,
   CustomSelect,
   DEFAULT_HANDLE_STYLE,
+  DomNodeLayer,
   GGMinimap,
   GGPropGroup,
   GraphEventEmitter,
@@ -13067,6 +13382,7 @@ export {
   UIControls$1 as UIControls,
   Vector3,
   Vector4,
+  branchDescriptor,
   buildMinimapFrame,
   buildMinimapGraphFrame,
   calculateMinimapBounds,

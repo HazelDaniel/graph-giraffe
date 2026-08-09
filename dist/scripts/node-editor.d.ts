@@ -1,5 +1,5 @@
 import { GraphEventEmitter } from "./events.js";
-import { ConnectionMode, NodeEditorConfig, AddUploadedTextureParams, CustomOverlay } from "./types.js";
+import { ConnectionMode, NodeEditorConfig, NodeData, AddUploadedTextureParams, CustomOverlay } from "./types.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
 import type { GraphSnapshot } from "./graph-serialization.js";
 /**
@@ -58,6 +58,7 @@ export declare class NodeEditor {
     private overlays;
     private scalingOverlayContainer;
     private fixedOverlayContainer;
+    private domNodeLayer;
     private resizeObserver;
     private activeTouches;
     private gestureMode;
@@ -136,6 +137,13 @@ export declare class NodeEditor {
         zoom: number;
     };
     /**
+     * Create a node of any registered type (built-in or custom) at a world
+     * coordinate. Routes through the command/history system, so the action is
+     * undoable and emits `history:command` (and any `before:nodeCreate` hooks
+     * can block it). Returns the created node, or `null` if blocked.
+     */
+    addNode(nodeType: string, worldX: number, worldY: number, parentId?: number | null, label?: string): Promise<NodeData | null>;
+    /**
      * Synchronize overlay container transforms with current camera pan and zoom.
      */
     private updateOverlays;
@@ -153,6 +161,7 @@ export declare class NodeEditor {
     private get commandContext();
     private captureSelectionSnapshot;
     private clearSelectionState;
+    private dispatchSelectionChange;
     private syncSelectionKind;
     private setNodeSelected;
     private setEdgeSelected;

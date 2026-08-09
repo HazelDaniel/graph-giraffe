@@ -85,6 +85,7 @@ import {
 } from "./scene-graph.js";
 import { TextureRegistry } from "./texture-registry.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
+import { DomNodeLayer } from "./dom-node-layer.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import { LoadingScreen } from "../components/loading-screen.js";
 import {
@@ -229,6 +230,7 @@ export class NodeEditor {
   private overlays = new Map<string, CustomOverlay>();
   private scalingOverlayContainer!: HTMLElement;
   private fixedOverlayContainer!: HTMLElement;
+  private domNodeLayer: DomNodeLayer | null = null;
 
   private resizeObserver!: ResizeObserver;
 
@@ -380,6 +382,14 @@ export class NodeEditor {
     if (scalingContainer) this.scalingOverlayContainer = scalingContainer;
     if (fixedContainer) this.fixedOverlayContainer = fixedContainer;
 
+    this.domNodeLayer = new DomNodeLayer({
+      store: this.store,
+      registry: this.typeRegistry,
+      events: this.events,
+      container: this.scalingOverlayContainer,
+    });
+    this.domNodeLayer.syncAll();
+
     this.renderer = new Renderer(
       gl,
       canvas,
@@ -400,6 +410,7 @@ export class NodeEditor {
       () => this.selectedNodeIds,
       () => {
         this.updateSelectionToolbarPosition();
+        this.domNodeLayer?.syncFrame();
         this.updateOverlays();
         this.refreshMinimap();
       },
@@ -408,6 +419,12 @@ export class NodeEditor {
       this.msdfAtlas,
       this.iconAtlas,
       this.typeRegistry
+    );
+
+    // DOM views mirror the WebGL draw pass: hide views outside the viewport
+    // so per-frame DOM cost tracks the on-screen graph, not the whole graph.
+    this.domNodeLayer?.setCull((x, y, w, h) =>
+      this.renderer.isRectInViewport(x, y, w, h)
     );
 
     const container = document.getElementById("sidebar");
@@ -683,6 +700,7 @@ export class NodeEditor {
     this.syncToolbarState();
     this.markMinimapDirty();
     this.refreshMinimap();
+    this.domNodeLayer?.syncAll();
   }
 
   /**
@@ -772,6 +790,27 @@ export class NodeEditor {
       panY: this.camera.panY,
       zoom: this.camera.zoom,
     };
+  }
+
+  /**
+   * Create a node of any registered type (built-in or custom) at a world
+   * coordinate. Routes through the command/history system, so the action is
+   * undoable and emits `history:command` (and any `before:nodeCreate` hooks
+   * can block it). Returns the created node, or `null` if blocked.
+   */
+  async addNode(
+    nodeType: string,
+    worldX: number,
+    worldY: number,
+    parentId: number | null = null,
+    label?: string
+  ): Promise<NodeData | null> {
+    if (!this.typeRegistry.has(nodeType)) {
+      throw new Error(
+        `NodeEditor.addNode: unknown node type "${nodeType}" — register it first via typeRegistry.register()`
+      );
+    }
+    return this.createNodeWithHistory(nodeType, worldX, worldY, parentId, label);
   }
 
   /**
@@ -1000,6 +1039,14 @@ export class NodeEditor {
     this.selectionKind = null;
     this.selectionRep = null;
     this.syncSelectionToolbar();
+    this.dispatchSelectionChange();
+  }
+
+  private dispatchSelectionChange(): void {
+    this.events.dispatch("selection:change", {
+      nodeIds: [...this.selectedNodeIds],
+      edgeIds: [...this.selectedEdgeIds],
+    });
   }
 
   private syncSelectionKind(): void {
@@ -1032,6 +1079,7 @@ export class NodeEditor {
     }
     this.syncSelectionKind();
     this.syncSelectionToolbar();
+    this.dispatchSelectionChange();
   }
 
   private setEdgeSelected(edgeId: number, isSelected: boolean): void {
@@ -2068,7 +2116,8 @@ export class NodeEditor {
     nodeType: NodeType,
     worldX: number,
     worldY: number,
-    parentId: number | null = null
+    parentId: number | null = null,
+    label?: string
   ): Promise<NodeData | null> {
     let parentType: NodeType | null = null;
     if (parentId !== null) {
@@ -2084,13 +2133,14 @@ export class NodeEditor {
     if (!allowed) return null;
 
     const selectionBefore = this.captureSelectionSnapshot();
-    const label =
-      nodeType === "group"
+    const resolvedLabel =
+      label ??
+      (nodeType === "group"
         ? `Group ${this.store.nextNodeId}`
         : nodeType === "hub"
         ? `Hub ${this.store.nextNodeId}`
-        : `Node ${this.store.nextNodeId}`;
-    const node = this.store.add(worldX, worldY, label, this.theme, nodeType);
+        : `Node ${this.store.nextNodeId}`);
+    const node = this.store.add(worldX, worldY, resolvedLabel, this.theme, nodeType);
 
     if (parentId !== null && !this.store.setParent(node.id, parentId)) {
       this.store.remove(node.id);

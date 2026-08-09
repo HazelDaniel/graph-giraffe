@@ -32,12 +32,18 @@ export type {
   NodeDrawContext,
   NodeOverlayContext,
   RendererDrawAPI,
+  DomNodeRenderer,
+  DomNodeViewContext,
 } from './scripts/node-type-registry.js';
+
+export { DomNodeLayer } from './scripts/dom-node-layer.js';
+export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
 
 export {
   BUILTIN_DESCRIPTORS,
   nodeDescriptor,
   hubDescriptor,
+  branchDescriptor,
   groupDescriptor,
   compositionDescriptor,
   compositionChildDescriptor,

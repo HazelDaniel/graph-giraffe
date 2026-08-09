@@ -60,7 +60,7 @@ export declare class Renderer {
     private drawOverlay;
     private drawConnectionPreview;
     private drawEdgeLabels;
-    private isRectInViewport;
+    isRectInViewport(worldX: number, worldY: number, width: number, height: number, extraPadding?: number): boolean;
     private drawGroupLabels;
     private drawHandles;
     private drawEdges;
