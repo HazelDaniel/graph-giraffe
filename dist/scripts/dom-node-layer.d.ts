@@ -60,6 +60,13 @@ export declare class DomNodeLayer {
     /** Full unconditional refresh, used on lifecycle events (not per-frame). */
     private updateView;
     private createSnapshot;
+    /**
+     * Whether the node is presented collapsed. Subgraphs collapse via their
+     * `isCollapsed` flag; leaf types additionally collapse *derived* from being
+     * dropped into a group (mirrors the WebGL renderer, which calls
+     * `store.shouldCollapseNode()` per frame).
+     */
+    private isNodeCollapsed;
     private computeZIndex;
     private applyZIndex;
     private applyState;

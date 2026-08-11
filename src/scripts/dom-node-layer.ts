@@ -292,9 +292,19 @@ export class DomNodeLayer {
       zIndex: this.computeZIndex(node),
       selected: !!node.isSelected,
       locked: !!node.isLocked,
-      collapsed: !!node.isCollapsed,
+      collapsed: this.isNodeCollapsed(node),
       dropTarget: !!node.isDropTarget,
     };
+  }
+
+  /**
+   * Whether the node is presented collapsed. Subgraphs collapse via their
+   * `isCollapsed` flag; leaf types additionally collapse *derived* from being
+   * dropped into a group (mirrors the WebGL renderer, which calls
+   * `store.shouldCollapseNode()` per frame).
+   */
+  private isNodeCollapsed(node: NodeData): boolean {
+    return !!node.isCollapsed || this.options.store.shouldCollapseNode(node);
   }
 
   private computeZIndex(node: NodeData): string {
@@ -319,7 +329,7 @@ export class DomNodeLayer {
     const snapshot = view.snapshot;
     snapshot.selected = !!node.isSelected;
     snapshot.locked = !!node.isLocked;
-    snapshot.collapsed = !!node.isCollapsed;
+    snapshot.collapsed = this.isNodeCollapsed(node);
     snapshot.dropTarget = !!node.isDropTarget;
     view.element.toggleAttribute("data-selected", snapshot.selected);
     view.element.toggleAttribute("data-locked", snapshot.locked);
@@ -346,7 +356,7 @@ export class DomNodeLayer {
       changed = true;
     }
 
-    const collapsed = !!node.isCollapsed;
+    const collapsed = this.isNodeCollapsed(node);
     if (snapshot.collapsed !== collapsed) {
       snapshot.collapsed = collapsed;
       view.element.toggleAttribute("data-collapsed", collapsed);
@@ -376,7 +386,7 @@ export class DomNodeLayer {
       worldY,
       width: node.width,
       height: node.height,
-      isCollapsed: !!node.isCollapsed,
+      isCollapsed: this.isNodeCollapsed(node),
       isSelected: !!node.isSelected,
       isLocked: !!node.isLocked,
       isDropTarget: !!node.isDropTarget,

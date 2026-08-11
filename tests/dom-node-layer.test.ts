@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import { NodeTypeRegistry } from "../src/scripts/node-type-registry.js";
-import { nodeDescriptor } from "../src/scripts/builtin-types.js";
+import { nodeDescriptor, groupDescriptor } from "../src/scripts/builtin-types.js";
 import { NodeStore } from "../src/scripts/node-store.js";
 import { DEFAULT_HANDLE_STYLE } from "../src/scripts/types.js";
 import { GraphEventEmitter } from "../src/scripts/events.js";
@@ -312,5 +312,37 @@ describe("DomNodeLayer", () => {
     h.layer.syncFrame();
     expect(view.style.display).toBeUndefined();
     expect(view.style.left).toBe("5000px");
+  });
+
+  it("marks a leaf dropped into a group as data-collapsed (derived collapse)", () => {
+    const h = buildHarness("node");
+    h.registry.register(
+      groupDescriptor as Parameters<NodeTypeRegistry["register"]>[0]
+    );
+
+    const group = h.store.add(0, 0, "g", "dark", "group");
+    const leaf = h.store.add(0, 40, "leaf", "dark", "node");
+    h.layer.syncAll();
+
+    const view = h.createdViews.find(
+      (v) => v.dataset.nodeId === String(leaf.id)
+    );
+    expect(view).toBeDefined();
+    expect(view!.attributes["data-collapsed"]).toBeUndefined();
+
+    h.store.setParent(leaf.id, group.id);
+    h.layer.syncFrame();
+
+    expect(view!.attributes["data-collapsed"]).toBe("");
+    expect(h.store.get(leaf.id)!.height).toBeLessThan(150);
+  });
+
+  it("does not mark an orphaned primitive as data-collapsed", () => {
+    const h = buildHarness("node");
+    h.store.add(0, 0, "free", "dark", "node");
+    h.layer.syncAll();
+
+    const view = h.createdViews[0];
+    expect(view.attributes["data-collapsed"]).toBeUndefined();
   });
 });

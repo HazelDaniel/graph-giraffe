@@ -48,7 +48,6 @@ async function boot(): Promise<void> {
     ["branch", 140, -20, "Route"],
     ["group", -420, 220, "Cluster"],
     ["composition", 60, 260, "Template"],
-    ["composition-child", 60, 180, "Slot A"],
     ["subgraph", 320, 200, "Nested"],
   ] as const;
 
