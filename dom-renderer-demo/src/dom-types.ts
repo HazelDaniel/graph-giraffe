@@ -1,5 +1,6 @@
 import type {
   DomNodeRenderer,
+  DomNodeViewContext,
   NodeTypeDescriptor,
 } from "@graph-giraffe/core";
 import {
@@ -13,20 +14,20 @@ import {
 } from "@graph-giraffe/core";
 import { DOM_VIEW_TAGS, registerDomViews } from "./dom-views";
 
+type DomViewElement = HTMLElement & {
+  update?(node: unknown, ctx?: DomNodeViewContext): void;
+};
+
 function domRendererFor(tag: string): DomNodeRenderer {
   return {
     createView(ctx) {
-      const element = document.createElement(tag) as unknown as {
-        update(node: unknown): void;
-      };
-      element.update(ctx.node);
-      return element as unknown as HTMLElement;
+      const element = document.createElement(tag) as DomViewElement;
+      element.update?.(ctx.node, ctx);
+      return element as HTMLElement;
     },
     updateView(ctx) {
-      const element = ctx.element as unknown as {
-        update?(node: unknown): void;
-      };
-      element.update?.(ctx.node);
+      const element = ctx.element as DomViewElement;
+      element.update?.(ctx.node, ctx);
     },
   };
 }

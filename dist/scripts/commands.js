@@ -47,6 +47,11 @@ export class UpdateLabelCommand {
 }
 /**
  * Single node tree deletion (node + all descendants + incident edges).
+ *
+ * When the deleted node is a subgraph, clones referencing it cascade too, and
+ * deleting a clone prunes it from its original's reference table. Any original
+ * whose reference table changed while surviving the deletion is captured in
+ * `referencedOriginals` so undo restores it exactly.
  */
 export class DeleteNodeCommand {
     type = "delete-node";
@@ -57,6 +62,9 @@ export class DeleteNodeCommand {
     undo(ctx) {
         ctx.restoreNodeSnapshots(this.payload.nodeSnapshots);
         ctx.restoreEdgeSnapshots(this.payload.edgeSnapshots);
+        if (this.payload.referencedOriginals) {
+            ctx.restoreNodeSnapshots(this.payload.referencedOriginals);
+        }
         ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
         ctx.refreshContainerChain(this.payload.parentId);
         ctx.syncPropertiesPanel();
@@ -110,6 +118,9 @@ export class DeleteSelectionCommand {
     undo(ctx) {
         ctx.restoreNodeSnapshots(this.payload.nodeSnapshots);
         ctx.restoreEdgeSnapshots(this.payload.edgeSnapshots);
+        if (this.payload.referencedOriginals) {
+            ctx.restoreNodeSnapshots(this.payload.referencedOriginals);
+        }
         ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
         for (const parentId of this.payload.parentIds) {
             ctx.refreshContainerChain(parentId);
@@ -268,6 +279,35 @@ export class CreateSubgraphCommand {
         ctx.clearSelectionState();
         ctx.setNodeSelected(this.payload.subgraphSnapshot.id, true);
         ctx.refreshContainerChain(this.payload.subgraphSnapshot.id);
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+}
+export class CloneSubgraphCommand {
+    type = "clone-subgraph";
+    payload;
+    constructor(payload) {
+        this.payload = payload;
+    }
+    undo(ctx) {
+        ctx.removeNodeAndIncidentEdges(this.payload.cloneSnapshot.id);
+        ctx.applyNodeSnapshot(this.payload.originalBeforeSnapshot);
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        ctx.refreshContainerChain(this.payload.parentId);
+        ctx.syncPropertiesPanel();
+        ctx.syncToolbarState();
+    }
+    redo(ctx) {
+        ctx.applyNodeSnapshot(this.payload.originalAfterSnapshot);
+        ctx.applyNodeSnapshot(this.payload.cloneSnapshot);
+        ctx.refreshContainerChain(this.payload.parentId);
+        if (this.payload.selectOnRedo) {
+            ctx.clearSelectionState();
+            ctx.setNodeSelected(this.payload.cloneSnapshot.id, true);
+        }
+        else {
+            ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        }
         ctx.syncPropertiesPanel();
         ctx.syncToolbarState();
     }

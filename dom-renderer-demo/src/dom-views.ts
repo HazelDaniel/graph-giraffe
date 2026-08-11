@@ -1,4 +1,9 @@
-import type { NodeData, NodePropType, NodeType } from "@graph-giraffe/core";
+import type {
+  DomNodeViewContext,
+  NodeData,
+  NodePropType,
+  NodeType,
+} from "@graph-giraffe/core";
 
 /**
  * DOM views re-creating each built-in node type as a custom element.
@@ -121,6 +126,19 @@ const BASE_STYLE = `
     pointer-events: none;
     user-select: none;
   }
+  .link-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    color: #93c5fd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .link-icon { font-size: 11px; }
 `;
 
 function renderPropRows(props: NodePropType | undefined): string {
@@ -152,13 +170,15 @@ function escapeHtml(value: string): string {
 
 abstract class DomNodeElement extends HTMLElement {
   protected shadow: ShadowRoot;
+  protected ctx?: DomNodeViewContext;
 
   constructor() {
     super();
     this.shadow = this.attachShadow({ mode: "open" });
   }
 
-  update(node: NodeData): void {
+  update(node: NodeData, ctx?: DomNodeViewContext): void {
+    this.ctx = ctx;
     this.render(node);
   }
 
@@ -273,9 +293,13 @@ class DomChildElement extends DomNodeElement {
 class DomSubgraphElement extends DomNodeElement {
   protected render(node: NodeData): void {
     const badge = node.isCollapsed ? "collapsed" : `${node.childIds.length} children`;
-    const body = node.isCollapsed
-      ? ""
-      : `<div class="body" style="font-size: 9px; color: #5eead4;">nested subgraph container</div>`;
+    let body: string;
+    if (node.isCollapsed) {
+      body = "";
+    } else {
+      const linkRow = this.renderLinkRow(node);
+      body = `<div class="body" style="font-size: 9px; color: #5eead4;">nested subgraph container${linkRow}</div>`;
+    }
     this.setContent(`
       <style>${BASE_STYLE}</style>
       <div class="card" style="background: rgba(20, 184, 166, 0.05); border: 1.5px solid rgba(20, 184, 166, 0.45);">
@@ -283,6 +307,17 @@ class DomSubgraphElement extends DomNodeElement {
         ${body}
       </div>
     `);
+  }
+
+  private renderLinkRow(node: NodeData): string {
+    if (node.subgraphRefId == null) return "";
+    const original = this.ctx?.getNode?.(node.subgraphRefId);
+    const label = original ? escapeHtml(original.text) : `#${node.subgraphRefId}`;
+    return `
+      <div class="link-row">
+        <span class="link-icon">&#x1F517;</span>
+        <span>Open original · ${label}</span>
+      </div>`;
   }
 }
 

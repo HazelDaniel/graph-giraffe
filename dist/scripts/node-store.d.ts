@@ -52,6 +52,12 @@ export declare class NodeStore {
      * rather than deleted.
      */
     collectRemovedIds(id: number): number[];
+    /**
+     * Expand a set of root ids into the full removal set, cascading subgraph
+     * clones: removing an original subgraph also removes every clone that
+     * references it (via `subgraphRefIds`), plus their descendants.
+     */
+    collectRemovedIdsWithClones(rootIds: Iterable<number>): number[];
     /** Create a new node at world coordinates (localX, localY). */
     add(localX: number, localY: number, text: string, theme: ThemeName, nodeType?: NodeType, idOverride?: number): NodeData;
     setConnectionMode(connectionMode: ConnectionMode): void;

@@ -43,6 +43,8 @@ export interface SerializedNode {
     parentId: number | null;
     childIds: number[];
     compositionRefId: number | null;
+    subgraphRefId?: number | null;
+    subgraphRefIds?: number[];
     isLocked?: boolean;
     isCollapsed?: boolean;
     props?: NodePropType;

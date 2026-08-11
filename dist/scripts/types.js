@@ -15,7 +15,20 @@ export const NODE_LAYOUT = {
     subgraphBtnPaddingRight: 18,
     subgraphBtnSpacing: 24,
     subgraphBtnClickRadius: 12,
+    subgraphLinkIconSize: 16,
+    subgraphLinkClickRadius: 12,
 };
+/**
+ * Local position of a subgraph clone's "open original" link, centered in the
+ * body area below the header. Shared by the WebGL overlay (drawGenericRoundedRect)
+ * and the editor's click hit test so they stay in sync.
+ */
+export function getSubgraphLinkLocal(node) {
+    return {
+        x: node.width / 2,
+        y: NODE_LAYOUT.headerHeight + (node.height - NODE_LAYOUT.headerHeight) / 2,
+    };
+}
 export const HANDLE_LAYOUT = {
     sideInset: 8,
     offsetX: -2,

@@ -36,6 +36,8 @@ export function captureNodeHistorySnapshot(node) {
         parentId: node.parentId,
         childIds: [...node.childIds],
         compositionRefId: node.compositionRefId,
+        subgraphRefId: node.subgraphRefId,
+        subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : undefined,
         props: cloneNodeProps(node.props),
         handleStates: node.handles.map((handle) => ({
             side: handle.side,

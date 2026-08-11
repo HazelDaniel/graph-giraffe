@@ -50,6 +50,8 @@ export interface SerializedNode {
   parentId: number | null;
   childIds: number[];
   compositionRefId: number | null;
+  subgraphRefId?: number | null;
+  subgraphRefIds?: number[];
   isLocked?: boolean;
   isCollapsed?: boolean;
   props?: NodePropType;
@@ -120,6 +122,10 @@ export function serializeGraph(params: SerializeGraphParams): GraphSnapshot {
       parentId: node.parentId,
       childIds: [...node.childIds],
       compositionRefId: node.compositionRefId,
+      subgraphRefId: node.subgraphRefId ?? undefined,
+      subgraphRefIds: node.subgraphRefIds?.length
+        ? [...node.subgraphRefIds]
+        : undefined,
       isLocked: node.isLocked || undefined,
       isCollapsed: node.isCollapsed || undefined,
       props: cloneNodeProps(node.props),
@@ -254,6 +260,8 @@ export function deserializeGraph(
     node.width = sn.width;
     node.height = sn.height;
     node.compositionRefId = sn.compositionRefId;
+    node.subgraphRefId = sn.subgraphRefId ?? null;
+    node.subgraphRefIds = sn.subgraphRefIds ? [...sn.subgraphRefIds] : undefined;
     node.isLocked = sn.isLocked ?? false;
     node.isCollapsed = sn.isCollapsed ?? false;
     node.props = cloneNodeProps(sn.props);

@@ -319,6 +319,30 @@ describe("graph serialization — round trips", () => {
     expect(restoredSubgraph.childIds).toContain(b.id);
   });
 
+  it("round-trips a subgraph clone's original reference", () => {
+    const driver = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const original = driver.createSubgraph([a.id])!;
+    const clone = driver.cloneSubgraph(original.id)!;
+    expect(clone.subgraphRefId).toBe(original.id);
+
+    const snapshot = exportFromDriver(driver);
+    const serializedOriginal = snapshot.nodes.find(
+      (n) => n.id === original.id
+    )!;
+    const serializedClone = snapshot.nodes.find((n) => n.id === clone.id)!;
+    expect(serializedClone.subgraphRefId).toBe(original.id);
+    expect(serializedOriginal.subgraphRefIds).toContain(clone.id);
+
+    const driver2 = createDriver();
+    importIntoDriver(driver2, snapshot);
+
+    const restoredClone = driver2.store.get(clone.id)!;
+    const restoredOriginal = driver2.store.get(original.id)!;
+    expect(restoredClone.subgraphRefId).toBe(original.id);
+    expect(restoredOriginal.subgraphRefIds).toContain(clone.id);
+  });
+
   it("round-trips a composition with composition-child nodes", () => {
     const driver = createDriver();
     const group = driver.createNode("group", 0, 0)!;

@@ -72,6 +72,11 @@ export declare class UpdateLabelCommand implements Command {
 }
 /**
  * Single node tree deletion (node + all descendants + incident edges).
+ *
+ * When the deleted node is a subgraph, clones referencing it cascade too, and
+ * deleting a clone prunes it from its original's reference table. Any original
+ * whose reference table changed while surviving the deletion is captured in
+ * `referencedOriginals` so undo restores it exactly.
  */
 export declare class DeleteNodeCommand implements Command {
     readonly type = "delete-node";
@@ -81,6 +86,7 @@ export declare class DeleteNodeCommand implements Command {
         edgeSnapshots: EdgeHistorySnapshot[];
         selectionBefore: SelectionSnapshot;
         parentId: number | null;
+        referencedOriginals?: NodeHistorySnapshot[];
     };
     constructor(payload: DeleteNodeCommand["payload"]);
     undo(ctx: CommandContext): void;
@@ -111,6 +117,7 @@ export declare class DeleteSelectionCommand implements Command {
         removedNodeIds: number[];
         removedEdgeIds: number[];
         parentIds: number[];
+        referencedOriginals?: NodeHistorySnapshot[];
     };
     constructor(payload: DeleteSelectionCommand["payload"]);
     undo(ctx: CommandContext): void;
@@ -193,6 +200,20 @@ export declare class CreateSubgraphCommand implements Command {
         selectionBefore: SelectionSnapshot;
     };
     constructor(payload: CreateSubgraphCommand["payload"]);
+    undo(ctx: CommandContext): void;
+    redo(ctx: CommandContext): void;
+}
+export declare class CloneSubgraphCommand implements Command {
+    readonly type = "clone-subgraph";
+    readonly payload: {
+        cloneSnapshot: NodeHistorySnapshot;
+        originalBeforeSnapshot: NodeHistorySnapshot;
+        originalAfterSnapshot: NodeHistorySnapshot;
+        parentId: number | null;
+        selectionBefore: SelectionSnapshot;
+        selectOnRedo: boolean;
+    };
+    constructor(payload: CloneSubgraphCommand["payload"]);
     undo(ctx: CommandContext): void;
     redo(ctx: CommandContext): void;
 }

@@ -133,6 +133,40 @@ export class NodeStore {
     return removedIds;
   }
 
+  /**
+   * Expand a set of root ids into the full removal set, cascading subgraph
+   * clones: removing an original subgraph also removes every clone that
+   * references it (via `subgraphRefIds`), plus their descendants.
+   */
+  collectRemovedIdsWithClones(rootIds: Iterable<number>): number[] {
+    const removed = new Set<number>();
+    const addSubtree = (id: number): void => {
+      for (const removedId of this.collectRemovedIds(id)) {
+        removed.add(removedId);
+      }
+    };
+
+    for (const rootId of rootIds) {
+      addSubtree(rootId);
+    }
+
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const removedId of [...removed]) {
+        const node = this.get(removedId);
+        if (!node || node.nodeType !== "subgraph") continue;
+        for (const cloneId of node.subgraphRefIds ?? []) {
+          if (removed.has(cloneId)) continue;
+          addSubtree(cloneId);
+          changed = true;
+        }
+      }
+    }
+
+    return [...removed];
+  }
+
   /** Create a new node at world coordinates (localX, localY). */
   add(
     localX: number,
@@ -909,6 +943,7 @@ export class NodeStore {
       childIds: [],
       nodeType,
       compositionRefId: null,
+      subgraphRefId: null,
       isDropTarget,
       isLocked,
       isCollapsed,

@@ -28,6 +28,8 @@ export interface NodeHistorySnapshot {
   parentId: number | null;
   childIds: number[];
   compositionRefId: number | null;
+  subgraphRefId: number | null;
+  subgraphRefIds?: number[];
   props?: NodePropType;
   handleStates: Array<{
     side: HandleSide;
@@ -94,6 +96,8 @@ export function captureNodeHistorySnapshot(node: NodeData): NodeHistorySnapshot 
     parentId: node.parentId,
     childIds: [...node.childIds],
     compositionRefId: node.compositionRefId,
+    subgraphRefId: node.subgraphRefId,
+    subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : undefined,
     props: cloneNodeProps(node.props),
     handleStates: node.handles.map((handle) => ({
       side: handle.side,

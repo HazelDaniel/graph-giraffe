@@ -148,6 +148,11 @@ export class UpdateLabelCommand implements Command {
 
 /**
  * Single node tree deletion (node + all descendants + incident edges).
+ *
+ * When the deleted node is a subgraph, clones referencing it cascade too, and
+ * deleting a clone prunes it from its original's reference table. Any original
+ * whose reference table changed while surviving the deletion is captured in
+ * `referencedOriginals` so undo restores it exactly.
  */
 export class DeleteNodeCommand implements Command {
   readonly type = "delete-node";
@@ -157,6 +162,7 @@ export class DeleteNodeCommand implements Command {
     edgeSnapshots: EdgeHistorySnapshot[];
     selectionBefore: SelectionSnapshot;
     parentId: number | null;
+    referencedOriginals?: NodeHistorySnapshot[];
   };
 
   constructor(payload: DeleteNodeCommand["payload"]) {
@@ -166,6 +172,9 @@ export class DeleteNodeCommand implements Command {
   undo(ctx: CommandContext): void {
     ctx.restoreNodeSnapshots(this.payload.nodeSnapshots);
     ctx.restoreEdgeSnapshots(this.payload.edgeSnapshots);
+    if (this.payload.referencedOriginals) {
+      ctx.restoreNodeSnapshots(this.payload.referencedOriginals);
+    }
     ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     ctx.refreshContainerChain(this.payload.parentId);
     ctx.syncPropertiesPanel();
@@ -228,6 +237,7 @@ export class DeleteSelectionCommand implements Command {
     removedNodeIds: number[];
     removedEdgeIds: number[];
     parentIds: number[];
+    referencedOriginals?: NodeHistorySnapshot[];
   };
 
   constructor(payload: DeleteSelectionCommand["payload"]) {
@@ -237,6 +247,9 @@ export class DeleteSelectionCommand implements Command {
   undo(ctx: CommandContext): void {
     ctx.restoreNodeSnapshots(this.payload.nodeSnapshots);
     ctx.restoreEdgeSnapshots(this.payload.edgeSnapshots);
+    if (this.payload.referencedOriginals) {
+      ctx.restoreNodeSnapshots(this.payload.referencedOriginals);
+    }
     ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     for (const parentId of this.payload.parentIds) {
       ctx.refreshContainerChain(parentId);
@@ -447,6 +460,45 @@ export class CreateSubgraphCommand implements Command {
     ctx.clearSelectionState();
     ctx.setNodeSelected(this.payload.subgraphSnapshot.id, true);
     ctx.refreshContainerChain(this.payload.subgraphSnapshot.id);
+    ctx.syncPropertiesPanel();
+    ctx.syncToolbarState();
+  }
+}
+
+export class CloneSubgraphCommand implements Command {
+  readonly type = "clone-subgraph";
+  readonly payload: {
+    cloneSnapshot: NodeHistorySnapshot;
+    originalBeforeSnapshot: NodeHistorySnapshot;
+    originalAfterSnapshot: NodeHistorySnapshot;
+    parentId: number | null;
+    selectionBefore: SelectionSnapshot;
+    selectOnRedo: boolean;
+  };
+
+  constructor(payload: CloneSubgraphCommand["payload"]) {
+    this.payload = payload;
+  }
+
+  undo(ctx: CommandContext): void {
+    ctx.removeNodeAndIncidentEdges(this.payload.cloneSnapshot.id);
+    ctx.applyNodeSnapshot(this.payload.originalBeforeSnapshot);
+    ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+    ctx.refreshContainerChain(this.payload.parentId);
+    ctx.syncPropertiesPanel();
+    ctx.syncToolbarState();
+  }
+
+  redo(ctx: CommandContext): void {
+    ctx.applyNodeSnapshot(this.payload.originalAfterSnapshot);
+    ctx.applyNodeSnapshot(this.payload.cloneSnapshot);
+    ctx.refreshContainerChain(this.payload.parentId);
+    if (this.payload.selectOnRedo) {
+      ctx.clearSelectionState();
+      ctx.setNodeSelected(this.payload.cloneSnapshot.id, true);
+    } else {
+      ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+    }
     ctx.syncPropertiesPanel();
     ctx.syncToolbarState();
   }

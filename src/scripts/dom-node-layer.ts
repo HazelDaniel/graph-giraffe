@@ -390,6 +390,7 @@ export class DomNodeLayer {
       isSelected: !!node.isSelected,
       isLocked: !!node.isLocked,
       isDropTarget: !!node.isDropTarget,
+      getNode: (id) => this.options.store.get(id),
     };
   }
 }

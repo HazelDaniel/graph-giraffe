@@ -55,6 +55,11 @@ export interface DomNodeViewContext {
     isSelected: boolean;
     isLocked: boolean;
     isDropTarget: boolean;
+    /**
+     * Resolve any node by id (used to show cross-references such as a subgraph
+     * clone's original label). Undefined when the layer has no store access.
+     */
+    getNode?: (id: number) => NodeData | undefined;
 }
 /**
  * Declarative DOM rendering hook for a node type.

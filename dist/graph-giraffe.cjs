@@ -886,8 +886,16 @@ const NODE_LAYOUT = {
   lockBtnClickRadius: 12,
   subgraphBtnPaddingRight: 18,
   subgraphBtnSpacing: 24,
-  subgraphBtnClickRadius: 12
+  subgraphBtnClickRadius: 12,
+  subgraphLinkIconSize: 16,
+  subgraphLinkClickRadius: 12
 };
+function getSubgraphLinkLocal(node) {
+  return {
+    x: node.width / 2,
+    y: NODE_LAYOUT.headerHeight + (node.height - NODE_LAYOUT.headerHeight) / 2
+  };
+}
 const HANDLE_LAYOUT = {
   sideInset: 8,
   offsetX: -2,
@@ -5450,6 +5458,36 @@ class NodeStore {
     }
     return removedIds;
   }
+  /**
+   * Expand a set of root ids into the full removal set, cascading subgraph
+   * clones: removing an original subgraph also removes every clone that
+   * references it (via `subgraphRefIds`), plus their descendants.
+   */
+  collectRemovedIdsWithClones(rootIds) {
+    const removed = /* @__PURE__ */ new Set();
+    const addSubtree = (id) => {
+      for (const removedId of this.collectRemovedIds(id)) {
+        removed.add(removedId);
+      }
+    };
+    for (const rootId of rootIds) {
+      addSubtree(rootId);
+    }
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const removedId of [...removed]) {
+        const node = this.get(removedId);
+        if (!node || node.nodeType !== "subgraph") continue;
+        for (const cloneId of node.subgraphRefIds ?? []) {
+          if (removed.has(cloneId)) continue;
+          addSubtree(cloneId);
+          changed = true;
+        }
+      }
+    }
+    return [...removed];
+  }
   /** Create a new node at world coordinates (localX, localY). */
   add(localX, localY, text, theme, nodeType = "node", idOverride) {
     var _a2;
@@ -6057,6 +6095,7 @@ class NodeStore {
       childIds: [],
       nodeType,
       compositionRefId: null,
+      subgraphRefId: null,
       isDropTarget,
       isLocked,
       isCollapsed,
@@ -8792,6 +8831,8 @@ function captureNodeHistorySnapshot(node) {
     parentId: node.parentId,
     childIds: [...node.childIds],
     compositionRefId: node.compositionRefId,
+    subgraphRefId: node.subgraphRefId,
+    subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : void 0,
     props: cloneNodeProps(node.props),
     handleStates: node.handles.map((handle) => ({
       side: handle.side,
@@ -8854,6 +8895,9 @@ class DeleteNodeCommand {
   undo(ctx) {
     ctx.restoreNodeSnapshots(this.payload.nodeSnapshots);
     ctx.restoreEdgeSnapshots(this.payload.edgeSnapshots);
+    if (this.payload.referencedOriginals) {
+      ctx.restoreNodeSnapshots(this.payload.referencedOriginals);
+    }
     ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     ctx.refreshContainerChain(this.payload.parentId);
     ctx.syncPropertiesPanel();
@@ -8901,6 +8945,9 @@ class DeleteSelectionCommand {
   undo(ctx) {
     ctx.restoreNodeSnapshots(this.payload.nodeSnapshots);
     ctx.restoreEdgeSnapshots(this.payload.edgeSnapshots);
+    if (this.payload.referencedOriginals) {
+      ctx.restoreNodeSnapshots(this.payload.referencedOriginals);
+    }
     ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     for (const parentId of this.payload.parentIds) {
       ctx.refreshContainerChain(parentId);
@@ -9048,6 +9095,34 @@ class CreateSubgraphCommand {
     ctx.clearSelectionState();
     ctx.setNodeSelected(this.payload.subgraphSnapshot.id, true);
     ctx.refreshContainerChain(this.payload.subgraphSnapshot.id);
+    ctx.syncPropertiesPanel();
+    ctx.syncToolbarState();
+  }
+}
+class CloneSubgraphCommand {
+  constructor(payload) {
+    __publicField(this, "type", "clone-subgraph");
+    __publicField(this, "payload");
+    this.payload = payload;
+  }
+  undo(ctx) {
+    ctx.removeNodeAndIncidentEdges(this.payload.cloneSnapshot.id);
+    ctx.applyNodeSnapshot(this.payload.originalBeforeSnapshot);
+    ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+    ctx.refreshContainerChain(this.payload.parentId);
+    ctx.syncPropertiesPanel();
+    ctx.syncToolbarState();
+  }
+  redo(ctx) {
+    ctx.applyNodeSnapshot(this.payload.originalAfterSnapshot);
+    ctx.applyNodeSnapshot(this.payload.cloneSnapshot);
+    ctx.refreshContainerChain(this.payload.parentId);
+    if (this.payload.selectOnRedo) {
+      ctx.clearSelectionState();
+      ctx.setNodeSelected(this.payload.cloneSnapshot.id, true);
+    } else {
+      ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+    }
     ctx.syncPropertiesPanel();
     ctx.syncToolbarState();
   }
@@ -9712,7 +9787,8 @@ class DomNodeLayer {
       isCollapsed: this.isNodeCollapsed(node),
       isSelected: !!node.isSelected,
       isLocked: !!node.isLocked,
-      isDropTarget: !!node.isDropTarget
+      isDropTarget: !!node.isDropTarget,
+      getNode: (id) => this.options.store.get(id)
     };
   }
 }
@@ -9920,6 +9996,39 @@ const subgraphDescriptor = {
     showProps: false,
     showCompositionRef: false
   },
+  drawOverlay: ({ node, worldX, worldY, isCollapsed, iconRenderer, iconBackgroundRenderer }) => {
+    if (node.subgraphRefId == null || isCollapsed) return;
+    const { x, y } = getSubgraphLinkLocal(node);
+    const glyphSize = NODE_LAYOUT.subgraphLinkIconSize;
+    iconBackgroundRenderer.addQuad(
+      worldX + x,
+      worldY + y + 1.2,
+      0.35,
+      0.55,
+      1,
+      0.16,
+      16,
+      16,
+      0,
+      0,
+      glyphSize,
+      "center",
+      void 0,
+      "circle"
+    );
+    iconRenderer.addText(
+      "",
+      worldX + x,
+      worldY + y,
+      glyphSize,
+      0.35,
+      0.55,
+      1,
+      1,
+      "center",
+      "middle"
+    );
+  },
   toolbarActions: ["collapse", "ungraph", "clone", "edit", "delete"],
   collapsedToolbarActions: ["expand", "clone", "edit", "delete"],
   collapsible: true,
@@ -9993,6 +10102,7 @@ const SPOTLIGHT = `
 <svg style="transform: scale(0.5);" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="brightness" class="icon glyph"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><circle cx="12" cy="12" r="5"></circle><path d="M12,5a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5Z"></path><path d="M17.66,7.34a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34Z"></path><path d="M21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Z"></path><path d="M18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41Z"></path><path d="M12,19a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19Z"></path><path d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17Z"></path><path d="M5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Z"></path><path d="M5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Z"></path></g></svg>
 `;
 function serializeGraph(params) {
+  var _a2;
   const {
     store,
     edgeStore,
@@ -10017,6 +10127,8 @@ function serializeGraph(params) {
       parentId: node.parentId,
       childIds: [...node.childIds],
       compositionRefId: node.compositionRefId,
+      subgraphRefId: node.subgraphRefId ?? void 0,
+      subgraphRefIds: ((_a2 = node.subgraphRefIds) == null ? void 0 : _a2.length) ? [...node.subgraphRefIds] : void 0,
       isLocked: node.isLocked || void 0,
       isCollapsed: node.isCollapsed || void 0,
       props: cloneNodeProps(node.props)
@@ -10101,6 +10213,8 @@ function deserializeGraph(params) {
     node.width = sn.width;
     node.height = sn.height;
     node.compositionRefId = sn.compositionRefId;
+    node.subgraphRefId = sn.subgraphRefId ?? null;
+    node.subgraphRefIds = sn.subgraphRefIds ? [...sn.subgraphRefIds] : void 0;
     node.isLocked = sn.isLocked ?? false;
     node.isCollapsed = sn.isCollapsed ?? false;
     node.props = cloneNodeProps(sn.props);
@@ -11378,6 +11492,22 @@ const _NodeEditor = class _NodeEditor {
       (edge) => nodeIdSet.has(edge.sourceNodeId) || nodeIdSet.has(edge.targetNodeId)
     ).map((edge) => ({ ...edge }));
   }
+  captureReferencedOriginals(removedIds) {
+    const removedIdSet = new Set(removedIds);
+    const originalIds = /* @__PURE__ */ new Set();
+    for (const removedId of removedIdSet) {
+      const node = this.store.get(removedId);
+      if (!node || node.subgraphRefId == null) continue;
+      if (removedIdSet.has(node.subgraphRefId)) continue;
+      originalIds.add(node.subgraphRefId);
+    }
+    const snapshots = [];
+    for (const originalId of originalIds) {
+      const original = this.store.get(originalId);
+      if (original) snapshots.push(this.captureNodeSnapshot(original));
+    }
+    return snapshots;
+  }
   captureEdgeSnapshotsForSelection(nodeIds, edgeIds) {
     const nodeIdSet = new Set(nodeIds);
     const edgeIdSet = new Set(edgeIds);
@@ -11437,6 +11567,10 @@ const _NodeEditor = class _NodeEditor {
     node.isCollapsed = snapshot.isCollapsed;
     node.childIds = [...snapshot.childIds];
     node.compositionRefId = snapshot.compositionRefId;
+    node.subgraphRefId = snapshot.subgraphRefId;
+    if (snapshot.subgraphRefIds) {
+      node.subgraphRefIds = [...snapshot.subgraphRefIds];
+    }
     node.props = cloneNodeProps(snapshot.props);
     node.handles = node.handles.map((handle) => {
       var _a2;
@@ -11628,9 +11762,10 @@ const _NodeEditor = class _NodeEditor {
     if (!allowed) return;
     this.activeLabelEdit = null;
     const selectionBefore = this.captureSelectionSnapshot();
-    const snapshots = this.captureSubtreeSnapshots(nodeId);
-    const removedIds = this.store.collectRemovedIds(nodeId);
+    const removedIds = this.store.collectRemovedIdsWithClones([nodeId]);
+    const snapshots = this.captureNodeSnapshots(removedIds);
     const edgeSnapshots = this.captureEdgeSnapshotsForSelection(removedIds, []);
+    const referencedOriginals = this.captureReferencedOriginals(removedIds);
     const parentId = node.parentId;
     this.removeNodeAndIncidentEdges(nodeId);
     this.clearSelectionAndHideProperties();
@@ -11643,7 +11778,8 @@ const _NodeEditor = class _NodeEditor {
         nodeSnapshots: snapshots,
         edgeSnapshots,
         selectionBefore,
-        parentId
+        parentId,
+        referencedOriginals
       })
     );
   }
@@ -11695,17 +11831,18 @@ const _NodeEditor = class _NodeEditor {
     }
     this.activeLabelEdit = null;
     const selectionBefore = this.captureSelectionSnapshot();
-    const snapshots = this.captureNodeSnapshots(nodeIds);
     const removedIds = /* @__PURE__ */ new Set();
     for (const nodeId of nodeIds) {
-      for (const removedId of this.store.collectRemovedIds(nodeId)) {
+      for (const removedId of this.store.collectRemovedIdsWithClones([nodeId])) {
         removedIds.add(removedId);
       }
     }
+    const snapshots = this.captureNodeSnapshots(removedIds);
     const edgeSnapshots = this.captureEdgeSnapshotsForSelection(
       removedIds,
       edgeIds
     );
+    const referencedOriginals = this.captureReferencedOriginals(removedIds);
     const parentIds = /* @__PURE__ */ new Set();
     for (const nodeId of nodeIds) {
       const node = this.store.get(nodeId);
@@ -11725,7 +11862,8 @@ const _NodeEditor = class _NodeEditor {
         selectionBefore,
         removedNodeIds: [...removedIds],
         removedEdgeIds: [...edgeIds],
-        parentIds: [...parentIds]
+        parentIds: [...parentIds],
+        referencedOriginals
       })
     );
   }
@@ -11909,6 +12047,9 @@ const _NodeEditor = class _NodeEditor {
     const selectionBefore = this.captureSelectionSnapshot();
     const parentId = subgraph.parentId;
     const world = getWorldPosition(subgraph.id, this.store.allNodesMap);
+    const originalId = subgraph.subgraphRefId ?? subgraph.id;
+    const original = this.store.get(originalId);
+    if (!original || original.nodeType !== "subgraph") return;
     const clone = this.store.add(
       world.x + 24,
       world.y + 24,
@@ -11920,15 +12061,24 @@ const _NodeEditor = class _NodeEditor {
       this.store.setParent(clone.id, parentId);
     }
     clone.isCollapsed = subgraph.isCollapsed;
+    clone.subgraphRefId = originalId;
     this.store.updateContainerBounds(clone.id, this.theme);
-    const snapshot = this.captureNodeSnapshot(clone);
+    const cloneSnapshot = this.captureNodeSnapshot(clone);
+    const originalBeforeSnapshot = this.captureNodeSnapshot(original);
+    original.subgraphRefIds = [
+      ...original.subgraphRefIds ?? [],
+      clone.id
+    ];
+    const originalAfterSnapshot = this.captureNodeSnapshot(original);
     this.clearSelectionState();
     this.setNodeSelected(clone.id, true);
     this.syncPropertiesPanelForSelection();
     this.refreshContainerChain(clone.parentId);
     this.pushCommand(
-      new CreateNodeCommand({
-        snapshot,
+      new CloneSubgraphCommand({
+        cloneSnapshot,
+        originalBeforeSnapshot,
+        originalAfterSnapshot,
         parentId,
         selectionBefore,
         selectOnRedo: true
@@ -12254,6 +12404,17 @@ const _NodeEditor = class _NodeEditor {
         this.hoveredHandle = null;
         this.draggingNode = null;
         this.dragSnapshot = null;
+        this.syncToolbarState();
+        return;
+      }
+    }
+    if (node.nodeType === "subgraph" && node.subgraphRefId != null && !node.isCollapsed) {
+      const link = getSubgraphLinkLocal(node);
+      const linkDx = localClickX - link.x;
+      const linkDy = localClickY - link.y;
+      if (linkDx * linkDx + linkDy * linkDy <= NODE_LAYOUT.subgraphLinkClickRadius * NODE_LAYOUT.subgraphLinkClickRadius) {
+        this.spotlightGroup(node.subgraphRefId);
+        this.hoveredHandle = null;
         this.syncToolbarState();
         return;
       }
@@ -13018,9 +13179,18 @@ const _NodeEditor = class _NodeEditor {
   removeNodesAndEdges(nodeIds, edgeIds) {
     const removedNodeIds = /* @__PURE__ */ new Set();
     for (const nodeId of nodeIds) {
-      for (const removedId of this.store.collectRemovedIds(nodeId)) {
+      for (const removedId of this.store.collectRemovedIdsWithClones([nodeId])) {
         removedNodeIds.add(removedId);
       }
+    }
+    for (const removedId of removedNodeIds) {
+      const node = this.store.get(removedId);
+      if (!node || node.subgraphRefId == null) continue;
+      const original = this.store.get(node.subgraphRefId);
+      if (!original || removedNodeIds.has(original.id)) continue;
+      original.subgraphRefIds = (original.subgraphRefIds ?? []).filter(
+        (id) => id !== removedId
+      );
     }
     const removedIdSet = new Set(removedNodeIds);
     const removedEdges = this.edgeStore.removeEdgesForNodes(removedNodeIds);

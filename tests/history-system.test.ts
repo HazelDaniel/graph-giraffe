@@ -690,4 +690,115 @@ describe("world action history", () => {
     expect(driver.store.get(hub.id)?.parentId).toBeNull();
     expectGraphIntegrity(driver);
   });
+
+  it("clones a subgraph and links the clone to the original", () => {
+    const { driver } = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const b = driver.createNode("node", 240, 0)!;
+    const original = driver.createSubgraph([a.id, b.id])!;
+
+    const clone = driver.cloneSubgraph(original.id)!;
+    expect(clone.nodeType).toBe("subgraph");
+    expect(clone.subgraphRefId).toBe(original.id);
+    expect(driver.store.get(original.id)?.subgraphRefIds).toContain(clone.id);
+    expect(driver.selectedNodes).toEqual([clone.id]);
+    expectGraphIntegrity(driver);
+  });
+
+  it("keeps clone-of-clone references pointing at the original", () => {
+    const { driver } = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const original = driver.createSubgraph([a.id])!;
+    const clone = driver.cloneSubgraph(original.id)!;
+    const cloneOfClone = driver.cloneSubgraph(clone.id)!;
+
+    expect(cloneOfClone.subgraphRefId).toBe(original.id);
+    expect(driver.store.get(original.id)?.subgraphRefIds).toEqual(
+      expect.arrayContaining([clone.id, cloneOfClone.id])
+    );
+    expectGraphIntegrity(driver);
+  });
+
+  it("undoes and redoes cloning, restoring the original's reference table", () => {
+    const { driver } = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const original = driver.createSubgraph([a.id])!;
+    const clone = driver.cloneSubgraph(original.id)!;
+
+    driver.undo();
+    expect(driver.store.get(clone.id)).toBeUndefined();
+    expect(driver.store.get(original.id)?.subgraphRefIds).not.toContain(clone.id);
+    expect(driver.selectedNodes).toEqual([original.id]);
+
+    driver.redo();
+    expect(driver.store.get(clone.id)?.subgraphRefId).toBe(original.id);
+    expect(driver.store.get(original.id)?.subgraphRefIds).toContain(clone.id);
+    expectGraphIntegrity(driver);
+  });
+
+  it("cascades deletion of the original to its clones and undoes the whole group", () => {
+    const { driver } = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const original = driver.createSubgraph([a.id])!;
+    const clone = driver.cloneSubgraph(original.id)!;
+
+    driver.deleteNode(original.id);
+    expect(driver.store.get(original.id)).toBeUndefined();
+    expect(driver.store.get(clone.id)).toBeUndefined();
+    expect(driver.store.get(a.id)).toBeUndefined();
+
+    driver.undo();
+    expect(driver.store.get(original.id)?.subgraphRefIds).toContain(clone.id);
+    expect(driver.store.get(clone.id)?.subgraphRefId).toBe(original.id);
+    expectGraphIntegrity(driver);
+  });
+
+  it("prunes a deleted clone from its original's reference table", () => {
+    const { driver } = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const original = driver.createSubgraph([a.id])!;
+    const clone = driver.cloneSubgraph(original.id)!;
+
+    driver.deleteNode(clone.id);
+    expect(driver.store.get(clone.id)).toBeUndefined();
+    expect(driver.store.get(original.id)?.subgraphRefIds).not.toContain(clone.id);
+    expect(driver.store.get(original.id)).toBeDefined();
+
+    driver.undo();
+    expect(driver.store.get(clone.id)?.subgraphRefId).toBe(original.id);
+    expect(driver.store.get(original.id)?.subgraphRefIds).toContain(clone.id);
+    expectGraphIntegrity(driver);
+  });
+
+  it("does not cascade-delete a clone when a clone is deleted", () => {
+    const { driver } = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const original = driver.createSubgraph([a.id])!;
+    const cloneA = driver.cloneSubgraph(original.id)!;
+    const cloneB = driver.cloneSubgraph(original.id)!;
+
+    driver.deleteNode(cloneA.id);
+    expect(driver.store.get(cloneA.id)).toBeUndefined();
+    expect(driver.store.get(original.id)).toBeDefined();
+    expect(driver.store.get(cloneB.id)).toBeDefined();
+    expectGraphIntegrity(driver);
+  });
+
+  it("collects clones of multiple originals in one removal set", () => {
+    const { driver } = createDriver();
+    const a = driver.createNode("node", 0, 0)!;
+    const b = driver.createNode("node", 400, 0)!;
+    const originalA = driver.createSubgraph([a.id])!;
+    const originalB = driver.createSubgraph([b.id])!;
+    const cloneA = driver.cloneSubgraph(originalA.id)!;
+    const cloneB = driver.cloneSubgraph(originalB.id)!;
+
+    const removed = new Set(
+      driver.store.collectRemovedIdsWithClones([originalA.id, originalB.id])
+    );
+    expect(removed.has(originalA.id)).toBe(true);
+    expect(removed.has(originalB.id)).toBe(true);
+    expect(removed.has(cloneA.id)).toBe(true);
+    expect(removed.has(cloneB.id)).toBe(true);
+  });
 });

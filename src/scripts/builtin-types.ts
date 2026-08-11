@@ -1,6 +1,6 @@
 import type { NodeTypeDescriptor, NodeOverlayConfig } from "./node-type-registry.js";
 import type { NodePropType } from "./types.js";
-import { NODE_LAYOUT } from "./types.js";
+import { NODE_LAYOUT, getSubgraphLinkLocal } from "./types.js";
 
 function createDefaultProps(): NodePropType {
   return {
@@ -237,6 +237,25 @@ export const subgraphDescriptor: NodeTypeDescriptor = {
     showAddIcon: false,
     showProps: false,
     showCompositionRef: false,
+  },
+
+  drawOverlay: ({ node, worldX, worldY, isCollapsed, iconRenderer, iconBackgroundRenderer }) => {
+    // Clones show an "open original" link (U+F003) centered in the body.
+    if (node.subgraphRefId == null || isCollapsed) return;
+    const { x, y } = getSubgraphLinkLocal(node);
+    const glyphSize = NODE_LAYOUT.subgraphLinkIconSize;
+    iconBackgroundRenderer.addQuad(
+      worldX + x, worldY + y + 1.2,
+      0.35, 0.55, 1.0, 0.16,
+      16, 16,
+      0, 0,
+      glyphSize, "center", undefined, "circle"
+    );
+    iconRenderer.addText(
+      "\u{F003}",
+      worldX + x, worldY + y,
+      glyphSize, 0.35, 0.55, 1.0, 1.0, "center", "middle"
+    );
   },
 
   toolbarActions: ["collapse", "ungraph", "clone", "edit", "delete"],

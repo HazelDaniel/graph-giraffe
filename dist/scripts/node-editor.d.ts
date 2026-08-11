@@ -205,6 +205,7 @@ export declare class NodeEditor {
     private captureSubtreeSnapshots;
     private captureNodeSnapshots;
     private captureEdgeSnapshots;
+    private captureReferencedOriginals;
     private captureEdgeSnapshotsForSelection;
     private captureBoundaryEdgeSnapshots;
     private removeBoundaryEdgesForRoots;

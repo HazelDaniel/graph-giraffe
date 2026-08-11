@@ -11,6 +11,7 @@ import {
   cloneNodeProps,
 } from "./history-snapshots.js";
 import {
+  CloneSubgraphCommand,
   Command,
   CommandContext,
   CreateHubFromConnectionDropCommand,
@@ -206,12 +207,13 @@ export class WorldActionDriver {
     if (!node) return;
 
     const selectionBefore = this.captureSelectionSnapshot();
-    const snapshots = this.captureNodeSnapshots([nodeId]);
-    const removedIds = this.store.collectRemovedIds(nodeId);
+    const removedIds = this.store.collectRemovedIdsWithClones([nodeId]);
+    const snapshots = this.captureNodeSnapshots(removedIds);
     const edgeSnapshots = this.captureEdgeSnapshotsForSelection(removedIds, []);
+    const referencedOriginals = this.captureReferencedOriginals(removedIds);
     const parentId = node.parentId;
 
-    this.removeNodeAndIncidentEdges(nodeId);
+    this.removeNodesAndEdges(removedIds, []);
     this.clearSelectionState();
     this.refreshContainerChain(parentId);
     this.syncPropertiesPanel();
@@ -222,6 +224,7 @@ export class WorldActionDriver {
       edgeSnapshots,
       selectionBefore,
       parentId,
+      referencedOriginals,
     }));
   }
 
@@ -518,6 +521,56 @@ export class WorldActionDriver {
     }));
 
     return subgraph;
+  }
+
+  cloneSubgraph(subgraphId: number): NodeData | null {
+    const subgraph = this.store.get(subgraphId);
+    if (!subgraph || subgraph.nodeType !== "subgraph") return null;
+
+    const selectionBefore = this.captureSelectionSnapshot();
+    const parentId = subgraph.parentId;
+    const world = getWorldPosition(subgraph.id, this.store.allNodesMap);
+    const originalId = subgraph.subgraphRefId ?? subgraph.id;
+    const original = this.store.get(originalId);
+    if (!original || original.nodeType !== "subgraph") return null;
+
+    const clone = this.store.add(
+      world.x + 24,
+      world.y + 24,
+      `${subgraph.text} Copy`,
+      this.theme,
+      "subgraph"
+    );
+    if (parentId !== null) {
+      this.store.setParent(clone.id, parentId);
+    }
+    clone.isCollapsed = subgraph.isCollapsed;
+    clone.subgraphRefId = originalId;
+    this.store.updateContainerBounds(clone.id, this.theme);
+
+    const cloneSnapshot = this.captureNodeSnapshot(clone);
+    const originalBeforeSnapshot = this.captureNodeSnapshot(original);
+    original.subgraphRefIds = [
+      ...(original.subgraphRefIds ?? []),
+      clone.id,
+    ];
+    const originalAfterSnapshot = this.captureNodeSnapshot(original);
+
+    this.clearSelectionState();
+    this.setNodeSelected(clone.id, true);
+    this.syncPropertiesPanel();
+    this.refreshContainerChain(clone.parentId);
+
+    this.pushCommand(new CloneSubgraphCommand({
+      cloneSnapshot,
+      originalBeforeSnapshot,
+      originalAfterSnapshot,
+      parentId,
+      selectionBefore,
+      selectOnRedo: true,
+    }));
+
+    return clone;
   }
 
   toggleSubgraphCollapse(subgraphId: number): boolean {
@@ -841,6 +894,26 @@ export class WorldActionDriver {
     return snapshots;
   }
 
+  private captureReferencedOriginals(
+    removedIds: Iterable<number>
+  ): NodeHistorySnapshot[] {
+    const removedIdSet = new Set(removedIds);
+    const originalIds = new Set<number>();
+    for (const removedId of removedIdSet) {
+      const node = this.store.get(removedId);
+      if (!node || node.subgraphRefId == null) continue;
+      if (removedIdSet.has(node.subgraphRefId)) continue;
+      originalIds.add(node.subgraphRefId);
+    }
+
+    const snapshots: NodeHistorySnapshot[] = [];
+    for (const originalId of originalIds) {
+      const original = this.store.get(originalId);
+      if (original) snapshots.push(this.captureNodeSnapshot(original));
+    }
+    return snapshots;
+  }
+
   private captureEdgeSnapshotsForSelection(
     nodeIds: Iterable<number>,
     edgeIds: Iterable<number>
@@ -888,6 +961,10 @@ export class WorldActionDriver {
     node.isLocked = snapshot.isLocked;
     node.childIds = [...snapshot.childIds];
     node.compositionRefId = snapshot.compositionRefId;
+    node.subgraphRefId = snapshot.subgraphRefId;
+    if (snapshot.subgraphRefIds) {
+      node.subgraphRefIds = [...snapshot.subgraphRefIds];
+    }
     node.props = cloneNodeProps(snapshot.props);
     node.handles = node.handles.map((handle) => ({
       ...handle,
@@ -1086,9 +1163,20 @@ export class WorldActionDriver {
   ): void {
     const removedNodeIds = new Set<number>();
     for (const nodeId of nodeIds) {
-      for (const removedId of this.store.collectRemovedIds(nodeId)) {
+      for (const removedId of this.store.collectRemovedIdsWithClones([nodeId])) {
         removedNodeIds.add(removedId);
       }
+    }
+
+    // Prune deleted clones from their surviving originals' reference tables.
+    for (const removedId of removedNodeIds) {
+      const node = this.store.get(removedId);
+      if (!node || node.subgraphRefId == null) continue;
+      const original = this.store.get(node.subgraphRefId);
+      if (!original || removedNodeIds.has(original.id)) continue;
+      original.subgraphRefIds = (original.subgraphRefIds ?? []).filter(
+        (id) => id !== removedId
+      );
     }
 
     const removedIdSet = new Set(removedNodeIds);

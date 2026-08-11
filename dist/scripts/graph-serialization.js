@@ -28,6 +28,10 @@ export function serializeGraph(params) {
             parentId: node.parentId,
             childIds: [...node.childIds],
             compositionRefId: node.compositionRefId,
+            subgraphRefId: node.subgraphRefId ?? undefined,
+            subgraphRefIds: node.subgraphRefIds?.length
+                ? [...node.subgraphRefIds]
+                : undefined,
             isLocked: node.isLocked || undefined,
             isCollapsed: node.isCollapsed || undefined,
             props: cloneNodeProps(node.props),
@@ -118,6 +122,8 @@ export function deserializeGraph(params) {
         node.width = sn.width;
         node.height = sn.height;
         node.compositionRefId = sn.compositionRefId;
+        node.subgraphRefId = sn.subgraphRefId ?? null;
+        node.subgraphRefIds = sn.subgraphRefIds ? [...sn.subgraphRefIds] : undefined;
         node.isLocked = sn.isLocked ?? false;
         node.isCollapsed = sn.isCollapsed ?? false;
         node.props = cloneNodeProps(sn.props);

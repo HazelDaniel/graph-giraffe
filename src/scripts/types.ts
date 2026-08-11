@@ -138,7 +138,24 @@ export const NODE_LAYOUT = {
   subgraphBtnPaddingRight: 18,
   subgraphBtnSpacing: 24,
   subgraphBtnClickRadius: 12,
+  subgraphLinkIconSize: 16,
+  subgraphLinkClickRadius: 12,
 };
+
+/**
+ * Local position of a subgraph clone's "open original" link, centered in the
+ * body area below the header. Shared by the WebGL overlay (drawGenericRoundedRect)
+ * and the editor's click hit test so they stay in sync.
+ */
+export function getSubgraphLinkLocal(node: {
+  width: number;
+  height: number;
+}): { x: number; y: number } {
+  return {
+    x: node.width / 2,
+    y: NODE_LAYOUT.headerHeight + (node.height - NODE_LAYOUT.headerHeight) / 2,
+  };
+}
 
 export const HANDLE_LAYOUT = {
   sideInset: 8,
@@ -311,6 +328,10 @@ export interface NodeData {
   nodeType: NodeType;
   /** Referenced composition id when an ordinary node is promoted visually. */
   compositionRefId: number | null;
+  /** When set on a subgraph, the id of the original subgraph this is a clone of. */
+  subgraphRefId: number | null;
+  /** Lookup table: ids of subgraph clones that reference this subgraph as their original. */
+  subgraphRefIds?: number[];
   isDropTarget?: boolean;
   /** When true on a group node, neither the group nor its children can be dragged. */
   isLocked?: boolean;

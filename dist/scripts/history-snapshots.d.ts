@@ -16,6 +16,8 @@ export interface NodeHistorySnapshot {
     parentId: number | null;
     childIds: number[];
     compositionRefId: number | null;
+    subgraphRefId: number | null;
+    subgraphRefIds?: number[];
     props?: NodePropType;
     handleStates: Array<{
         side: HandleSide;

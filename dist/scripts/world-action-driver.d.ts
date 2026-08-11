@@ -39,6 +39,7 @@ export declare class WorldActionDriver {
     duplicateIntoComposition(sourceId: number, compositionId: number): NodeData | null;
     createHubFromConnectionDrop(sourceNodeId: number, sourceHandleSide: HandleSide, worldX: number, worldY: number, parentId?: number | null): NodeData | null;
     createSubgraph(nodeIds: number[]): NodeData | null;
+    cloneSubgraph(subgraphId: number): NodeData | null;
     toggleSubgraphCollapse(subgraphId: number): boolean;
     ungraphSubgraph(subgraphId: number): boolean;
     updateLabel(nodeId: number, label: string): boolean;
@@ -62,6 +63,7 @@ export declare class WorldActionDriver {
     private captureNodeSnapshot;
     private captureNodeSnapshots;
     private captureSubtreeSnapshots;
+    private captureReferencedOriginals;
     private captureEdgeSnapshotsForSelection;
     private applyNodeSnapshot;
     private restoreNodeSnapshots;
