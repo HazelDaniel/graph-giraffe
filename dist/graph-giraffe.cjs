@@ -11614,10 +11614,7 @@ const _NodeEditor = class _NodeEditor {
       return false;
     }
     if (hoveredContainer.nodeType === "subgraph") {
-      const hoveredOwningSubgraphId = this.getOwningSubgraphId(
-        hoveredContainer.id
-      );
-      return sourceOwningSubgraphId === hoveredContainer.id || sourceOwningSubgraphId === hoveredOwningSubgraphId;
+      return sourceOwningSubgraphId === hoveredContainer.id;
     }
     return sourceOwningSubgraphId === this.getOwningSubgraphId(hoveredContainer.id);
   }
@@ -12882,7 +12879,7 @@ const _NodeEditor = class _NodeEditor {
     const screenY = clientY - top;
     const pickedId = this.pick(screenX, screenY);
     const dropTarget = pickedId === 0 ? null : this.store.get(pickedId);
-    if (dropTarget && dropTarget.nodeType !== "subgraph") {
+    if (dropTarget) {
       return false;
     }
     const { x: worldX, y: worldY } = this.camera.screenToWorld(
@@ -12890,7 +12887,7 @@ const _NodeEditor = class _NodeEditor {
       screenY
     );
     const selectionBefore = this.captureSelectionSnapshot();
-    const parentId = (dropTarget == null ? void 0 : dropTarget.nodeType) === "subgraph" ? dropTarget.id : null;
+    const parentId = null;
     const hub = this.store.add(
       worldX,
       worldY,
@@ -12898,10 +12895,6 @@ const _NodeEditor = class _NodeEditor {
       this.theme,
       "hub"
     );
-    if (parentId !== null && !this.store.setParent(hub.id, parentId)) {
-      this.store.remove(hub.id);
-      return false;
-    }
     const edgeParams = source.sourceHandleSide === "right" ? {
       sourceNodeId: source.sourceNodeId,
       sourceHandleSide: source.sourceHandleSide,

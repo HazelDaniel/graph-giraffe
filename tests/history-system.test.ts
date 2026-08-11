@@ -512,6 +512,61 @@ describe("world action history", () => {
     expectGraphIntegrity(driver);
   });
 
+  it("rejects reparenting an external group into a sealed subgraph", () => {
+    const { driver } = createDriver();
+    const group = driver.createNode("group", 0, 0)!;
+    const member = driver.createNode("node", 20, 20)!;
+    const subgraph = driver.createSubgraph([member.id])!;
+
+    expect(driver.reparentNode(group.id, subgraph.id)).toBe(false);
+    expect(driver.store.get(group.id)?.parentId).toBeNull();
+    expect(driver.store.get(subgraph.id)?.childIds).toEqual([member.id]);
+    expectGraphIntegrity(driver);
+  });
+
+  it("rejects reparenting an external composition into a sealed subgraph", () => {
+    const { driver } = createDriver();
+    const composition = driver.createNode("composition", 0, 0)!;
+    const member = driver.createNode("node", 20, 20)!;
+    const subgraph = driver.createSubgraph([member.id])!;
+
+    expect(driver.reparentNode(composition.id, subgraph.id)).toBe(false);
+    expect(driver.store.get(composition.id)?.parentId).toBeNull();
+    expectGraphIntegrity(driver);
+  });
+
+  it("rejects reparenting a member into a sealed sibling subgraph", () => {
+    const { driver } = createDriver();
+    const node = driver.createNode("node", 20, 20)!;
+    const subgraphA = driver.createSubgraph([node.id])!;
+    const other = driver.createNode("node", 200, 20)!;
+    const subgraphB = driver.createSubgraph([other.id])!;
+
+    expect(driver.reparentNode(node.id, subgraphB.id)).toBe(false);
+    expect(driver.store.get(node.id)?.parentId).toBe(subgraphA.id);
+    expectGraphIntegrity(driver);
+  });
+
+  it("rejects creating a hub inside a sealed subgraph", () => {
+    const { driver } = createDriver();
+    const source = driver.createNode("node", 0, 0)!;
+    const member = driver.createNode("node", 20, 20)!;
+    const subgraph = driver.createSubgraph([member.id])!;
+
+    const hub = driver.createHubFromConnectionDrop(
+      source.id,
+      "right",
+      200,
+      40,
+      subgraph.id
+    );
+
+    expect(hub).toBeNull();
+    expect(driver.store.get(subgraph.id)?.childIds).toEqual([member.id]);
+    expect(driver.edgeStore.allEdges()).toHaveLength(0);
+    expectGraphIntegrity(driver);
+  });
+
   it("allows leaf nodes that are direct children of a subgraph to move", () => {
     const { driver } = createDriver();
     const child = driver.createNode("node", 20, 20)!;

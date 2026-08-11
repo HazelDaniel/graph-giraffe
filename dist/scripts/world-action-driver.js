@@ -268,6 +268,13 @@ export class WorldActionDriver {
             return null;
         if (source.nodeType === "composition")
             return null;
+        // Subgraphs are sealed units — a connection drop must not spawn a hub
+        // inside one (that would add a new member after creation).
+        if (parentId !== null) {
+            const parent = this.store.get(parentId);
+            if (!parent || parent.nodeType === "subgraph")
+                return null;
+        }
         const selectionBefore = this.captureSelectionSnapshot();
         const hub = this.store.add(worldX, worldY, `Hub ${this.store.nextNodeId}`, this.theme, "hub");
         if (parentId !== null && !this.store.setParent(hub.id, parentId)) {
@@ -802,9 +809,9 @@ export class WorldActionDriver {
         if (source.nodeType === "hub" && target.nodeType === "group")
             return false;
         if (target.nodeType === "subgraph") {
-            const targetOwningSubgraphId = this.getOwningSubgraphId(target.id);
-            return (sourceOwningSubgraphId === target.id ||
-                sourceOwningSubgraphId === targetOwningSubgraphId);
+            // Subgraphs are sealed units: after creation their membership is fixed,
+            // so only nodes already owned by the target subgraph may "enter" it.
+            return sourceOwningSubgraphId === target.id;
         }
         return sourceOwningSubgraphId === this.getOwningSubgraphId(target.id);
     }

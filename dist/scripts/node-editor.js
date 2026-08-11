@@ -1478,10 +1478,12 @@ export class NodeEditor {
             hoveredContainer.nodeType === "group") {
             return false;
         }
+        // Subgraphs are sealed units: after creation their membership is fixed,
+        // so only nodes already owned by the hovered subgraph may "enter" it
+        // (an intra-unit no-op). Anything external — including root-level nodes
+        // or members of a sibling/nested subgraph — cannot be reparented inside.
         if (hoveredContainer.nodeType === "subgraph") {
-            const hoveredOwningSubgraphId = this.getOwningSubgraphId(hoveredContainer.id);
-            return (sourceOwningSubgraphId === hoveredContainer.id ||
-                sourceOwningSubgraphId === hoveredOwningSubgraphId);
+            return sourceOwningSubgraphId === hoveredContainer.id;
         }
         return (sourceOwningSubgraphId === this.getOwningSubgraphId(hoveredContainer.id));
     }
@@ -2737,12 +2739,14 @@ export class NodeEditor {
         const screenY = clientY - top;
         const pickedId = this.pick(screenX, screenY);
         const dropTarget = pickedId === 0 ? null : this.store.get(pickedId);
-        if (dropTarget && dropTarget.nodeType !== "subgraph") {
+        // Subgraphs are sealed units — dropping a connection on one must not
+        // spawn a hub inside it (that would add a new member after creation).
+        if (dropTarget) {
             return false;
         }
         const { x: worldX, y: worldY } = this.camera.screenToWorld(screenX, screenY);
         const selectionBefore = this.captureSelectionSnapshot();
-        const parentId = dropTarget?.nodeType === "subgraph" ? dropTarget.id : null;
+        const parentId = null;
         const hub = this.store.add(worldX, worldY, `Hub ${this.store.nextNodeId}`, this.theme, "hub");
         if (parentId !== null && !this.store.setParent(hub.id, parentId)) {
             this.store.remove(hub.id);
