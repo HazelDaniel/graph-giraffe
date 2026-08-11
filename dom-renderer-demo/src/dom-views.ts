@@ -98,6 +98,29 @@ const BASE_STYLE = `
     color: #cbd5e1;
     white-space: nowrap;
   }
+  /* Add-child "+" affordance, mirroring the WebGL group's overlay icon at
+     local (width/2, height - plusBtnPaddingBottom). The host is
+     pointer-events: none, so clicks fall through to WebGL picking, which
+     already owns the plus-button hit test (node-editor handleMouseDown). */
+  .plus-btn {
+    position: absolute;
+    left: 50%;
+    top: calc(100% - 20px);
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: rgba(34, 197, 94, 0.18);
+    border: 1.5px solid rgba(34, 197, 94, 0.75);
+    color: #86efac;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 17px;
+    text-align: center;
+    pointer-events: none;
+    user-select: none;
+  }
 `;
 
 function renderPropRows(props: NodePropType | undefined): string {
@@ -216,6 +239,7 @@ class DomGroupElement extends DomNodeElement {
           ${lock ? "Locked" : "Unlocked"} · ${node.childIds.length} children
         </div>
       </div>
+      <div class="plus-btn">+</div>
     `);
   }
 }
