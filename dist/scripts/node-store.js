@@ -658,6 +658,18 @@ export class NodeStore {
         node.height = height;
         node.textureIds = expectedTextureIds;
     }
+    /**
+     * Effective collapse state, i.e. whether the node is *presented* collapsed.
+     *
+     * `node.isCollapsed` alone is NOT the whole story: it only records the
+     * explicit, serializable toggle (subgraph collapse). Leaf types additionally
+     * collapse *derived* from membership — a primitive dropped inside a group is
+     * rendered head-only. Callers that gate rendering/interaction on collapse
+     * must use this accessor, not read `node.isCollapsed` directly.
+     */
+    isNodeCollapsed(node) {
+        return Boolean(node.isCollapsed) || this.shouldCollapseNode(node);
+    }
     shouldCollapseNode(node) {
         if (node.compositionRefId !== null)
             return false;

@@ -5969,6 +5969,18 @@ class NodeStore {
     node.height = height;
     node.textureIds = expectedTextureIds;
   }
+  /**
+   * Effective collapse state, i.e. whether the node is *presented* collapsed.
+   *
+   * `node.isCollapsed` alone is NOT the whole story: it only records the
+   * explicit, serializable toggle (subgraph collapse). Leaf types additionally
+   * collapse *derived* from membership — a primitive dropped inside a group is
+   * rendered head-only. Callers that gate rendering/interaction on collapse
+   * must use this accessor, not read `node.isCollapsed` directly.
+   */
+  isNodeCollapsed(node) {
+    return Boolean(node.isCollapsed) || this.shouldCollapseNode(node);
+  }
   shouldCollapseNode(node) {
     if (node.compositionRefId !== null) return false;
     if (node.nodeType === "composition-child") return true;
@@ -7630,7 +7642,7 @@ class Renderer {
     }
     if (!picking) {
       const [r, g, b, _] = this.getFontColor();
-      const isCollapsed = this.store.shouldCollapseNode(node);
+      const isCollapsed = this.store.isNodeCollapsed(node);
       const headOnly = node.nodeType === "composition-child" || isCollapsed;
       const titleY = (node.nodeType === "group" || node.nodeType === "composition") && !isCollapsed ? 20 : headOnly ? node.height / 2 : NODE_LAYOUT.headerHeight / 2;
       if (node.nodeType === "node" || node.nodeType === "composition-child" || isCollapsed) {
@@ -8089,7 +8101,7 @@ class Renderer {
     const borderWidth = (config == null ? void 0 : config.borderWidth) ?? 1.5;
     const [fillR, fillG, fillB, fillA] = (config == null ? void 0 : config.fillColor) ?? [0.08, 0.09, 0.1, 0.9];
     const [borderR, borderG, borderB, borderA] = (config == null ? void 0 : config.borderColor) ?? [1, 1, 1, 0.9];
-    const isCollapsed = this.store.shouldCollapseNode(node);
+    const isCollapsed = this.store.isNodeCollapsed(node);
     if (node.isDropTarget || node.isSelected) {
       this.setModelMatrix(
         worldX - 3,
@@ -9712,13 +9724,12 @@ class DomNodeLayer {
     };
   }
   /**
-   * Whether the node is presented collapsed. Subgraphs collapse via their
-   * `isCollapsed` flag; leaf types additionally collapse *derived* from being
-   * dropped into a group (mirrors the WebGL renderer, which calls
-   * `store.shouldCollapseNode()` per frame).
+   * Whether the node is presented collapsed. Single source of truth on the
+   * store: explicit subgraph `isCollapsed` flags OR the derived collapse of a
+   * leaf dropped inside a group.
    */
   isNodeCollapsed(node) {
-    return !!node.isCollapsed || this.options.store.shouldCollapseNode(node);
+    return this.options.store.isNodeCollapsed(node);
   }
   computeZIndex(node) {
     const zTier = this.options.registry.getZTier(node.nodeType);

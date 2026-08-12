@@ -944,7 +944,7 @@ export class Renderer {
     if (!picking) {
       const [r, g, b, _] = this.getFontColor();
 
-      const isCollapsed = this.store.shouldCollapseNode(node);
+      const isCollapsed = this.store.isNodeCollapsed(node);
       const headOnly = node.nodeType === "composition-child" || isCollapsed;
 
       const titleY =
@@ -1456,7 +1456,7 @@ export class Renderer {
     const borderWidth = config?.borderWidth ?? 1.5;
     const [fillR, fillG, fillB, fillA] = config?.fillColor ?? [0.08, 0.09, 0.1, 0.9];
     const [borderR, borderG, borderB, borderA] = config?.borderColor ?? [1.0, 1.0, 1.0, 0.9];
-    const isCollapsed = this.store.shouldCollapseNode(node);
+    const isCollapsed = this.store.isNodeCollapsed(node);
 
     if (node.isDropTarget || node.isSelected) {
       this.setModelMatrix(

@@ -298,13 +298,12 @@ export class DomNodeLayer {
   }
 
   /**
-   * Whether the node is presented collapsed. Subgraphs collapse via their
-   * `isCollapsed` flag; leaf types additionally collapse *derived* from being
-   * dropped into a group (mirrors the WebGL renderer, which calls
-   * `store.shouldCollapseNode()` per frame).
+   * Whether the node is presented collapsed. Single source of truth on the
+   * store: explicit subgraph `isCollapsed` flags OR the derived collapse of a
+   * leaf dropped inside a group.
    */
   private isNodeCollapsed(node: NodeData): boolean {
-    return !!node.isCollapsed || this.options.store.shouldCollapseNode(node);
+    return this.options.store.isNodeCollapsed(node);
   }
 
   private computeZIndex(node: NodeData): string {

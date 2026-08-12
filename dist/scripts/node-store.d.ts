@@ -137,6 +137,16 @@ export declare class NodeStore {
     private syncToMap;
     private insertNode;
     syncNodePresentation(nodeId: number): void;
+    /**
+     * Effective collapse state, i.e. whether the node is *presented* collapsed.
+     *
+     * `node.isCollapsed` alone is NOT the whole story: it only records the
+     * explicit, serializable toggle (subgraph collapse). Leaf types additionally
+     * collapse *derived* from membership — a primitive dropped inside a group is
+     * rendered head-only. Callers that gate rendering/interaction on collapse
+     * must use this accessor, not read `node.isCollapsed` directly.
+     */
+    isNodeCollapsed(node: NodeData): boolean;
     shouldCollapseNode(node: NodeData): boolean;
     private getPresentedNodeSize;
     private getCompositionReferencePreviewChildren;
