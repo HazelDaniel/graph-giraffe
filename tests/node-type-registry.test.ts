@@ -115,6 +115,12 @@ describe("NodeTypeRegistry", () => {
       expect(size).toEqual({ width: 190, height: 150 });
     });
 
+    it("returns default size for composition (220x200 container standard)", () => {
+      const reg = createRegistry();
+      const size = reg.getDefaultSize("composition");
+      expect(size).toEqual({ width: 220, height: 200 });
+    });
+
     it("returns collapsed size for subgraph when collapsed", () => {
       const reg = createRegistry();
       const size = reg.getDefaultSize("subgraph", true);

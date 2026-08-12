@@ -2258,6 +2258,7 @@ export class NodeEditor {
       return;
     }
 
+    this.store.updateContainerBounds(composition.id, this.theme);
     this.refreshContainerChain(targetGroup.id);
     const snapshot = this.captureNodeSnapshot(composition);
     this.clearSelectionState();

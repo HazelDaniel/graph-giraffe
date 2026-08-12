@@ -48,7 +48,7 @@ export const NODE_SIZE = {
     branch: { width: 140, height: 120 },
     nodeCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
     group: { width: 220, height: 200 },
-    composition: { width: 140, height: 200 },
+    composition: { width: 220, height: 200 },
     compositionChild: { width: 160, height: NODE_LAYOUT.headerHeight },
     subgraph: { width: 220, height: 160 },
     subgraphCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
@@ -83,8 +83,9 @@ export function getDefaultNodeSize(nodeType, isCollapsed = false, registry) {
         return registry.getDefaultSize(nodeType, isCollapsed);
     switch (nodeType) {
         case "group":
-        case "composition":
             return NODE_SIZE.group;
+        case "composition":
+            return NODE_SIZE.composition;
         case "subgraph":
             return isCollapsed ? NODE_SIZE.subgraphCollapsed : NODE_SIZE.subgraph;
         case "composition-child":

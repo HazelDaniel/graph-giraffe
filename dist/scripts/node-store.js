@@ -593,7 +593,7 @@ export class NodeStore {
             this.updateSubgraphBounds(container);
             return;
         }
-        const defaultSize = getDefaultNodeSize(container.nodeType);
+        const defaultSize = getDefaultNodeSize(container.nodeType, false, this.registry);
         if (container.childIds.length === 0) {
             container.width = defaultSize.width;
             container.height = defaultSize.height;

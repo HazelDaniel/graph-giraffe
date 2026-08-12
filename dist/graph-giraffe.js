@@ -913,7 +913,7 @@ const NODE_SIZE = {
   branch: { width: 140, height: 120 },
   nodeCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight },
   group: { width: 220, height: 200 },
-  composition: { width: 140, height: 200 },
+  composition: { width: 220, height: 200 },
   compositionChild: { width: 160, height: NODE_LAYOUT.headerHeight },
   subgraph: { width: 220, height: 160 },
   subgraphCollapsed: { width: 190, height: NODE_LAYOUT.headerHeight }
@@ -944,8 +944,9 @@ function getDefaultNodeSize(nodeType, isCollapsed = false, registry) {
   if (registry) return registry.getDefaultSize(nodeType, isCollapsed);
   switch (nodeType) {
     case "group":
-    case "composition":
       return NODE_SIZE.group;
+    case "composition":
+      return NODE_SIZE.composition;
     case "subgraph":
       return isCollapsed ? NODE_SIZE.subgraphCollapsed : NODE_SIZE.subgraph;
     case "composition-child":
@@ -5907,7 +5908,7 @@ class NodeStore {
       this.updateSubgraphBounds(container);
       return;
     }
-    const defaultSize = getDefaultNodeSize(container.nodeType);
+    const defaultSize = getDefaultNodeSize(container.nodeType, false, this.registry);
     if (container.childIds.length === 0) {
       container.width = defaultSize.width;
       container.height = defaultSize.height;
@@ -9928,7 +9929,7 @@ const compositionDescriptor = {
   type: "composition",
   category: "container",
   zTier: 0.2,
-  defaultSize: { width: 140, height: 200 },
+  defaultSize: { width: 220, height: 200 },
   handles: { always: false, sides: ["left", "right"], multiConnect: false },
   isConnectionCandidate: (mode) => mode === "node",
   allowedParents: ["group", "subgraph"],
@@ -11935,6 +11936,7 @@ const _NodeEditor = class _NodeEditor {
       this.store.remove(composition.id);
       return;
     }
+    this.store.updateContainerBounds(composition.id, this.theme);
     this.refreshContainerChain(targetGroup.id);
     const snapshot = this.captureNodeSnapshot(composition);
     this.clearSelectionState();

@@ -147,7 +147,7 @@ export const compositionDescriptor: NodeTypeDescriptor = {
   type: "composition",
   category: "container",
   zTier: 0.2,
-  defaultSize: { width: 140, height: 200 },
+  defaultSize: { width: 220, height: 200 },
 
   handles: { always: false, sides: ["left", "right"], multiConnect: false },
   isConnectionCandidate: (mode) => mode === "node",

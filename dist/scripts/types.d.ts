@@ -161,7 +161,7 @@ export declare const NODE_SIZE: {
         readonly height: 200;
     };
     readonly composition: {
-        readonly width: 140;
+        readonly width: 220;
         readonly height: 200;
     };
     readonly compositionChild: {
