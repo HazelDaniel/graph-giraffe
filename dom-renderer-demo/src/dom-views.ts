@@ -208,7 +208,11 @@ abstract class DomNodeElement extends HTMLElement {
     this.shadow.innerHTML = `<style>${styles}</style>${inner}`;
   }
 
-  protected header(title: string, badges: string[] = [], {nodeType, isLocked, isCollapsed}: NodeData): string {
+  protected header(title: string, badges: string[] = [], {nodeType, isLocked}: NodeData): string {
+    // Effective collapse (explicit subgraph toggle OR a leaf derived-collapsed
+    // inside a group) comes from the context, not the raw `node.isCollapsed`
+    // field, which only ever records the explicit toggle.
+    const isCollapsed = this.ctx?.isCollapsed ?? false;
     return `<div class="head${isCollapsed ? " collapsed" : ""}">
       <span class="title">${escapeHtml(title)}</span>
       ${(()=> {
