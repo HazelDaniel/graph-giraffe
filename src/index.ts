@@ -39,6 +39,19 @@ export type {
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
 
+// ─── Bundled DOM skins (renderMode: "dom") ───────────────
+
+export {
+  registerDomViews,
+  DOM_VIEW_TAGS,
+} from './scripts/dom-views.js';
+export {
+  createCustomElementDomRenderer,
+  toDomDescriptor,
+  DOM_NODE_DESCRIPTORS,
+  registerDomNodeDescriptors,
+} from './scripts/dom-descriptors.js';
+
 export {
   BUILTIN_DESCRIPTORS,
   nodeDescriptor,

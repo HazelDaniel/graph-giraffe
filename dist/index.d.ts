@@ -19,6 +19,8 @@ export { NodeTypeRegistry } from './scripts/node-type-registry.js';
 export type { NodeTypeDescriptor, NodeOverlayConfig, RoundedRectConfig, FlatConfig, NodeDrawContext, NodeOverlayContext, RendererDrawAPI, DomNodeRenderer, DomNodeViewContext, } from './scripts/node-type-registry.js';
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
+export { registerDomViews, DOM_VIEW_TAGS, } from './scripts/dom-views.js';
+export { createCustomElementDomRenderer, toDomDescriptor, DOM_NODE_DESCRIPTORS, registerDomNodeDescriptors, } from './scripts/dom-descriptors.js';
 export { BUILTIN_DESCRIPTORS, nodeDescriptor, hubDescriptor, branchDescriptor, groupDescriptor, compositionDescriptor, compositionChildDescriptor, subgraphDescriptor, } from './scripts/builtin-types.js';
 export type { NodeEditorConfig, NodeData, EdgeData, NodeType, ContainerNodeType, LeafNodeType, CandidateNodeType, EdgeType, EdgeHeadType, EdgeHeadSkinId, HandleSide, HandleShape, HandleStyle, NodeHandleData, ConnectionMode, ThemeName, ThemeStyle, TextureKind, TextureSource, TextureSourceType, NodeTextureIds, AddUploadedTextureParams, NodePropType, NodePropPrimitive, PropChangePayload, ConnectionPreviewData, CustomOverlay, GeometryType, GeometryMeshType, BGGeometryMeshType, } from './scripts/types.js';
 export { NODE_LAYOUT, NODE_SIZE, HANDLE_LAYOUT, DEFAULT_HANDLE_STYLE, isContainerNodeType, isLeafNodeType, isNodePrimitiveType, isCandidateNodeType, getDefaultNodeSize, } from './scripts/types.js';

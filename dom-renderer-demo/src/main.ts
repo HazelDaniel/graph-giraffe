@@ -2,8 +2,8 @@ import {
   NodeEditor,
   shaders,
   Shell,
+  registerDomNodeDescriptors,
 } from "@graph-giraffe/core";
-import { DOM_NODE_DESCRIPTORS } from "./dom-types";
 
 async function boot(): Promise<void> {
   const host = document.getElementById("editor");
@@ -33,12 +33,10 @@ async function boot(): Promise<void> {
   );
 
 
-  // REPLACING, not additive: swap every built-in WebGL type for its DOM
-  // rendering under the SAME type name. Snapshot imports then always adopt the
-  // editor's mode (dom) because type strings resolve against this registry.
-  for (const descriptor of DOM_NODE_DESCRIPTORS) {
-    editor.typeRegistry.replace(descriptor);
-  }
+  // REPLACING, not additive: swap every built-in type for its bundled DOM skin
+  // under the SAME type name. Snapshot imports then always adopt the editor's
+  // mode (dom) because type strings resolve against this registry.
+  registerDomNodeDescriptors(editor.typeRegistry);
 
   // Sample graph: one of each built-in type, loosely connected by hand so the
   // editor's WebGL handles stay interactive (drag to connect).

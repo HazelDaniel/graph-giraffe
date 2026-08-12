@@ -20,6 +20,9 @@ export { NodeEditor } from './scripts/node-editor.js';
 // ─── Node Type Registry ─────────────────────────────────
 export { NodeTypeRegistry } from './scripts/node-type-registry.js';
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
+// ─── Bundled DOM skins (renderMode: "dom") ───────────────
+export { registerDomViews, DOM_VIEW_TAGS, } from './scripts/dom-views.js';
+export { createCustomElementDomRenderer, toDomDescriptor, DOM_NODE_DESCRIPTORS, registerDomNodeDescriptors, } from './scripts/dom-descriptors.js';
 export { BUILTIN_DESCRIPTORS, nodeDescriptor, hubDescriptor, branchDescriptor, groupDescriptor, compositionDescriptor, compositionChildDescriptor, subgraphDescriptor, } from './scripts/builtin-types.js';
 export { NODE_LAYOUT, NODE_SIZE, HANDLE_LAYOUT, DEFAULT_HANDLE_STYLE, isContainerNodeType, isLeafNodeType, isNodePrimitiveType, isCandidateNodeType, getDefaultNodeSize, } from './scripts/types.js';
 export { GraphEventEmitter } from './scripts/events.js';
