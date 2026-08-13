@@ -13553,7 +13553,7 @@ class DomBranchElement extends DomNodeElement {
     this.setContent(`
       <style>${BASE_STYLE}</style>
       <div class="card" style="border: none; background: transparent; box-shadow: none; align-items: center; justify-content: center;">
-        <div style="position: absolute; inset: 0; background: rgba(92, 92, 94, 0.25); outline: 1.8px solid rgba(251, 146, 60, 0.8); border-radius: 18px; clip-path: polygon(50% 6%, 100% 88%, 4% 88%);"></div>
+        <div style="position: absolute; inset: 0; background: rgba(92, 92, 94, 0.25); outline: 1.8px solid rgba(251, 146, 60, 0.8); border-radius: 18px; mask-image: url("data:image/svg+xml,%3Csvg width='333' height='258' viewBox='0 0 333 258' fill='none' xmlns='http://www.w3.org/2000/svg'%3E %3Cpath d='M154.489 6.12569C159.827 -2.0419 173.173 -2.04189 178.511 6.1257L331.121 239.623C336.459 247.791 329.787 258 319.11 258H13.8898C3.21334 258 -3.45942 247.791 1.8788 239.623L154.489 6.12569Z' fill='%23D9D9D9'/%3E %3C/svg%3E")"></div>
         <div style="position: relative; font-size: 12px; font-weight: 600; color: #fdba74; padding: 34px 6px 6px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(node.text)}</div>
       </div>
     `);

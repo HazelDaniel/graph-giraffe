@@ -16,9 +16,9 @@
       1
     ],
     "camera": {
-      "panX": 21816.651186345207,
-      "panY": 3608.5164512412875,
-      "zoom": 0.858621696206064
+      "panX": 166265.6497551281,
+      "panY": 86795.15361164285,
+      "zoom": 1.1148410657283625
     }
   },
   "nodes": [
@@ -167,6 +167,90 @@
       },
       "parentId": null,
       "childIds": [],
+      "compositionRefId": null
+    },
+    {
+      "id": 424,
+      "nodeType": "group",
+      "localX": -67228.22718363536,
+      "localY": -21470.36893682048,
+      "width": 220,
+      "height": 280,
+      "text": "Group 424",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [
+        425,
+        426,
+        427,
+        428,
+        429
+      ],
+      "compositionRefId": null
+    },
+    {
+      "id": 437,
+      "nodeType": "group",
+      "localX": -97226.77741406279,
+      "localY": -36575.781347309385,
+      "width": 220,
+      "height": 200,
+      "text": "Group 437",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [
+        444,
+        445,
+        446
+      ],
+      "compositionRefId": null
+    },
+    {
+      "id": 478,
+      "nodeType": "group",
+      "localX": -233309.9920371712,
+      "localY": 10284.595355744148,
+      "width": 220,
+      "height": 280,
+      "text": "Group 478",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [
+        479,
+        480,
+        481,
+        482,
+        483
+      ],
+      "compositionRefId": null
+    },
+    {
+      "id": 485,
+      "nodeType": "group",
+      "localX": -234157.715100493,
+      "localY": 10942.044945407006,
+      "width": 220,
+      "height": 200,
+      "text": "Group 485",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [
+        486,
+        487,
+        488
+      ],
       "compositionRefId": null
     },
     {
@@ -430,8 +514,8 @@
       "height": 30,
       "text": "Node 5",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 4,
       "childIds": [],
@@ -514,8 +598,8 @@
       "height": 30,
       "text": "Node 6",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 4,
       "childIds": [],
@@ -598,8 +682,8 @@
       "height": 30,
       "text": "Node 7",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 4,
       "childIds": [],
@@ -682,8 +766,8 @@
       "height": 30,
       "text": "Node 8",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 4,
       "childIds": [],
@@ -766,8 +850,8 @@
       "height": 30,
       "text": "Node 9",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 4,
       "childIds": [],
@@ -850,8 +934,8 @@
       "height": 30,
       "text": "Node 10",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 4,
       "childIds": [],
@@ -3034,8 +3118,8 @@
       "height": 30,
       "text": "Node 37",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 36,
       "childIds": [],
@@ -3118,8 +3202,8 @@
       "height": 30,
       "text": "Node 38",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 36,
       "childIds": [],
@@ -3202,8 +3286,8 @@
       "height": 30,
       "text": "Node 39",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 36,
       "childIds": [],
@@ -3286,8 +3370,8 @@
       "height": 30,
       "text": "Node 40",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 36,
       "childIds": [],
@@ -4120,14 +4204,14 @@
     {
       "id": 50,
       "nodeType": "node",
-      "localX": -24745.9344154683,
-      "localY": -3768.140907034221,
+      "localX": -24828.54164200151,
+      "localY": -3873.878156996732,
       "width": 190,
       "height": 262,
       "text": "Node 50",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": null,
       "childIds": [],
@@ -9350,8 +9434,8 @@
       "height": 30,
       "text": "Node 113",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 119,
       "childIds": [],
@@ -9770,8 +9854,8 @@
       "height": 30,
       "text": "Node 118",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 119,
       "childIds": [],
@@ -10442,8 +10526,8 @@
       "height": 30,
       "text": "Node 128",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 120,
       "childIds": [],
@@ -10526,8 +10610,8 @@
       "height": 30,
       "text": "Node 129",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 120,
       "childIds": [],
@@ -10610,8 +10694,8 @@
       "height": 30,
       "text": "Node 130",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": 120,
       "childIds": [],
@@ -21692,14 +21776,14 @@
     {
       "id": 263,
       "nodeType": "node",
-      "localX": -104544.25130778935,
-      "localY": 17812.5361064718,
+      "localX": -103352.7433571323,
+      "localY": 17771.872808271968,
       "width": 190,
       "height": 262,
       "text": "Node 263",
       "textureIds": {
-        "body": "jklcfkldfdfjsljfsdlfjlsdjlfjsl",
-        "head": "jkldfjslllsljfsdlfjlsdjlfjslfsljklsd"
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
       },
       "parentId": null,
       "childIds": [],
@@ -34304,6 +34388,6138 @@
       "parentId": null,
       "childIds": [],
       "compositionRefId": null
+    },
+    {
+      "id": 425,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 50,
+      "width": 190,
+      "height": 30,
+      "text": "Node 425",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 424,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 426,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 90,
+      "width": 190,
+      "height": 30,
+      "text": "Node 426",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 424,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 427,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 130,
+      "width": 190,
+      "height": 30,
+      "text": "Node 427",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 424,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 428,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 170,
+      "width": 190,
+      "height": 30,
+      "text": "Node 428",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 424,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 429,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 210,
+      "width": 190,
+      "height": 30,
+      "text": "Node 429",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 424,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 430,
+      "nodeType": "node",
+      "localX": -68080.02018737623,
+      "localY": -21661.552668289027,
+      "width": 190,
+      "height": 262,
+      "text": "Node 430",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 431,
+      "nodeType": "node",
+      "localX": -68095.01073597325,
+      "localY": -21272.0704586435,
+      "width": 190,
+      "height": 262,
+      "text": "Node 431",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 432,
+      "nodeType": "node",
+      "localX": -68722.84431824624,
+      "localY": -21585.027712574425,
+      "width": 190,
+      "height": 262,
+      "text": "Node 432",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 433,
+      "nodeType": "node",
+      "localX": -70872.08296125318,
+      "localY": -21770.77329323014,
+      "width": 190,
+      "height": 262,
+      "text": "Node 433",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 434,
+      "nodeType": "node",
+      "localX": -70085.00290014378,
+      "localY": -21410.66815970832,
+      "width": 190,
+      "height": 262,
+      "text": "Node 434",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 435,
+      "nodeType": "node",
+      "localX": -70556.54184552745,
+      "localY": -21568.914155356295,
+      "width": 190,
+      "height": 262,
+      "text": "Node 435",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 436,
+      "nodeType": "node",
+      "localX": -71208.68296940274,
+      "localY": -21526.104738828188,
+      "width": 190,
+      "height": 262,
+      "text": "Node 436",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 438,
+      "nodeType": "node",
+      "localX": -98573.2104141001,
+      "localY": -36624.880966930155,
+      "width": 190,
+      "height": 262,
+      "text": "Node 438",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 439,
+      "nodeType": "node",
+      "localX": -98520.85613598918,
+      "localY": -36326.16387055117,
+      "width": 190,
+      "height": 262,
+      "text": "Node 439",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 440,
+      "nodeType": "node",
+      "localX": -98084.2280109721,
+      "localY": -36735.24943379954,
+      "width": 190,
+      "height": 262,
+      "text": "Node 440",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 441,
+      "nodeType": "node",
+      "localX": -97733.8871479757,
+      "localY": -36598.32126321916,
+      "width": 190,
+      "height": 262,
+      "text": "Node 441",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 442,
+      "nodeType": "node",
+      "localX": -98356.45521883664,
+      "localY": -36548.5809802316,
+      "width": 190,
+      "height": 262,
+      "text": "Node 442",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 443,
+      "nodeType": "node",
+      "localX": -97699.5242588957,
+      "localY": -36276.13528532771,
+      "width": 190,
+      "height": 262,
+      "text": "Node 443",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 444,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 50,
+      "width": 190,
+      "height": 30,
+      "text": "Node 444",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 437,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 445,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 90,
+      "width": 190,
+      "height": 30,
+      "text": "Node 445",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 437,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 446,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 130,
+      "width": 190,
+      "height": 30,
+      "text": "Node 446",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 437,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 447,
+      "nodeType": "node",
+      "localX": 5473.424115160923,
+      "localY": -48379.70290167991,
+      "width": 190,
+      "height": 262,
+      "text": "Node 447",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 448,
+      "nodeType": "node",
+      "localX": 5884.727459091086,
+      "localY": -48066.436830160106,
+      "width": 190,
+      "height": 262,
+      "text": "Node 448",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 449,
+      "nodeType": "node",
+      "localX": 5069.940871471302,
+      "localY": -48163.860217990565,
+      "width": 190,
+      "height": 262,
+      "text": "Node 449",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 450,
+      "nodeType": "node",
+      "localX": 2722.9042068043213,
+      "localY": -48634.21328344511,
+      "width": 190,
+      "height": 262,
+      "text": "Node 450",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 451,
+      "nodeType": "node",
+      "localX": 3123.254623236045,
+      "localY": -48986.244652959824,
+      "width": 190,
+      "height": 262,
+      "text": "Node 451",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 452,
+      "nodeType": "node",
+      "localX": 3773.941509085894,
+      "localY": -49002.56235152025,
+      "width": 190,
+      "height": 262,
+      "text": "Node 452",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 453,
+      "nodeType": "node",
+      "localX": 1019.9845601027896,
+      "localY": -49598.14966333544,
+      "width": 190,
+      "height": 262,
+      "text": "Node 453",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 454,
+      "nodeType": "node",
+      "localX": -212571.5771037934,
+      "localY": -63164.11023483938,
+      "width": 190,
+      "height": 262,
+      "text": "Node 454",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 455,
+      "nodeType": "node",
+      "localX": -211704.8216488814,
+      "localY": -63341.823062267926,
+      "width": 190,
+      "height": 262,
+      "text": "Node 455",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 456,
+      "nodeType": "node",
+      "localX": -215122.69387382426,
+      "localY": -63911.5861011222,
+      "width": 190,
+      "height": 262,
+      "text": "Node 456",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 457,
+      "nodeType": "node",
+      "localX": -216328.87393916407,
+      "localY": -63786.81829029685,
+      "width": 190,
+      "height": 262,
+      "text": "Node 457",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 458,
+      "nodeType": "node",
+      "localX": -215358.85402461042,
+      "localY": -64375.68566774425,
+      "width": 190,
+      "height": 262,
+      "text": "Node 458",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 459,
+      "nodeType": "node",
+      "localX": -218564.21605497223,
+      "localY": -64383.854615428616,
+      "width": 190,
+      "height": 262,
+      "text": "Node 459",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 460,
+      "nodeType": "node",
+      "localX": -217386.29405143383,
+      "localY": -64446.39247839195,
+      "width": 190,
+      "height": 262,
+      "text": "Node 460",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 461,
+      "nodeType": "node",
+      "localX": -218456.7918927757,
+      "localY": -64699.27271625155,
+      "width": 190,
+      "height": 262,
+      "text": "Node 461",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 462,
+      "nodeType": "node",
+      "localX": -217934.72628041048,
+      "localY": -64886.80401488086,
+      "width": 190,
+      "height": 262,
+      "text": "Node 462",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 463,
+      "nodeType": "node",
+      "localX": -220392.0272207194,
+      "localY": -64964.022473482095,
+      "width": 190,
+      "height": 262,
+      "text": "Node 463",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 464,
+      "nodeType": "node",
+      "localX": -219443.17448714832,
+      "localY": -65355.301264270965,
+      "width": 190,
+      "height": 262,
+      "text": "Node 464",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 465,
+      "nodeType": "node",
+      "localX": -227310.09707285505,
+      "localY": 13138.034752127127,
+      "width": 190,
+      "height": 262,
+      "text": "Node 465",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 466,
+      "nodeType": "node",
+      "localX": -227397.331645845,
+      "localY": 12729.921614959805,
+      "width": 190,
+      "height": 262,
+      "text": "Node 466",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 467,
+      "nodeType": "node",
+      "localX": -228298.75496890335,
+      "localY": 13063.987404504172,
+      "width": 190,
+      "height": 262,
+      "text": "Node 467",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 468,
+      "nodeType": "node",
+      "localX": -226998.90530603565,
+      "localY": 12854.837998330751,
+      "width": 190,
+      "height": 262,
+      "text": "Node 468",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 469,
+      "nodeType": "node",
+      "localX": -227988.89451224435,
+      "localY": 12734.512041557895,
+      "width": 190,
+      "height": 262,
+      "text": "Node 469",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 470,
+      "nodeType": "node",
+      "localX": -226876.0465244699,
+      "localY": 12560.219155713297,
+      "width": 190,
+      "height": 262,
+      "text": "Node 470",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 471,
+      "nodeType": "node",
+      "localX": -230181.42726127277,
+      "localY": 11435.7521391889,
+      "width": 190,
+      "height": 262,
+      "text": "Node 471",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 472,
+      "nodeType": "node",
+      "localX": -229307.4042733048,
+      "localY": 11284.955610630763,
+      "width": 190,
+      "height": 262,
+      "text": "Node 472",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 473,
+      "nodeType": "node",
+      "localX": -230910.94359008464,
+      "localY": 11854.70468926947,
+      "width": 190,
+      "height": 262,
+      "text": "Node 473",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 474,
+      "nodeType": "node",
+      "localX": -230355.3423001613,
+      "localY": 10805.514993878623,
+      "width": 190,
+      "height": 262,
+      "text": "Node 474",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 475,
+      "nodeType": "node",
+      "localX": -231760.23177422024,
+      "localY": 10573.61187510342,
+      "width": 190,
+      "height": 262,
+      "text": "Node 475",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 476,
+      "nodeType": "node",
+      "localX": -232178.95079249353,
+      "localY": 10690.491666623917,
+      "width": 190,
+      "height": 262,
+      "text": "Node 476",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 477,
+      "nodeType": "node",
+      "localX": -234647.40951177635,
+      "localY": 11161.384778854559,
+      "width": 190,
+      "height": 262,
+      "text": "Node 477",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 479,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 50,
+      "width": 190,
+      "height": 30,
+      "text": "Node 479",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 478,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 480,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 90,
+      "width": 190,
+      "height": 30,
+      "text": "Node 480",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 478,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 481,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 130,
+      "width": 190,
+      "height": 30,
+      "text": "Node 481",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 478,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 482,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 170,
+      "width": 190,
+      "height": 30,
+      "text": "Node 482",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 478,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 483,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 210,
+      "width": 190,
+      "height": 30,
+      "text": "Node 483",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 478,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 484,
+      "nodeType": "node",
+      "localX": -232408.34324875075,
+      "localY": 11095.03629627544,
+      "width": 190,
+      "height": 262,
+      "text": "Node 484",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 486,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 50,
+      "width": 190,
+      "height": 30,
+      "text": "Node 486",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 485,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 487,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 90,
+      "width": 190,
+      "height": 30,
+      "text": "Node 487",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 485,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 488,
+      "nodeType": "node",
+      "localX": 15,
+      "localY": 130,
+      "width": 190,
+      "height": 30,
+      "text": "Node 488",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": 485,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 489,
+      "nodeType": "node",
+      "localX": -237584.82945885858,
+      "localY": 9742.48099862793,
+      "width": 190,
+      "height": 262,
+      "text": "Node 489",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 490,
+      "nodeType": "node",
+      "localX": -236778.75393730006,
+      "localY": 10294.386913624217,
+      "width": 190,
+      "height": 262,
+      "text": "Node 490",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 491,
+      "nodeType": "node",
+      "localX": -146535.23351469802,
+      "localY": -76150.91374118216,
+      "width": 190,
+      "height": 262,
+      "text": "Node 491",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 492,
+      "nodeType": "node",
+      "localX": -143741.78288734512,
+      "localY": -75889.92339686543,
+      "width": 190,
+      "height": 262,
+      "text": "Node 492",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 493,
+      "nodeType": "node",
+      "localX": -143640.99319963175,
+      "localY": -75767.496475765,
+      "width": 190,
+      "height": 262,
+      "text": "Node 493",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 494,
+      "nodeType": "node",
+      "localX": -146999.35016422777,
+      "localY": -76262.08594670797,
+      "width": 190,
+      "height": 262,
+      "text": "Node 494",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 495,
+      "nodeType": "node",
+      "localX": -144487.05522074067,
+      "localY": -76437.33374568216,
+      "width": 190,
+      "height": 262,
+      "text": "Node 495",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 496,
+      "nodeType": "node",
+      "localX": -144256.36559914504,
+      "localY": -76393.42874213422,
+      "width": 190,
+      "height": 262,
+      "text": "Node 496",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 497,
+      "nodeType": "node",
+      "localX": -146336.12448774735,
+      "localY": -77060.2107491196,
+      "width": 190,
+      "height": 262,
+      "text": "Node 497",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 498,
+      "nodeType": "node",
+      "localX": -145798.97578489926,
+      "localY": -76886.4440902408,
+      "width": 190,
+      "height": 262,
+      "text": "Node 498",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 499,
+      "nodeType": "node",
+      "localX": -146891.86609868504,
+      "localY": -76981.90472678815,
+      "width": 190,
+      "height": 262,
+      "text": "Node 499",
+      "textureIds": {
+        "body": "",
+        "head": ""
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 500,
+      "nodeType": "node",
+      "localX": -148265.83437231192,
+      "localY": -77680.4854764196,
+      "width": 190,
+      "height": 262,
+      "text": "Node 500",
+      "textureIds": {
+        "body": "gg-node-body-default",
+        "head": "gg-node-head-default"
+      },
+      "parentId": null,
+      "childIds": [],
+      "compositionRefId": null,
+      "props": {
+        "groups": [
+          "Appearance",
+          "Data",
+          "Meta"
+        ],
+        "booleans": {
+          "ungrouped": [
+            {
+              "label": "Visible",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            },
+            {
+              "label": "Primary",
+              "value": false,
+              "uiPrimitive": "checkbox"
+            }
+          ],
+          "Appearance": [
+            {
+              "label": "Shadow",
+              "value": true,
+              "uiPrimitive": "checkbox"
+            }
+          ]
+        },
+        "texts": {
+          "Data": [
+            {
+              "label": "Value",
+              "value": "0",
+              "uiPrimitive": "range"
+            },
+            {
+              "label": "default",
+              "value": "0",
+              "uiPrimitive": "range"
+            }
+          ]
+        },
+        "enums": {
+          "Appearance": [
+            {
+              "label": "Size",
+              "value": "Medium",
+              "uiPrimitive": "select",
+              "options": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+              ]
+            }
+          ],
+          "Meta": [
+            {
+              "label": "Depth",
+              "value": "Deep",
+              "uiPrimitive": "select",
+              "options": [
+                "Shallow",
+                "Steep",
+                "Deep"
+              ]
+            }
+          ]
+        }
+      }
     }
   ],
   "edges": [
@@ -34334,6 +40550,17 @@
       "sourceNodeId": 416,
       "sourceHandleSide": "right",
       "targetNodeId": 415,
+      "targetHandleSide": "left",
+      "edgeType": "orthogonal",
+      "headType": "arrow",
+      "headSkinId": "arrow",
+      "label": ""
+    },
+    {
+      "id": 4,
+      "sourceNodeId": 259,
+      "sourceHandleSide": "right",
+      "targetNodeId": 263,
       "targetHandleSide": "left",
       "edgeType": "orthogonal",
       "headType": "arrow",
@@ -34464,7 +40691,7 @@
     }
   ],
   "counters": {
-    "nodeId": 416,
-    "edgeId": 3
+    "nodeId": 500,
+    "edgeId": 4
   }
 }
