@@ -536,7 +536,7 @@ export class Renderer {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.bgGeometry.vertexBuffer);
         gl.vertexAttribPointer(this.bgLocations.a_Position, 2, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this.bgLocations.a_Position);
-        gl.uniform4f(this.bgLocations.u_Color, 0.05, 0.05, 0.05, 0.12); // dull gray pattern
+        gl.uniform4f(this.bgLocations.u_Color, 0.05, 0.05, 0.05, 0.6); // dull gray pattern
         gl.uniform1i(this.bgLocations.u_UsePointMask, this.bgGeometry.primitiveType === gl.POINTS ? 1 : 0);
         gl.drawArrays(this.bgGeometry.primitiveType, 0, this.bgGeometry.length);
     }

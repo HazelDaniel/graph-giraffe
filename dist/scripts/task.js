@@ -21,7 +21,7 @@ async function init() {
         throw new Error("MSDF shader source missing from DOM");
     if (!iconBGVsSource || !iconBGFsSource)
         throw new Error("Icon background shader source missing from DOM");
-    const editor = await NodeEditor.create("webgl-canvas", "2d-bg-canvas", vsSource, fsSource, BGvsSource, BGfsSource, msdfVsSource, msdfFsSource, iconBGVsSource, iconBGFsSource, { connectionMode: "node", renderMode: "dom" }, 
+    const editor = await NodeEditor.create("webgl-canvas", "2d-bg-canvas", vsSource, fsSource, BGvsSource, BGfsSource, msdfVsSource, msdfFsSource, iconBGVsSource, iconBGFsSource, { connectionMode: "node" }, 
     //prettier-ignore
     [
         generateTetureSkinOption("node-head", "Custom Node Head", 0, "jkldfjsljfsdlfjlsdjlfjsl"),

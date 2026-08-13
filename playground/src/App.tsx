@@ -254,6 +254,7 @@ function App() {
               connectionMode="node"
               onConnect={handleConnect}
               style={{ width: "100%", height: "100%", minHeight: "40rem" }}
+              renderMode="dom"
             >
               <EventLogger />
             </NodeEditor>
