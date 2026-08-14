@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@graph-giraffe/react':
-        specifier: ^0.9.4
-        version: 0.9.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.9.6
+        version: 0.9.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
         specifier: ^19.2.7
         version: 19.2.7
@@ -207,11 +207,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@graph-giraffe/core@0.8.2':
-    resolution: {integrity: sha512-vgKxwvFeNZ5liOHv/bG9bjuO/kAhlkPd8tJF9IM73ygjGVHvokboA2WovrBA6077RmlDFzNy7RV8FQip78TApw==}
+  '@graph-giraffe/core@0.8.4':
+    resolution: {integrity: sha512-HTzejxugPBU+obXIzIENnHnrelUkRjF7rmw/zDqbndIEIWTgZy8LMYkRIAkfT9VaR6rwIZKC85iNAGnFHQf8mQ==}
 
-  '@graph-giraffe/react@0.9.4':
-    resolution: {integrity: sha512-4gOjRwq4dNQy1Wvyb8hY1mFMH8TPoe6A4dqlTAquWu7K8LVOoTNuayI4J3CokCRw+aWMxSwNMGVjEZ65AXop9A==}
+  '@graph-giraffe/react@0.9.6':
+    resolution: {integrity: sha512-PDBUIIgfa6+YYtvABGMI4isZMkBsSFms6slIl7Y7PAIYrmmERbTmcO25BaKhtvmLGH2NkfvkYCyUV5/huS7ISA==}
     peerDependencies:
       react: ^18 || ^19
       react-dom: ^18 || ^19
@@ -759,11 +759,11 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
-  '@graph-giraffe/core@0.8.2': {}
+  '@graph-giraffe/core@0.8.4': {}
 
-  '@graph-giraffe/react@0.9.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@graph-giraffe/react@0.9.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@graph-giraffe/core': 0.8.2
+      '@graph-giraffe/core': 0.8.4
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
