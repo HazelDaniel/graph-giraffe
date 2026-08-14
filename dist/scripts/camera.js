@@ -41,6 +41,12 @@ export class Camera {
         this.zoom = newZoom;
     }
     /**
+     * Whether a camera animation is currently in flight.
+     */
+    isAnimating() {
+        return this._animating;
+    }
+    /**
      * Immediately set the camera state and cancel any in-flight animation.
      */
     setState(panX, panY, zoom) {

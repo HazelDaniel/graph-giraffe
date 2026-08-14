@@ -26,6 +26,10 @@ export declare class Camera {
      */
     zoomAt(mouseX: number, mouseY: number, deltaY: number): void;
     /**
+     * Whether a camera animation is currently in flight.
+     */
+    isAnimating(): boolean;
+    /**
      * Immediately set the camera state and cancel any in-flight animation.
      */
     setState(panX: number, panY: number, zoom: number): void;

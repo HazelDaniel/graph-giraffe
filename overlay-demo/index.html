@@ -16,20 +16,26 @@
         </div>
         <p class="demo-header-desc">
           Figma-style comment bubbles attached to the canvas. Toggle
-          <strong>Comment</strong> mode, then click an empty area — a bubble
-          spawns at the exact click point. Drag a bubble by its header to move
-          it (the tail keeps pointing at the anchor). Dismiss with
-          <strong>&times;</strong>.
+          <strong>Comment</strong> mode (toolbar or the action pane), then click
+          an empty area — a pin drops and a composer auto-focuses. Blur to save
+          (an event fires; the demo holds its own chat state), or blur empty to
+          cancel. Drag by the bubble header to move it. <strong>Load</strong>
+          restores bubbles from stored state; <strong>Pan</strong> imperatively
+          lerps the camera to a comment.
         </p>
 
         <div id="demo-toolbar" class="demo-toolbar">
           <button id="demo-comment-toggle" aria-pressed="false">💬 Comment</button>
-          <button id="demo-clear-comments">Clear comments</button>
+          <button id="demo-load-comments">Load saved</button>
+          <button id="demo-pan-comment">Pan to comment</button>
+          <button id="demo-clear-comments">Clear</button>
           <button id="demo-reset">Reset</button>
         </div>
       </header>
 
       <main class="demo-canvas" id="editor"></main>
+
+      <aside class="demo-log" id="demo-log" aria-label="Comment events"></aside>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

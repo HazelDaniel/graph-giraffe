@@ -46,6 +46,10 @@ export {
   attachCommentLayer,
 } from './scripts/overlay-primitives.js';
 export type {
+  CommentRecord,
+  CommentBubble,
+  CommentEvents,
+  CommentEventName,
   CommentBubbleOptions,
   CommentLayerOptions,
   CommentLayerController,

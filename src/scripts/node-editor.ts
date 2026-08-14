@@ -490,6 +490,7 @@ export class NodeEditor {
       onAddBranch: () => this.handleAddNode(canvas, "branch"),
       onAddComposition: () => this.handleAddComposition(canvas),
       onToggleMultiSelect: () => this.toggleMultiSelectMode(),
+      onCommentMode: () => this.toggleCommentMode(),
       onUndo: () => this.undo(),
       onRedo: () => this.redo(),
       onDeleteNode: () => this.handleDeleteSelected(),
@@ -826,6 +827,44 @@ export class NodeEditor {
       panY: this.camera.panY,
       zoom: this.camera.zoom,
     };
+  }
+
+  /**
+   * Imperatively animate (lerp) the camera so the given world coordinate lands
+   * at a screen position — by default the center of the canvas. Optionally
+   * targets a new zoom too. User pan/zoom input cancels the animation, and any
+   * in-flight animation is superseded by this call.
+   *
+   * Resolves once the camera reaches its destination.
+   */
+  async panTo(
+    worldX: number,
+    worldY: number,
+    options: { zoom?: number; screenX?: number; screenY?: number } = {}
+  ): Promise<void> {
+    const zoom = options.zoom ?? this.camera.zoom;
+    const width = this.canvas.clientWidth || window.innerWidth;
+    const height = this.canvas.clientHeight || window.innerHeight;
+    const screenX = options.screenX ?? width / 2;
+    const screenY = options.screenY ?? height / 2;
+
+    // From screenToWorld: worldX = (screenX - panX) / zoom → panX = screenX - worldX * zoom.
+    const targetPanX = screenX - worldX * zoom;
+    const targetPanY = screenY - worldY * zoom;
+
+    this.camera.animateTo(targetPanX, targetPanY, zoom);
+
+    await new Promise<void>((resolve) => {
+      const tick = (): void => {
+        this.requestRender();
+        if (this.camera.isAnimating()) {
+          requestAnimationFrame(tick);
+        } else {
+          resolve();
+        }
+      };
+      tick();
+    });
   }
 
   /**
@@ -1551,6 +1590,29 @@ export class NodeEditor {
   private toggleMultiSelectMode(): void {
     this.isMultiSelectMode = !this.isMultiSelectMode;
     this.controls.setMultiSelectActive(this.isMultiSelectMode);
+  }
+
+  private isCommentMode = false;
+
+  private toggleCommentMode(): void {
+    this.isCommentMode = !this.isCommentMode;
+    this.controls.setCommentModeActive(this.isCommentMode);
+    this.events.dispatch("comment:modeChange", { enabled: this.isCommentMode });
+  }
+
+  /**
+   * Get whether comment mode is active.
+   */
+  getCommentMode(): boolean {
+    return this.isCommentMode;
+  }
+
+  /**
+   * Programmatically enable/disable comment mode.
+   */
+  setCommentMode(enabled: boolean): void {
+    if (this.isCommentMode === enabled) return;
+    this.toggleCommentMode();
   }
 
   private selectNodeByClick(nodeId: number): void {

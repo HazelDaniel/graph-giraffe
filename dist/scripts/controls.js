@@ -14,6 +14,7 @@ export class UIControls {
     undoButton;
     redoButton;
     deleteNodeButton;
+    commentModeButton;
     sidebar;
     sidebarToggle;
     nodeProperties;
@@ -30,6 +31,7 @@ export class UIControls {
         this.undoButton = historyPane.shadowRoot?.querySelector("#btn-undo");
         this.redoButton = historyPane.shadowRoot?.querySelector("#btn-redo");
         this.deleteNodeButton = toolPane.shadowRoot?.querySelector("#btn-delete-node");
+        this.commentModeButton = toolPane.shadowRoot?.querySelector("#btn-comment-mode");
         this.sidebarToggle = container.shadowRoot?.querySelector("#sidebar-toggle");
         this.nodeProperties = container.shadowRoot?.querySelector("#node-properties");
         this.nodeLabelInput = container.shadowRoot?.querySelector("#node-label-input");
@@ -43,6 +45,7 @@ export class UIControls {
         this.undoButton.addEventListener("click", () => callbacks.onUndo());
         this.redoButton.addEventListener("click", () => callbacks.onRedo());
         this.deleteNodeButton.addEventListener("click", () => callbacks.onDeleteNode());
+        this.commentModeButton.addEventListener("click", () => callbacks.onCommentMode?.());
         const kebabMenu = document.getElementById("kebab-menu");
         kebabMenu?.addEventListener("gg-kebab-action", (e) => {
             const customEvent = e;
@@ -118,6 +121,9 @@ export class UIControls {
             this.createSubgraphButton.disabled = false;
         else
             this.createSubgraphButton.disabled = true;
+    }
+    setCommentModeActive(active) {
+        this.commentModeButton.classList.toggle("active", active);
     }
     enableUndo() {
         this.undoButton.disabled = false;

@@ -154,6 +154,19 @@ export declare class NodeEditor {
         zoom: number;
     };
     /**
+     * Imperatively animate (lerp) the camera so the given world coordinate lands
+     * at a screen position — by default the center of the canvas. Optionally
+     * targets a new zoom too. User pan/zoom input cancels the animation, and any
+     * in-flight animation is superseded by this call.
+     *
+     * Resolves once the camera reaches its destination.
+     */
+    panTo(worldX: number, worldY: number, options?: {
+        zoom?: number;
+        screenX?: number;
+        screenY?: number;
+    }): Promise<void>;
+    /**
      * Create a node of any registered type (built-in or custom) at a world
      * coordinate. Routes through the command/history system, so the action is
      * undoable and emits `history:command` (and any `before:nodeCreate` hooks
@@ -197,6 +210,16 @@ export declare class NodeEditor {
     private restoreSelectionSnapshot;
     private clearSelectionAndHideProperties;
     private toggleMultiSelectMode;
+    private isCommentMode;
+    private toggleCommentMode;
+    /**
+     * Get whether comment mode is active.
+     */
+    getCommentMode(): boolean;
+    /**
+     * Programmatically enable/disable comment mode.
+     */
+    setCommentMode(enabled: boolean): void;
     private selectNodeByClick;
     private selectEdgeByClick;
     private beginLabelEdit;

@@ -100,6 +100,9 @@ export interface GraphEvents {
     panY: number;
     zoom: number;
   };
+  "comment:modeChange": {
+    enabled: boolean;
+  };
 }
 
 export type SyncHandler<T> = (payload: T) => void;

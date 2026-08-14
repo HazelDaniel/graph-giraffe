@@ -338,6 +338,18 @@ class ActionPane extends HTMLElement {
           </svg>
         </button>
 
+        <button id="btn-comment-mode" title="Comment">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5V13C20 14.1046 19.1046 15 18 15H11.5L7 19V15H6C4.89543 15 4 14.1046 4 13V5Z"
+              fill="currentColor"
+            />
+            <circle cx="8" cy="9" r="1.4" fill="#0b0b0b" />
+            <circle cx="12" cy="9" r="1.4" fill="#0b0b0b" />
+            <circle cx="16" cy="9" r="1.4" fill="#0b0b0b" />
+          </svg>
+        </button>
+
         <button id="btn-multi-select">
           <svg
             fill="currentColor"
@@ -4783,6 +4795,12 @@ class Camera {
     this.zoom = newZoom;
   }
   /**
+   * Whether a camera animation is currently in flight.
+   */
+  isAnimating() {
+    return this._animating;
+  }
+  /**
    * Immediately set the camera state and cancel any in-flight animation.
    */
   setState(panX, panY, zoom) {
@@ -8565,12 +8583,13 @@ class UIControls {
     __publicField(this, "undoButton");
     __publicField(this, "redoButton");
     __publicField(this, "deleteNodeButton");
+    __publicField(this, "commentModeButton");
     __publicField(this, "sidebar");
     __publicField(this, "sidebarToggle");
     __publicField(this, "nodeProperties");
     __publicField(this, "nodeLabelInput");
     __publicField(this, "nodePropGroup");
-    var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
+    var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s;
     this.sidebar = container;
     this.addNodeButton = (_a2 = toolPane.shadowRoot) == null ? void 0 : _a2.querySelector(
       "#btn-add-node"
@@ -8599,16 +8618,19 @@ class UIControls {
     this.deleteNodeButton = (_i = toolPane.shadowRoot) == null ? void 0 : _i.querySelector(
       "#btn-delete-node"
     );
-    this.sidebarToggle = (_j = container.shadowRoot) == null ? void 0 : _j.querySelector(
+    this.commentModeButton = (_j = toolPane.shadowRoot) == null ? void 0 : _j.querySelector(
+      "#btn-comment-mode"
+    );
+    this.sidebarToggle = (_k = container.shadowRoot) == null ? void 0 : _k.querySelector(
       "#sidebar-toggle"
     );
-    this.nodeProperties = (_k = container.shadowRoot) == null ? void 0 : _k.querySelector(
+    this.nodeProperties = (_l = container.shadowRoot) == null ? void 0 : _l.querySelector(
       "#node-properties"
     );
-    this.nodeLabelInput = (_l = container.shadowRoot) == null ? void 0 : _l.querySelector(
+    this.nodeLabelInput = (_m = container.shadowRoot) == null ? void 0 : _m.querySelector(
       "#node-label-input"
     );
-    this.nodePropGroup = (_m = container.shadowRoot) == null ? void 0 : _m.querySelector(
+    this.nodePropGroup = (_n = container.shadowRoot) == null ? void 0 : _n.querySelector(
       "#node-prop-group"
     );
     this.addNodeButton.addEventListener("click", () => callbacks.onAddNode());
@@ -8625,7 +8647,7 @@ class UIControls {
       "click",
       () => callbacks.onSubgraphCreate()
     );
-    (_n = this.addBranchButton) == null ? void 0 : _n.addEventListener(
+    (_o = this.addBranchButton) == null ? void 0 : _o.addEventListener(
       "click",
       () => {
         var _a3;
@@ -8638,6 +8660,13 @@ class UIControls {
       "click",
       () => callbacks.onDeleteNode()
     );
+    this.commentModeButton.addEventListener(
+      "click",
+      () => {
+        var _a3;
+        return (_a3 = callbacks.onCommentMode) == null ? void 0 : _a3.call(callbacks);
+      }
+    );
     const kebabMenu = document.getElementById("kebab-menu");
     kebabMenu == null ? void 0 : kebabMenu.addEventListener("gg-kebab-action", (e) => {
       var _a3, _b2;
@@ -8648,7 +8677,7 @@ class UIControls {
         (_b2 = callbacks.onExport) == null ? void 0 : _b2.call(callbacks);
       }
     });
-    const bgPicker = (_o = container.shadowRoot) == null ? void 0 : _o.querySelector(
+    const bgPicker = (_p = container.shadowRoot) == null ? void 0 : _p.querySelector(
       "#bg-color-picker"
     );
     bgPicker == null ? void 0 : bgPicker.addEventListener("input", (e) => {
@@ -8658,7 +8687,7 @@ class UIControls {
       const b = parseInt(hex.slice(5, 7), 16) / 255;
       callbacks.onBgColorChange(r, g, b, 1);
     });
-    const fontColorPicker = (_p = container.shadowRoot) == null ? void 0 : _p.querySelector(
+    const fontColorPicker = (_q = container.shadowRoot) == null ? void 0 : _q.querySelector(
       "#font-color-picker"
     );
     fontColorPicker == null ? void 0 : fontColorPicker.addEventListener("input", (e) => {
@@ -8668,7 +8697,7 @@ class UIControls {
       const b = parseInt(hex.slice(5, 7), 16) / 255;
       callbacks.onFontColorChange(r, g, b, 1);
     });
-    const themeSelect = (_q = container.shadowRoot) == null ? void 0 : _q.querySelector(
+    const themeSelect = (_r = container.shadowRoot) == null ? void 0 : _r.querySelector(
       "#theme-selector"
     );
     themeSelect == null ? void 0 : themeSelect.addEventListener("gg-select-change", (e) => {
@@ -8676,7 +8705,7 @@ class UIControls {
         e.target.value
       );
     });
-    const textureSelect = (_r = container.shadowRoot) == null ? void 0 : _r.querySelector(
+    const textureSelect = (_s = container.shadowRoot) == null ? void 0 : _s.querySelector(
       "#texture-selector"
     );
     textureSelect == null ? void 0 : textureSelect.refresh();
@@ -8731,6 +8760,9 @@ class UIControls {
     if (this.multiSelectButton.classList.contains("active"))
       this.createSubgraphButton.disabled = false;
     else this.createSubgraphButton.disabled = true;
+  }
+  setCommentModeActive(active) {
+    this.commentModeButton.classList.toggle("active", active);
   }
   enableUndo() {
     this.undoButton.disabled = false;
@@ -10374,6 +10406,7 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "msdfAtlas");
     __publicField(this, "iconAtlas");
     __publicField(this, "dpr", 1);
+    __publicField(this, "isCommentMode", false);
     __publicField(this, "zoomThrottleTimer", null);
     __publicField(this, "ZOOM_THROTTLE_MS", 180);
     this.canvasId = canvasId;
@@ -10566,6 +10599,7 @@ const _NodeEditor = class _NodeEditor {
       onAddBranch: () => this.handleAddNode(canvas, "branch"),
       onAddComposition: () => this.handleAddComposition(canvas),
       onToggleMultiSelect: () => this.toggleMultiSelectMode(),
+      onCommentMode: () => this.toggleCommentMode(),
       onUndo: () => this.undo(),
       onRedo: () => this.redo(),
       onDeleteNode: () => this.handleDeleteSelected(),
@@ -10854,6 +10888,35 @@ const _NodeEditor = class _NodeEditor {
       panY: this.camera.panY,
       zoom: this.camera.zoom
     };
+  }
+  /**
+   * Imperatively animate (lerp) the camera so the given world coordinate lands
+   * at a screen position — by default the center of the canvas. Optionally
+   * targets a new zoom too. User pan/zoom input cancels the animation, and any
+   * in-flight animation is superseded by this call.
+   *
+   * Resolves once the camera reaches its destination.
+   */
+  async panTo(worldX, worldY, options = {}) {
+    const zoom = options.zoom ?? this.camera.zoom;
+    const width = this.canvas.clientWidth || window.innerWidth;
+    const height = this.canvas.clientHeight || window.innerHeight;
+    const screenX = options.screenX ?? width / 2;
+    const screenY = options.screenY ?? height / 2;
+    const targetPanX = screenX - worldX * zoom;
+    const targetPanY = screenY - worldY * zoom;
+    this.camera.animateTo(targetPanX, targetPanY, zoom);
+    await new Promise((resolve) => {
+      const tick = () => {
+        this.requestRender();
+        if (this.camera.isAnimating()) {
+          requestAnimationFrame(tick);
+        } else {
+          resolve();
+        }
+      };
+      tick();
+    });
   }
   /**
    * Create a node of any registered type (built-in or custom) at a world
@@ -11398,6 +11461,24 @@ const _NodeEditor = class _NodeEditor {
   toggleMultiSelectMode() {
     this.isMultiSelectMode = !this.isMultiSelectMode;
     this.controls.setMultiSelectActive(this.isMultiSelectMode);
+  }
+  toggleCommentMode() {
+    this.isCommentMode = !this.isCommentMode;
+    this.controls.setCommentModeActive(this.isCommentMode);
+    this.events.dispatch("comment:modeChange", { enabled: this.isCommentMode });
+  }
+  /**
+   * Get whether comment mode is active.
+   */
+  getCommentMode() {
+    return this.isCommentMode;
+  }
+  /**
+   * Programmatically enable/disable comment mode.
+   */
+  setCommentMode(enabled) {
+    if (this.isCommentMode === enabled) return;
+    this.toggleCommentMode();
   }
   selectNodeByClick(nodeId) {
     const canExtendSelection = this.isMultiSelectMode && (this.selectionKind === null || this.selectionKind === "node");
@@ -13307,35 +13388,60 @@ const BUBBLE_CSS = `
     width: 0;
     height: 0;
   }
+  .gg-comment-pin {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--gg-comment-avatar, linear-gradient(135deg, #6366f1, #8b5cf6));
+    color: #fff;
+    font: 600 10px/1 system-ui, -apple-system, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    z-index: 1;
+    transition: transform 120ms ease;
+  }
+  .gg-comment-pin:hover {
+    transform: translate(-50%, -50%) scale(1.12);
+  }
   .gg-comment-tail {
     position: absolute;
     left: 0;
     top: 0;
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     pointer-events: none;
     overflow: visible;
   }
-  .gg-comment-card {
+  .gg-comment-popover {
     position: absolute;
-    left: 16px;
-    top: 16px;
-    width: 240px;
+    left: 32px;
+    top: 32px;
+    width: 248px;
     box-sizing: border-box;
     background: var(--gg-comment-bg, #0f172a);
     border: 1px solid var(--gg-comment-border, rgba(255, 255, 255, 0.12));
     border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
     color: var(--gg-comment-fg, #e2e8f0);
-    font: 13px/1.4 system-ui, -apple-system, sans-serif;
+    font: 13px/1.45 system-ui, -apple-system, sans-serif;
     overflow: hidden;
+    z-index: 2;
   }
   .gg-comment-head {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 10px;
+    padding: 9px 10px;
     cursor: grab;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
   .gg-comment-head.gg-comment-dragging {
     cursor: grabbing;
@@ -13376,22 +13482,35 @@ const BUBBLE_CSS = `
     color: #f87171;
     background: rgba(248, 113, 113, 0.12);
   }
+  .gg-comment-body {
+    padding: 9px 12px 11px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 20px;
+  }
   .gg-comment-input {
     box-sizing: border-box;
     width: calc(100% - 16px);
-    margin: 0 8px 8px;
+    margin: 8px;
     resize: none;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     background: var(--gg-comment-input-bg, rgba(15, 23, 42, 0.9));
     color: inherit;
-    padding: 6px 8px;
+    padding: 7px 9px;
     font: inherit;
-    min-height: 20px;
+    min-height: 40px;
+    display: block;
   }
   .gg-comment-input:focus {
     outline: none;
     border-color: var(--gg-comment-accent, #6366f1);
+  }
+  .gg-comment[data-mode="editing"] .gg-comment-body {
+    display: none;
+  }
+  .gg-comment[data-mode="saved"] .gg-comment-input {
+    display: none;
   }
 `;
 function ensureStyles() {
@@ -13407,7 +13526,7 @@ function initials(name) {
   if (parts.length === 0) return "?";
   return (parts[0][0] + (((_a2 = parts[1]) == null ? void 0 : _a2[0]) ?? "")).toUpperCase();
 }
-function emit(element, type, detail) {
+function emitDom(element, type, detail) {
   element.dispatchEvent(
     new CustomEvent(type, { bubbles: true, composed: true, detail })
   );
@@ -13415,74 +13534,112 @@ function emit(element, type, detail) {
 function createCommentBubble(options) {
   ensureStyles();
   const id = options.id ?? "";
+  const author = options.author ?? "Guest";
   const element = document.createElement("div");
   element.className = "gg-comment";
+  element.setAttribute("data-mode", options.editing === false ? "saved" : "editing");
+  const pin = document.createElement("div");
+  pin.className = "gg-comment-pin";
+  pin.title = author;
+  pin.textContent = initials(author);
+  pin.setAttribute("aria-label", `Comment by ${author}`);
   const tail = document.createElementNS(
     "http://www.w3.org/2000/svg",
     "svg"
   );
   tail.setAttribute("class", "gg-comment-tail");
-  tail.setAttribute("viewBox", "0 0 48 48");
+  tail.setAttribute("viewBox", "0 0 40 40");
   const path = document.createElementNS(
     "http://www.w3.org/2000/svg",
     "path"
   );
-  path.setAttribute("d", "M3 3 C 10 6 15 10 19 19");
+  path.setAttribute("d", "M13 13 C 20 14 22 18 26 26");
   path.setAttribute("fill", "none");
-  path.setAttribute("stroke", "rgba(255,255,255,0.35)");
+  path.setAttribute("stroke", "rgba(255,255,255,0.4)");
   path.setAttribute("stroke-width", "2");
   path.setAttribute("stroke-linecap", "round");
   tail.appendChild(path);
-  const card = document.createElement("div");
-  card.className = "gg-comment-card";
+  const popover = document.createElement("div");
+  popover.className = "gg-comment-popover";
   const head = document.createElement("div");
   head.className = "gg-comment-head";
   const avatar = document.createElement("span");
   avatar.className = "gg-comment-avatar";
-  avatar.textContent = options.author ? initials(options.author) : "?";
+  avatar.textContent = initials(author);
   avatar.setAttribute("aria-hidden", "true");
-  const author = document.createElement("span");
-  author.className = "gg-comment-author";
-  author.textContent = options.author ?? "Guest";
+  const authorEl = document.createElement("span");
+  authorEl.className = "gg-comment-author";
+  authorEl.textContent = author;
   const close = document.createElement("button");
   close.className = "gg-comment-close";
   close.type = "button";
-  close.setAttribute("aria-label", "Dismiss comment");
+  close.setAttribute("aria-label", "Delete comment");
   close.innerHTML = "&times;";
+  head.append(avatar, authorEl, close);
+  const body = document.createElement("div");
+  body.className = "gg-comment-body";
+  body.textContent = options.text ?? "";
+  const input = document.createElement("textarea");
+  input.className = "gg-comment-input";
+  input.rows = 2;
+  input.placeholder = options.placeholder ?? "Write a comment…";
+  input.value = options.text ?? "";
+  input.addEventListener("pointerdown", (event) => event.stopPropagation());
+  popover.append(head, body, input);
+  element.append(pin, tail, popover);
+  const overlay = {
+    id,
+    element,
+    worldX: options.worldX,
+    worldY: options.worldY,
+    scaleWithZoom: false,
+    setMode(mode) {
+      element.setAttribute("data-mode", mode);
+      if (mode === "editing") {
+        input.value = body.textContent;
+      } else {
+        body.textContent = input.value;
+      }
+    },
+    focus() {
+      input.focus();
+    },
+    getText() {
+      return input.value;
+    }
+  };
+  input.addEventListener("blur", () => {
+    var _a2;
+    return (_a2 = options.onBlur) == null ? void 0 : _a2.call(options, input.value);
+  });
   close.addEventListener("click", (event) => {
     var _a2;
     event.stopPropagation();
     (_a2 = options.onDismiss) == null ? void 0 : _a2.call(options, id);
   });
-  head.append(avatar, author, close);
-  const input = document.createElement("textarea");
-  input.className = "gg-comment-input";
-  input.rows = 1;
-  input.placeholder = options.placeholder ?? "Leave a comment…";
-  input.value = options.initialText ?? "";
-  input.addEventListener("pointerdown", (event) => event.stopPropagation());
-  card.append(head, input);
-  element.append(tail, card);
-  return {
-    id,
-    element,
-    worldX: options.worldX,
-    worldY: options.worldY,
-    scaleWithZoom: false
-  };
+  pin.addEventListener("click", () => {
+    var _a2;
+    return (_a2 = options.onPinClick) == null ? void 0 : _a2.call(options, id);
+  });
+  return overlay;
 }
 function attachCommentLayer(editor, options = {}) {
   ensureStyles();
   const seq = ++layerSeq;
   const overlays = /* @__PURE__ */ new Map();
+  const listeners = /* @__PURE__ */ new Map();
   let counter = 0;
   let enabled = options.enabled ?? true;
   const canvas = options.canvas ?? document.getElementById("webgl-canvas") ?? null;
-  const resolveCanvasRect = () => {
-    if (canvas) return canvas.getBoundingClientRect();
-    return null;
-  };
-  const spawnFromEvent = (event) => {
+  function emit(type, payload) {
+    for (const handler of listeners.get(type) ?? []) {
+      handler(payload);
+    }
+  }
+  function resolveCanvasRect() {
+    return canvas ? canvas.getBoundingClientRect() : null;
+  }
+  function spawnFromEvent(event) {
     const rect = resolveCanvasRect();
     if (!rect) return;
     const { x, y } = editor.screenToWorld(
@@ -13490,40 +13647,120 @@ function attachCommentLayer(editor, options = {}) {
       event.clientY - rect.top
     );
     add(x, y);
-  };
+  }
   const onPaneClick = (payload) => {
     if (!enabled) return;
     spawnFromEvent(payload.event);
   };
-  const unsubscribe = editor.events.on("pane:click", onPaneClick);
+  const unsubscribePane = editor.events.on("pane:click", onPaneClick);
   function add(worldX, worldY, bubbleOptions = {}) {
-    var _a2;
     const id = bubbleOptions.id ?? `gg-comment-${seq}-${++counter}`;
+    if (overlays.has(id)) remove(id);
     const overlay = createCommentBubble({
       ...bubbleOptions,
       id,
       worldX,
       worldY,
       author: bubbleOptions.author ?? options.author ?? "Guest",
+      editing: bubbleOptions.editing ?? true,
+      onBlur: (text) => handleBlur(overlay, text),
       onDismiss: (bubbleId) => {
+        suppressBlur(overlay);
+        emit("delete", { id: bubbleId });
+        emitDom(overlay.element, "gg-comment:delete", { id: bubbleId });
         remove(bubbleId);
-        emit(overlay.element, "gg-comment:dismiss", { id: bubbleId });
+      },
+      onPinClick: (bubbleId) => {
+        const target = overlays.get(bubbleId);
+        if (!target) return;
+        target.setMode("editing");
+        target.focus();
       }
     });
     overlays.set(id, overlay);
     editor.addOverlay(overlay);
     wireBubbleDrag(editor, overlay);
-    emit(overlay.element, "gg-comment:create", { id, worldX, worldY });
-    (_a2 = options.onCreate) == null ? void 0 : _a2.call(options, id, overlay);
+    if (overlay.element.getAttribute("data-mode") === "editing") {
+      overlay.focus();
+    }
+    emit("create", { id, author: overlayAuthor(overlay), worldX, worldY });
+    emitDom(overlay.element, "gg-comment:create", {
+      id,
+      worldX,
+      worldY
+    });
     return id;
   }
-  function remove(id) {
+  function overlayAuthor(overlay) {
     var _a2;
+    return ((_a2 = overlay.element.querySelector(".gg-comment-author")) == null ? void 0 : _a2.textContent) ?? "Guest";
+  }
+  function handleBlur(overlay, text) {
+    const trimmed = text.trim();
+    const id = overlay.id;
+    const author = overlayAuthor(overlay);
+    const { worldX, worldY } = overlay;
+    if (trimmed) {
+      overlay.setMode("saved");
+      emit("save", { id, author, text: trimmed, worldX, worldY });
+      emitDom(overlay.element, "gg-comment:save", {
+        id,
+        author,
+        text: trimmed,
+        worldX,
+        worldY
+      });
+    } else {
+      emit("cancel", { id, author, worldX, worldY });
+      emitDom(overlay.element, "gg-comment:cancel", {
+        id,
+        worldX,
+        worldY
+      });
+      remove(id);
+    }
+  }
+  function suppressBlur(overlay) {
+    const input = overlay.element.querySelector(".gg-comment-input");
+    if (input && typeof input.blur === "function") {
+      input.blur();
+    }
+  }
+  function load(records) {
+    for (const record of records) {
+      if (overlays.has(record.id)) remove(record.id);
+      const overlay = createCommentBubble({
+        id: record.id,
+        worldX: record.worldX,
+        worldY: record.worldY,
+        author: record.author,
+        text: record.text,
+        editing: false,
+        onBlur: (text) => handleBlur(overlay, text),
+        onDismiss: (bubbleId) => {
+          suppressBlur(overlay);
+          emit("delete", { id: bubbleId });
+          emitDom(overlay.element, "gg-comment:delete", { id: bubbleId });
+          remove(bubbleId);
+        },
+        onPinClick: (bubbleId) => {
+          const target = overlays.get(bubbleId);
+          if (!target) return;
+          target.setMode("editing");
+          target.focus();
+        }
+      });
+      overlays.set(record.id, overlay);
+      editor.addOverlay(overlay);
+      wireBubbleDrag(editor, overlay);
+    }
+    emit("load", { count: records.length });
+  }
+  function remove(id) {
     const overlay = overlays.get(id);
     if (!overlay) return;
     editor.removeOverlay(id);
     overlays.delete(id);
-    (_a2 = options.onRemove) == null ? void 0 : _a2.call(options, id);
   }
   function get(id) {
     return overlays.get(id);
@@ -13534,12 +13771,22 @@ function attachCommentLayer(editor, options = {}) {
   function setEnabled(value) {
     enabled = value;
   }
+  function on(type, handler) {
+    if (!listeners.has(type)) listeners.set(type, /* @__PURE__ */ new Set());
+    const set = listeners.get(type);
+    set.add(handler);
+    return () => {
+      set.delete(handler);
+    };
+  }
   function destroy() {
     clear();
-    unsubscribe();
+    unsubscribePane();
+    listeners.clear();
   }
   return {
     add,
+    load,
     remove,
     get,
     clear,
@@ -13547,18 +13794,19 @@ function attachCommentLayer(editor, options = {}) {
     get enabled() {
       return enabled;
     },
+    on,
     destroy
   };
 }
 function wireBubbleDrag(editor, overlay) {
-  const card = overlay.element.querySelector(".gg-comment-card");
-  if (!card) return;
+  const head = overlay.element.querySelector(".gg-comment-head");
+  if (!head) return;
   let startClientX = 0;
   let startClientY = 0;
   let startWorldX = 0;
   let startWorldY = 0;
   let dragging = false;
-  card.addEventListener("pointerdown", (event) => {
+  head.addEventListener("pointerdown", (event) => {
     const pointer = event;
     const target = pointer.target;
     if (target.closest("button") || target.closest("textarea")) return;
@@ -13571,7 +13819,7 @@ function wireBubbleDrag(editor, overlay) {
     event.currentTarget.classList.add("gg-comment-dragging");
     event.currentTarget.setPointerCapture(pointer.pointerId);
   });
-  card.addEventListener("pointermove", (event) => {
+  head.addEventListener("pointermove", (event) => {
     if (!dragging) return;
     const pointer = event;
     const zoom = editor.getCameraState().zoom || 1;
@@ -13592,8 +13840,8 @@ function wireBubbleDrag(editor, overlay) {
       pointer.pointerId
     );
   };
-  card.addEventListener("pointerup", stop);
-  card.addEventListener("pointercancel", stop);
+  head.addEventListener("pointerup", stop);
+  head.addEventListener("pointercancel", stop);
 }
 const BASE_STYLE = `
   :host { display: block; }

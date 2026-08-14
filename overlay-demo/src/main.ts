@@ -4,14 +4,37 @@ import {
   Shell,
   attachCommentLayer,
   type CommentLayerController,
+  type CommentRecord,
 } from "@graph-giraffe/core";
+
+/**
+ * The demo's own chat state — the library deliberately holds none. The
+ * comment layer only emits events; persistence lives here, and `load()`
+ * renders bubbles back from it.
+ */
+const savedComments: CommentRecord[] = [
+  {
+    id: "saved-1",
+    author: "Ada",
+    text: "Can we tune the routing here?",
+    worldX: -80,
+    worldY: -260,
+    createdAt: Date.now(),
+  },
+  {
+    id: "saved-2",
+    author: "Sam",
+    text: "Remember to re-skin this in dom mode.",
+    worldX: 240,
+    worldY: -160,
+    createdAt: Date.now(),
+  },
+];
 
 async function boot(): Promise<void> {
   const host = document.getElementById("editor");
   if (!host) throw new Error("editor host not found");
 
-  // Inject the same editor shell the core ships (canvases, overlay layers,
-  // sidebar, action pane, minimap, history pane).
   host.innerHTML = Shell;
 
   const editor = await NodeEditor.create(
@@ -32,7 +55,6 @@ async function boot(): Promise<void> {
     }
   );
 
-  // Event-driven rendering: draw one frame only when something changed.
   let dirty = false;
   let scheduled = false;
   const scheduleRender = (): void => {
@@ -70,11 +92,34 @@ async function boot(): Promise<void> {
   new ResizeObserver(scheduleRender).observe(host);
   window.addEventListener("resize", scheduleRender);
 
-  // The overlay primitive: a comment layer that spawns Figma-style bubbles
-  // wherever the user clicks empty canvas space.
   const comments: CommentLayerController = attachCommentLayer(editor, {
     author: "Guest",
     enabled: false,
+  });
+
+  const log = document.getElementById("demo-log")!;
+  const logEvent = (type: string, detail: string): void => {
+    const row = document.createElement("div");
+    row.className = `log-${type}`;
+    row.textContent = `${type.padEnd(6, " ")} ${detail}`;
+    log.prepend(row);
+    while (log.childElementCount > 10) log.lastElementChild?.remove();
+  };
+
+  comments.on("create", (p) =>
+    logEvent("create", `@(${p.worldX.toFixed(0)}, ${p.worldY.toFixed(0)})`)
+  );
+  comments.on("save", (p) =>
+    logEvent("save", `"${p.text.slice(0, 40)}" @(${p.worldX.toFixed(0)}, ${p.worldY.toFixed(0)})`)
+  );
+  comments.on("cancel", (p) => logEvent("cancel", `draft @(${p.worldX.toFixed(0)}, ${p.worldY.toFixed(0)})`));
+  comments.on("delete", (p) => logEvent("delete", `bubble ${p.id}`));
+  comments.on("load", (p) => logEvent("load", `${p.count} bubbles restored`));
+
+  // Keep the comment layer in sync with the action pane's Comment button.
+  editor.events.on("comment:modeChange", ({ enabled }) => {
+    comments.setEnabled(enabled);
+    syncToggle(enabled);
   });
 
   const sample = [
@@ -89,26 +134,44 @@ async function boot(): Promise<void> {
     await editor.addNode(type, x, y, null, label);
   }
 
-  wireToolbar(comments);
+  wireToolbar(editor, comments, logEvent);
+
+  // Show restored bubbles immediately so the primitive is visible on load.
+  comments.load(savedComments);
 
   (globalThis as unknown as { __ggEditor?: NodeEditor }).__ggEditor = editor;
-
-  // Drop a couple of example bubbles so the primitive is visible on load.
-  comments.add(-80, -260, { initialText: "Can we tune the routing here?", author: "Alex" });
-  comments.add(240, -160, { initialText: "Remember to re-skin this in dom mode.", author: "Sam" });
 
   editor.requestRender();
 }
 
-function wireToolbar(comments: CommentLayerController): void {
+function syncToggle(enabled: boolean): void {
   const toggle = document.getElementById("demo-comment-toggle");
+  toggle?.setAttribute("aria-pressed", String(enabled));
+  toggle?.classList.toggle("active", enabled);
+}
+
+function wireToolbar(
+  editor: NodeEditor,
+  comments: CommentLayerController,
+  logEvent: (type: string, detail: string) => void
+): void {
+  const toggle = document.getElementById("demo-comment-toggle");
+  const loadBtn = document.getElementById("demo-load-comments");
+  const panBtn = document.getElementById("demo-pan-comment");
   const clear = document.getElementById("demo-clear-comments");
   const reset = document.getElementById("demo-reset");
 
   toggle?.addEventListener("click", () => {
-    comments.setEnabled(!comments.enabled);
-    toggle.setAttribute("aria-pressed", String(comments.enabled));
-    toggle.classList.toggle("active", comments.enabled);
+    // Route through the editor so the action-pane button stays in sync too.
+    editor.setCommentMode(!editor.getCommentMode());
+  });
+
+  loadBtn?.addEventListener("click", () => comments.load(savedComments));
+
+  panBtn?.addEventListener("click", () => {
+    const target = savedComments[0];
+    logEvent("pan", `to (${target.worldX}, ${target.worldY})`);
+    void editor.panTo(target.worldX, target.worldY, { zoom: 1.4 });
   });
 
   clear?.addEventListener("click", () => comments.clear());

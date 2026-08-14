@@ -18,6 +18,9 @@ class FakeEl {
   tagName = "";
   private _className = "";
   private classes = new Set<string>();
+  private attrs = new Map<string, string>();
+  focus = vi.fn();
+  blur = vi.fn();
   set className(v: string) {
     this._className = v;
     this.classes = new Set(v.split(/\s+/).filter(Boolean));
@@ -34,9 +37,11 @@ class FakeEl {
     remove: (c: string) => this.classes.delete(c),
     contains: (c: string) => this.classes.has(c),
   };
-  setAttribute(_name: string, _value: string): void {}
-  getAttribute(_name: string): string | null {
-    return null;
+  setAttribute(name: string, value: string): void {
+    this.attrs.set(name, value);
+  }
+  getAttribute(name: string): string | null {
+    return this.attrs.get(name) ?? null;
   }
   appendChild(child: FakeEl): FakeEl {
     this.children.push(child);
@@ -108,7 +113,7 @@ function makeEditor() {
   const removed: string[] = [];
   const handlers: Record<string, Array<(payload: unknown) => void>> = {};
   const editor = {
-    screenToWorld: (sx: number, sy: number) => ({ x: (sx - 0) / 1, y: (sy - 0) / 1 }),
+    screenToWorld: (sx: number, sy: number) => ({ x: sx, y: sy }),
     getCameraState: () => ({ panX: 0, panY: 0, zoom: 1 }),
     addOverlay: (o: CustomOverlay) => {
       added.push(o);
@@ -141,23 +146,104 @@ describe("overlay primitives", () => {
     expect(overlay.worldY).toBe(50);
     expect(overlay.scaleWithZoom).toBe(false);
     expect(overlay.element).toBeDefined();
+    expect(overlay.element.getAttribute("data-mode")).toBe("editing");
   });
 
   it("attachCommentLayer spawns a bubble on pane:click at click world coords", () => {
     installDom();
     const { editor, added, handlers } = makeEditor();
-    const layer = attachCommentLayer(editor, { canvas: new FakeEl() as unknown as HTMLElement });
+    const layer = attachCommentLayer(editor, {
+      canvas: new FakeEl() as unknown as HTMLElement,
+    });
 
     const paneClick = handlers["pane:click"]![0];
     paneClick({ event: { clientX: 60, clientY: 80 } });
 
     expect(added.length).toBe(1);
     const overlay = added[0];
-    // client (60,80) - canvas rect (10,20) => (50,60); screenToWorld identity.
     expect(overlay.worldX).toBe(50);
     expect(overlay.worldY).toBe(60);
     expect(overlay.id).toMatch(/^gg-comment-/);
     expect(layer.get(overlay.id)).toBe(overlay);
+  });
+
+  it("new bubbles auto-focus their composer", () => {
+    installDom();
+    const { editor, added } = makeEditor();
+    const layer = attachCommentLayer(editor);
+    layer.add(1, 2);
+    const input = added[0].element.querySelector(
+      ".gg-comment-input"
+    ) as unknown as FakeEl;
+    expect(input.focus).toHaveBeenCalled();
+  });
+
+  it("blurring an empty composer emits cancel and removes the bubble", () => {
+    installDom();
+    const { editor, removed } = makeEditor();
+    const layer = attachCommentLayer(editor);
+    const cancel = vi.fn();
+    layer.on("cancel", cancel);
+
+    const id = layer.add(1, 2);
+    const input = layer.get(id)!.element.querySelector(
+      ".gg-comment-input"
+    ) as unknown as FakeEl;
+    input.value = "";
+    input.dispatchEvent({ type: "blur" });
+
+    expect(cancel).toHaveBeenCalledWith({
+      id,
+      author: "Guest",
+      worldX: 1,
+      worldY: 2,
+    });
+    expect(layer.get(id)).toBeUndefined();
+    expect(removed).toContain(id);
+  });
+
+  it("blurring a composer with text emits save and keeps a saved bubble", () => {
+    installDom();
+    const { editor } = makeEditor();
+    const layer = attachCommentLayer(editor);
+    const save = vi.fn();
+    layer.on("save", save);
+
+    const id = layer.add(5, 6, { author: "Ada" });
+    const input = layer.get(id)!.element.querySelector(
+      ".gg-comment-input"
+    ) as unknown as FakeEl;
+    input.value = "great work!";
+    input.dispatchEvent({ type: "blur" });
+
+    expect(save).toHaveBeenCalledWith({
+      id,
+      author: "Ada",
+      text: "great work!",
+      worldX: 5,
+      worldY: 6,
+    });
+    const bubble = layer.get(id);
+    expect(bubble).toBeDefined();
+    expect(bubble!.element.getAttribute("data-mode")).toBe("saved");
+  });
+
+  it("load() renders saved bubbles from consumer state and emits load", () => {
+    installDom();
+    const { editor, added } = makeEditor();
+    const layer = attachCommentLayer(editor);
+    const load = vi.fn();
+    layer.on("load", load);
+
+    layer.load([
+      { id: "a", author: "Ada", text: "hello", worldX: 10, worldY: 20 },
+      { id: "b", author: "Lin", text: "wip", worldX: 30, worldY: 40 },
+    ]);
+
+    expect(added.length).toBe(2);
+    expect(layer.get("a")).toBeDefined();
+    expect(layer.get("a")!.element.getAttribute("data-mode")).toBe("saved");
+    expect(load).toHaveBeenCalledWith({ count: 2 });
   });
 
   it("setEnabled(false) stops spawning from pane clicks", () => {
@@ -169,17 +255,35 @@ describe("overlay primitives", () => {
     expect(added.length).toBe(0);
   });
 
-  it("remove(id) removes the overlay and fires onRemove", () => {
+  it("remove(id) removes the overlay", () => {
     installDom();
     const { editor, added, removed } = makeEditor();
-    const onRemove = vi.fn();
-    const layer = attachCommentLayer(editor, { onRemove });
+    const layer = attachCommentLayer(editor);
     const id = layer.add(1, 2, { id: "custom-id" });
     expect(added.length).toBe(1);
 
     layer.remove(id);
     expect(removed).toContain(id);
-    expect(onRemove).toHaveBeenCalledWith(id);
+    expect(layer.get(id)).toBeUndefined();
+  });
+
+  it("dismissing a bubble emits delete", () => {
+    installDom();
+    const { editor } = makeEditor();
+    const layer = attachCommentLayer(editor);
+    const del = vi.fn();
+    layer.on("delete", del);
+
+    const id = layer.add(1, 2);
+    const close = layer.get(id)!.element.querySelector(
+      ".gg-comment-close"
+    ) as unknown as FakeEl;
+    close.dispatchEvent({
+      type: "click",
+      stopPropagation: () => {},
+    } as unknown as Event);
+
+    expect(del).toHaveBeenCalledWith({ id });
     expect(layer.get(id)).toBeUndefined();
   });
 

@@ -333,6 +333,18 @@ export class ActionPane extends HTMLElement {
           </svg>
         </button>
 
+        <button id="btn-comment-mode" title="Comment">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5V13C20 14.1046 19.1046 15 18 15H11.5L7 19V15H6C4.89543 15 4 14.1046 4 13V5Z"
+              fill="currentColor"
+            />
+            <circle cx="8" cy="9" r="1.4" fill="#0b0b0b" />
+            <circle cx="12" cy="9" r="1.4" fill="#0b0b0b" />
+            <circle cx="16" cy="9" r="1.4" fill="#0b0b0b" />
+          </svg>
+        </button>
+
         <button id="btn-multi-select">
           <svg
             fill="currentColor"

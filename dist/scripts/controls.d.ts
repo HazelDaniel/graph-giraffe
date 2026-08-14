@@ -10,6 +10,8 @@ export interface ControlCallbacks {
     onUndo(): void;
     onRedo(): void;
     onDeleteNode(): void;
+    onCommentMode?(): void;
+    setCommentModeActive?(active: boolean): void;
     onImport?(): void;
     onExport?(): void;
     onSubgraphCreate: () => void;
@@ -41,6 +43,7 @@ export declare class UIControls {
     private undoButton;
     private redoButton;
     private deleteNodeButton;
+    private commentModeButton;
     private sidebar;
     private sidebarToggle;
     private nodeProperties;
@@ -52,6 +55,7 @@ export declare class UIControls {
     enableAddComposition(): void;
     disableAddComposition(): void;
     setMultiSelectActive(active: boolean): void;
+    setCommentModeActive(active: boolean): void;
     enableUndo(): void;
     disableUndo(): void;
     enableRedo(): void;

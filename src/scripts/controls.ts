@@ -13,6 +13,8 @@ export interface ControlCallbacks {
   onUndo(): void;
   onRedo(): void;
   onDeleteNode(): void;
+  onCommentMode?(): void;
+  setCommentModeActive?(active: boolean): void;
   onImport?(): void;
   onExport?(): void;
 
@@ -46,6 +48,7 @@ export class UIControls {
   private undoButton: HTMLButtonElement;
   private redoButton: HTMLButtonElement;
   private deleteNodeButton: HTMLButtonElement;
+  private commentModeButton: HTMLButtonElement;
 
   private sidebar: HTMLElement;
   private sidebarToggle: HTMLButtonElement;
@@ -88,6 +91,9 @@ export class UIControls {
     this.deleteNodeButton = toolPane.shadowRoot?.querySelector(
       "#btn-delete-node"
     )! as HTMLButtonElement;
+    this.commentModeButton = toolPane.shadowRoot?.querySelector(
+      "#btn-comment-mode"
+    )! as HTMLButtonElement;
     this.sidebarToggle = container.shadowRoot?.querySelector(
       "#sidebar-toggle"
     )! as HTMLButtonElement;
@@ -119,6 +125,9 @@ export class UIControls {
     this.redoButton.addEventListener("click", () => callbacks.onRedo());
     this.deleteNodeButton.addEventListener("click", () =>
       callbacks.onDeleteNode()
+    );
+    this.commentModeButton.addEventListener("click", () =>
+      callbacks.onCommentMode?.()
     );
 
     const kebabMenu = document.getElementById("kebab-menu");
@@ -219,6 +228,9 @@ export class UIControls {
     if (this.multiSelectButton.classList.contains("active"))
       this.createSubgraphButton.disabled = false;
     else this.createSubgraphButton.disabled = true;
+  }
+  setCommentModeActive(active: boolean): void {
+    this.commentModeButton.classList.toggle("active", active);
   }
   enableUndo(): void {
     this.undoButton.disabled = false;
