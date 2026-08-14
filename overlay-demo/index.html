@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graph Giraffe — Overlay Primitives</title>
+    <link rel="stylesheet" href="/assets/index.css" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="demo-header">
+        <div class="demo-header-brand">
+          <span class="demo-header-title">Graph Giraffe</span>
+          <span class="demo-header-badge">Overlay Primitives</span>
+        </div>
+        <p class="demo-header-desc">
+          Figma-style comment bubbles attached to the canvas. Toggle
+          <strong>Comment</strong> mode, then click an empty area — a bubble
+          spawns at the exact click point. Drag a bubble by its header to move
+          it (the tail keeps pointing at the anchor). Dismiss with
+          <strong>&times;</strong>.
+        </p>
+
+        <div id="demo-toolbar" class="demo-toolbar">
+          <button id="demo-comment-toggle" aria-pressed="false">💬 Comment</button>
+          <button id="demo-clear-comments">Clear comments</button>
+          <button id="demo-reset">Reset</button>
+        </div>
+      </header>
+
+      <main class="demo-canvas" id="editor"></main>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

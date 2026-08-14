@@ -20,6 +20,8 @@ export { NodeEditor } from './scripts/node-editor.js';
 // ─── Node Type Registry ─────────────────────────────────
 export { NodeTypeRegistry } from './scripts/node-type-registry.js';
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
+// ─── Overlay primitives ───────────────────────────────────
+export { createCommentBubble, attachCommentLayer, } from './scripts/overlay-primitives.js';
 // ─── Bundled DOM skins (renderMode: "dom") ───────────────
 export { registerDomViews, DOM_VIEW_TAGS, } from './scripts/dom-views.js';
 export { createCustomElementDomRenderer, toDomDescriptor, DOM_NODE_DESCRIPTORS, registerDomNodeDescriptors, } from './scripts/dom-descriptors.js';

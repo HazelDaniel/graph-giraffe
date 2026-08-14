@@ -19,6 +19,8 @@ export { NodeTypeRegistry } from './scripts/node-type-registry.js';
 export type { NodeTypeDescriptor, NodeOverlayConfig, RoundedRectConfig, FlatConfig, NodeDrawContext, NodeOverlayContext, RendererDrawAPI, DomNodeRenderer, DomNodeViewContext, } from './scripts/node-type-registry.js';
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
+export { createCommentBubble, attachCommentLayer, } from './scripts/overlay-primitives.js';
+export type { CommentBubbleOptions, CommentLayerOptions, CommentLayerController, } from './scripts/overlay-primitives.js';
 export { registerDomViews, DOM_VIEW_TAGS, } from './scripts/dom-views.js';
 export { createCustomElementDomRenderer, toDomDescriptor, DOM_NODE_DESCRIPTORS, registerDomNodeDescriptors, } from './scripts/dom-descriptors.js';
 export { BUILTIN_DESCRIPTORS, nodeDescriptor, hubDescriptor, branchDescriptor, groupDescriptor, compositionDescriptor, compositionChildDescriptor, subgraphDescriptor, } from './scripts/builtin-types.js';

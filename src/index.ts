@@ -39,6 +39,18 @@ export type {
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
 
+// ─── Overlay primitives ───────────────────────────────────
+
+export {
+  createCommentBubble,
+  attachCommentLayer,
+} from './scripts/overlay-primitives.js';
+export type {
+  CommentBubbleOptions,
+  CommentLayerOptions,
+  CommentLayerController,
+} from './scripts/overlay-primitives.js';
+
 // ─── Bundled DOM skins (renderMode: "dom") ───────────────
 
 export {
