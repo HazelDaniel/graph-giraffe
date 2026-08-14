@@ -10186,8 +10186,15 @@ const BUBBLE_CSS = `
     cursor: grab;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-  .gg-comment-head.gg-comment-dragging {
+  .gg-comment-body {
+    cursor: grab;
+  }
+  .gg-comment-dragging {
     cursor: grabbing;
+  }
+  .gg-comment[data-collapsed="true"] .gg-comment-tail,
+  .gg-comment[data-collapsed="true"] .gg-comment-popover {
+    display: none;
   }
   .gg-comment-avatar {
     width: 22px;
@@ -10281,6 +10288,7 @@ function createCommentBubble(options) {
   const element = document.createElement("div");
   element.className = "gg-comment";
   element.setAttribute("data-mode", options.editing === false ? "saved" : "editing");
+  element.setAttribute("data-collapsed", options.collapsed ? "true" : "false");
   const pin = document.createElement("div");
   pin.className = "gg-comment-pin";
   pin.title = author;
@@ -10344,7 +10352,11 @@ function createCommentBubble(options) {
         body.textContent = input.value;
       }
     },
+    setCollapsed(collapsed) {
+      element.setAttribute("data-collapsed", collapsed ? "true" : "false");
+    },
     focus() {
+      element.setAttribute("data-collapsed", "false");
       setTimeout(() => input.focus(), 0);
     },
     getText() {
@@ -10355,14 +10367,25 @@ function createCommentBubble(options) {
     var _a2;
     return (_a2 = options.onBlur) == null ? void 0 : _a2.call(options, input.value);
   });
+  pin.addEventListener("mousedown", (event) => event.preventDefault());
+  avatar.addEventListener("mousedown", (event) => event.preventDefault());
   close.addEventListener("click", (event) => {
     var _a2;
     event.stopPropagation();
     (_a2 = options.onDismiss) == null ? void 0 : _a2.call(options, id);
   });
+  avatar.addEventListener("click", (event) => {
+    var _a2;
+    event.stopPropagation();
+    (_a2 = options.onOpen) == null ? void 0 : _a2.call(options, id);
+  });
   pin.addEventListener("click", () => {
     var _a2;
-    return (_a2 = options.onPinClick) == null ? void 0 : _a2.call(options, id);
+    if (pin.getAttribute("data-dragged") === "true") {
+      pin.removeAttribute("data-dragged");
+      return;
+    }
+    (_a2 = options.onOpen) == null ? void 0 : _a2.call(options, id);
   });
   return overlay;
 }
@@ -10413,10 +10436,11 @@ function attachCommentLayer(editor, options = {}) {
         emitDom(overlay.element, "gg-comment:delete", { id: bubbleId });
         remove(bubbleId);
       },
-      onPinClick: (bubbleId) => {
+      onOpen: (bubbleId) => {
         const target = overlays.get(bubbleId);
         if (!target) return;
         target.setMode("editing");
+        target.setCollapsed(false);
         target.focus();
       }
     });
@@ -10445,6 +10469,7 @@ function attachCommentLayer(editor, options = {}) {
     const { worldX, worldY } = overlay;
     if (trimmed) {
       overlay.setMode("saved");
+      overlay.setCollapsed(true);
       emit("save", { id, author, text: trimmed, worldX, worldY });
       emitDom(overlay.element, "gg-comment:save", {
         id,
@@ -10479,6 +10504,7 @@ function attachCommentLayer(editor, options = {}) {
         author: record.author,
         text: record.text,
         editing: false,
+        collapsed: true,
         onBlur: (text) => handleBlur(overlay, text),
         onDismiss: (bubbleId) => {
           suppressBlur(overlay);
@@ -10486,10 +10512,11 @@ function attachCommentLayer(editor, options = {}) {
           emitDom(overlay.element, "gg-comment:delete", { id: bubbleId });
           remove(bubbleId);
         },
-        onPinClick: (bubbleId) => {
+        onOpen: (bubbleId) => {
           const target = overlays.get(bubbleId);
           if (!target) return;
           target.setMode("editing");
+          target.setCollapsed(false);
           target.focus();
         }
       });
@@ -10542,49 +10569,65 @@ function attachCommentLayer(editor, options = {}) {
   };
 }
 function wireBubbleDrag(editor, overlay) {
-  const head = overlay.element.querySelector(".gg-comment-head");
-  if (!head) return;
-  let startClientX = 0;
-  let startClientY = 0;
-  let startWorldX = 0;
-  let startWorldY = 0;
-  let dragging = false;
-  head.addEventListener("pointerdown", (event) => {
-    const pointer = event;
-    const target = pointer.target;
-    if (target.closest("button") || target.closest("textarea")) return;
-    if (pointer.button !== 0) return;
-    startClientX = pointer.clientX;
-    startClientY = pointer.clientY;
-    startWorldX = overlay.worldX;
-    startWorldY = overlay.worldY;
-    dragging = true;
-    event.currentTarget.classList.add("gg-comment-dragging");
-    event.currentTarget.setPointerCapture(pointer.pointerId);
-  });
-  head.addEventListener("pointermove", (event) => {
-    if (!dragging) return;
-    const pointer = event;
-    const zoom = editor.getCameraState().zoom || 1;
-    const nextX = startWorldX + (pointer.clientX - startClientX) / zoom;
-    const nextY = startWorldY + (pointer.clientY - startClientY) / zoom;
-    overlay.worldX = nextX;
-    overlay.worldY = nextY;
-    editor.updateOverlayPosition(overlay.id, nextX, nextY);
-  });
-  const stop = (event) => {
-    if (!dragging) return;
-    const pointer = event;
-    dragging = false;
-    event.currentTarget.classList.remove(
-      "gg-comment-dragging"
-    );
-    event.currentTarget.releasePointerCapture(
-      pointer.pointerId
-    );
-  };
-  head.addEventListener("pointerup", stop);
-  head.addEventListener("pointercancel", stop);
+  const handles = [
+    ".gg-comment-pin",
+    ".gg-comment-head",
+    ".gg-comment-body"
+  ].map((selector) => overlay.element.querySelector(selector)).filter((el) => el !== null);
+  for (const el of handles) {
+    let startClientX = 0;
+    let startClientY = 0;
+    let startWorldX = 0;
+    let startWorldY = 0;
+    let dragging = false;
+    let moved = false;
+    el.addEventListener("pointerdown", (event) => {
+      const pointer = event;
+      const target = pointer.target;
+      if (pointer.button !== 0 || target.closest("button") || target.closest("textarea") || target.closest(".gg-comment-avatar")) {
+        return;
+      }
+      startClientX = pointer.clientX;
+      startClientY = pointer.clientY;
+      startWorldX = overlay.worldX;
+      startWorldY = overlay.worldY;
+      dragging = true;
+      moved = false;
+      el.classList.add("gg-comment-dragging");
+      el.setPointerCapture(pointer.pointerId);
+    });
+    el.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+      const pointer = event;
+      if (!moved && Math.hypot(
+        pointer.clientX - startClientX,
+        pointer.clientY - startClientY
+      ) > 3) {
+        moved = true;
+        if (el.classList.contains("gg-comment-pin")) {
+          el.setAttribute("data-dragged", "true");
+        }
+      }
+      const zoom = editor.getCameraState().zoom || 1;
+      const nextX = startWorldX + (pointer.clientX - startClientX) / zoom;
+      const nextY = startWorldY + (pointer.clientY - startClientY) / zoom;
+      overlay.worldX = nextX;
+      overlay.worldY = nextY;
+      editor.updateOverlayPosition(overlay.id, nextX, nextY);
+    });
+    const stop = (event) => {
+      if (!dragging) return;
+      const pointer = event;
+      dragging = false;
+      if (event.type === "pointercancel") {
+        el.removeAttribute("data-dragged");
+      }
+      el.classList.remove("gg-comment-dragging");
+      el.releasePointerCapture(pointer.pointerId);
+    };
+    el.addEventListener("pointerup", stop);
+    el.addEventListener("pointercancel", stop);
+  }
 }
 const EDIT = `
 <svg style="transform: scale(0.5);"  viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M18.9445 9.1875L14.9445 5.1875M18.9445 9.1875L13.946 14.1859C13.2873 14.8446 12.4878 15.3646 11.5699 15.5229C10.6431 15.6828 9.49294 15.736 8.94444 15.1875C8.39595 14.639 8.44915 13.4888 8.609 12.562C8.76731 11.6441 9.28735 10.8446 9.946 10.1859L14.9445 5.1875M18.9445 9.1875C18.9445 9.1875 21.9444 6.1875 19.9444 4.1875C17.9444 2.1875 14.9445 5.1875 14.9445 5.1875M20.5 12C20.5 18.5 18.5 20.5 12 20.5C5.5 20.5 3.5 18.5 3.5 12C3.5 5.5 5.5 3.5 12 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>

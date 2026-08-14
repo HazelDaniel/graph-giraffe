@@ -62,8 +62,15 @@ const BUBBLE_CSS = `
     cursor: grab;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-  .gg-comment-head.gg-comment-dragging {
+  .gg-comment-body {
+    cursor: grab;
+  }
+  .gg-comment-dragging {
     cursor: grabbing;
+  }
+  .gg-comment[data-collapsed="true"] .gg-comment-tail,
+  .gg-comment[data-collapsed="true"] .gg-comment-popover {
+    display: none;
   }
   .gg-comment-avatar {
     width: 22px;
@@ -162,6 +169,7 @@ export function createCommentBubble(options) {
     const element = document.createElement("div");
     element.className = "gg-comment";
     element.setAttribute("data-mode", options.editing === false ? "saved" : "editing");
+    element.setAttribute("data-collapsed", options.collapsed ? "true" : "false");
     const pin = document.createElement("div");
     pin.className = "gg-comment-pin";
     pin.title = author;
@@ -220,11 +228,15 @@ export function createCommentBubble(options) {
                 body.textContent = input.value;
             }
         },
+        setCollapsed(collapsed) {
+            element.setAttribute("data-collapsed", collapsed ? "true" : "false");
+        },
         focus() {
             // Defer out of the current pointer/mouse task. Calling focus() during a
             // mousedown on the (non-focusable) canvas gets reverted by the browser's
             // default action, which would immediately blur an empty composer and
             // cancel it. Running on the next task makes the focus stick.
+            element.setAttribute("data-collapsed", "false");
             setTimeout(() => input.focus(), 0);
         },
         getText() {
@@ -232,18 +244,35 @@ export function createCommentBubble(options) {
         },
     };
     input.addEventListener("blur", () => options.onBlur?.(input.value));
+    // Prevent the mousedown default action (which moves focus to the body) so
+    // clicking the avatar/pin while the composer is focused doesn't blur it and
+    // collapse the bubble out from under the pointer before the click lands.
+    pin.addEventListener("mousedown", (event) => event.preventDefault());
+    avatar.addEventListener("mousedown", (event) => event.preventDefault());
     close.addEventListener("click", (event) => {
         event.stopPropagation();
         options.onDismiss?.(id);
     });
-    pin.addEventListener("click", () => options.onPinClick?.(id));
+    avatar.addEventListener("click", (event) => {
+        event.stopPropagation();
+        options.onOpen?.(id);
+    });
+    pin.addEventListener("click", () => {
+        // Suppress the expand when the click is the tail end of a drag.
+        if (pin.getAttribute("data-dragged") === "true") {
+            pin.removeAttribute("data-dragged");
+            return;
+        }
+        options.onOpen?.(id);
+    });
     return overlay;
 }
 /**
  * Attach a comment layer to an editor. While enabled, clicking an empty part
- * of the canvas (`pane:click`) spawns a composer bubble at the click point,
- * auto-focused. Blurring the composer emits `save` (text) or `cancel` (empty).
- * Bubbles can be dragged by their header and dismissed individually.
+ * of the canvas (`pane:click`) spawns an expanded, auto-focused composer
+ * bubble at the click point. Blurring the composer collapses it (and emits
+ * `save` if it has text, or `cancel`/removes it if empty). Bubbles are
+ * draggable by their pin or chatbox and dismissed individually.
  */
 export function attachCommentLayer(editor, options = {}) {
     ensureStyles();
@@ -292,11 +321,12 @@ export function attachCommentLayer(editor, options = {}) {
                 emitDom(overlay.element, "gg-comment:delete", { id: bubbleId });
                 remove(bubbleId);
             },
-            onPinClick: (bubbleId) => {
+            onOpen: (bubbleId) => {
                 const target = overlays.get(bubbleId);
                 if (!target)
                     return;
                 target.setMode("editing");
+                target.setCollapsed(false);
                 target.focus();
             },
         });
@@ -324,6 +354,7 @@ export function attachCommentLayer(editor, options = {}) {
         const { worldX, worldY } = overlay;
         if (trimmed) {
             overlay.setMode("saved");
+            overlay.setCollapsed(true);
             emit("save", { id, author, text: trimmed, worldX, worldY });
             emitDom(overlay.element, "gg-comment:save", {
                 id,
@@ -362,6 +393,7 @@ export function attachCommentLayer(editor, options = {}) {
                 author: record.author,
                 text: record.text,
                 editing: false,
+                collapsed: true,
                 onBlur: (text) => handleBlur(overlay, text),
                 onDismiss: (bubbleId) => {
                     suppressBlur(overlay);
@@ -369,11 +401,12 @@ export function attachCommentLayer(editor, options = {}) {
                     emitDom(overlay.element, "gg-comment:delete", { id: bubbleId });
                     remove(bubbleId);
                 },
-                onPinClick: (bubbleId) => {
+                onOpen: (bubbleId) => {
                     const target = overlays.get(bubbleId);
                     if (!target)
                         return;
                     target.setMode("editing");
+                    target.setCollapsed(false);
                     target.focus();
                 },
             });
@@ -429,53 +462,75 @@ export function attachCommentLayer(editor, options = {}) {
     };
 }
 /**
- * Drag a fixed-size overlay by its header: a pointer drag translates the
- * anchor in world space (screen delta / zoom) and re-glues the bubble.
+ * Drag a fixed-size overlay by its pin, header, or message body: a pointer
+ * drag translates the anchor in world space (screen delta / zoom) and
+ * re-glues the bubble. A drag that exceeds a few pixels flags the pin with
+ * `data-dragged` so the trailing `click` does not expand a collapsed bubble.
  */
 function wireBubbleDrag(editor, overlay) {
-    const head = overlay.element.querySelector(".gg-comment-head");
-    if (!head)
-        return;
-    let startClientX = 0;
-    let startClientY = 0;
-    let startWorldX = 0;
-    let startWorldY = 0;
-    let dragging = false;
-    head.addEventListener("pointerdown", (event) => {
-        const pointer = event;
-        const target = pointer.target;
-        if (target.closest("button") || target.closest("textarea"))
-            return;
-        if (pointer.button !== 0)
-            return;
-        startClientX = pointer.clientX;
-        startClientY = pointer.clientY;
-        startWorldX = overlay.worldX;
-        startWorldY = overlay.worldY;
-        dragging = true;
-        event.currentTarget.classList.add("gg-comment-dragging");
-        event.currentTarget.setPointerCapture(pointer.pointerId);
-    });
-    head.addEventListener("pointermove", (event) => {
-        if (!dragging)
-            return;
-        const pointer = event;
-        const zoom = editor.getCameraState().zoom || 1;
-        const nextX = startWorldX + (pointer.clientX - startClientX) / zoom;
-        const nextY = startWorldY + (pointer.clientY - startClientY) / zoom;
-        overlay.worldX = nextX;
-        overlay.worldY = nextY;
-        editor.updateOverlayPosition(overlay.id, nextX, nextY);
-    });
-    const stop = (event) => {
-        if (!dragging)
-            return;
-        const pointer = event;
-        dragging = false;
-        event.currentTarget.classList.remove("gg-comment-dragging");
-        event.currentTarget.releasePointerCapture(pointer.pointerId);
-    };
-    head.addEventListener("pointerup", stop);
-    head.addEventListener("pointercancel", stop);
+    const handles = [
+        ".gg-comment-pin",
+        ".gg-comment-head",
+        ".gg-comment-body",
+    ]
+        .map((selector) => overlay.element.querySelector(selector))
+        .filter((el) => el !== null);
+    for (const el of handles) {
+        let startClientX = 0;
+        let startClientY = 0;
+        let startWorldX = 0;
+        let startWorldY = 0;
+        let dragging = false;
+        let moved = false;
+        el.addEventListener("pointerdown", (event) => {
+            const pointer = event;
+            const target = pointer.target;
+            if (pointer.button !== 0 ||
+                target.closest("button") ||
+                target.closest("textarea") ||
+                target.closest(".gg-comment-avatar")) {
+                return;
+            }
+            startClientX = pointer.clientX;
+            startClientY = pointer.clientY;
+            startWorldX = overlay.worldX;
+            startWorldY = overlay.worldY;
+            dragging = true;
+            moved = false;
+            el.classList.add("gg-comment-dragging");
+            el.setPointerCapture(pointer.pointerId);
+        });
+        el.addEventListener("pointermove", (event) => {
+            if (!dragging)
+                return;
+            const pointer = event;
+            if (!moved &&
+                Math.hypot(pointer.clientX - startClientX, pointer.clientY - startClientY) > 3) {
+                moved = true;
+                if (el.classList.contains("gg-comment-pin")) {
+                    el.setAttribute("data-dragged", "true");
+                }
+            }
+            const zoom = editor.getCameraState().zoom || 1;
+            const nextX = startWorldX + (pointer.clientX - startClientX) / zoom;
+            const nextY = startWorldY + (pointer.clientY - startClientY) / zoom;
+            overlay.worldX = nextX;
+            overlay.worldY = nextY;
+            editor.updateOverlayPosition(overlay.id, nextX, nextY);
+        });
+        const stop = (event) => {
+            if (!dragging)
+                return;
+            const pointer = event;
+            dragging = false;
+            if (event.type === "pointercancel") {
+                el.removeAttribute("data-dragged");
+            }
+            el.classList.remove("gg-comment-dragging");
+            el.releasePointerCapture(pointer.pointerId);
+        };
+        el.addEventListener("pointerup", stop);
+        el.addEventListener("pointercancel", stop);
+    }
 }
 //# sourceMappingURL=overlay-primitives.js.map

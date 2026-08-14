@@ -2,9 +2,10 @@ import type { NodeEditor } from "./node-editor.js";
 import type { CustomOverlay } from "./types.js";
 /**
  * Figma-style comment overlays built on the editor's low-level `CustomOverlay`
- * API. The library owns no chat state: creating a bubble focuses a composer
- * attached to a pin, and blurring it emits `save`/`cancel` events for the
- * consumer to persist. `load()` renders bubbles back from consumer state.
+ * API. Bubbles collapse to a draggable anchor pin and expand into a chatbox;
+ * the library owns no chat state: creating a bubble focuses a composer, and
+ * blurring it emits `save`/`cancel` events for the consumer to persist.
+ * `load()` renders bubbles back from consumer state.
  */
 export interface CommentRecord {
     id: string;
@@ -57,13 +58,18 @@ export interface CommentBubbleOptions {
     onBlur?: (text: string) => void;
     /** Fired when the bubble's dismiss button is pressed. */
     onDismiss?: (id: string) => void;
-    /** Fired when the pin is clicked. */
-    onPinClick?: (id: string) => void;
+    /** Fired when the anchor pin or header avatar is clicked — the consumer
+     *  opens the composer (expand + focus). */
+    onOpen?: (id: string) => void;
+    /** Start collapsed to the anchor pin only. Default false. */
+    collapsed?: boolean;
 }
 /** A comment bubble `CustomOverlay` with editing/saved-mode controls. */
 export interface CommentBubble extends CustomOverlay {
     /** Switch between composer ("editing") and posted message ("saved"). */
     setMode(mode: "editing" | "saved"): void;
+    /** Collapse to the draggable anchor pin, or expand the chatbox. */
+    setCollapsed(collapsed: boolean): void;
     /** Focus the attached composer. */
     focus(): void;
     /** Current composer text. */
@@ -107,8 +113,9 @@ export interface CommentLayerController {
 export declare function createCommentBubble(options: CommentBubbleOptions): CommentBubble;
 /**
  * Attach a comment layer to an editor. While enabled, clicking an empty part
- * of the canvas (`pane:click`) spawns a composer bubble at the click point,
- * auto-focused. Blurring the composer emits `save` (text) or `cancel` (empty).
- * Bubbles can be dragged by their header and dismissed individually.
+ * of the canvas (`pane:click`) spawns an expanded, auto-focused composer
+ * bubble at the click point. Blurring the composer collapses it (and emits
+ * `save` if it has text, or `cancel`/removes it if empty). Bubbles are
+ * draggable by their pin or chatbox and dismissed individually.
  */
 export declare function attachCommentLayer(editor: NodeEditor, options?: CommentLayerOptions): CommentLayerController;

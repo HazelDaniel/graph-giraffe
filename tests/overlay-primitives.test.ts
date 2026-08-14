@@ -44,6 +44,9 @@ class FakeEl {
   getAttribute(name: string): string | null {
     return this.attrs.get(name) ?? null;
   }
+  removeAttribute(name: string): void {
+    this.attrs.delete(name);
+  }
   appendChild(child: FakeEl): FakeEl {
     this.children.push(child);
     return child;
@@ -246,6 +249,7 @@ describe("overlay primitives", () => {
     const bubble = layer.get(id);
     expect(bubble).toBeDefined();
     expect(bubble!.element.getAttribute("data-mode")).toBe("saved");
+    expect(bubble!.element.getAttribute("data-collapsed")).toBe("true");
   });
 
   it("load() renders saved bubbles from consumer state and emits load", () => {
@@ -263,7 +267,85 @@ describe("overlay primitives", () => {
     expect(added.length).toBe(2);
     expect(layer.get("a")).toBeDefined();
     expect(layer.get("a")!.element.getAttribute("data-mode")).toBe("saved");
+    expect(layer.get("a")!.element.getAttribute("data-collapsed")).toBe("true");
     expect(load).toHaveBeenCalledWith({ count: 2 });
+  });
+
+  it("clicking the anchor pin opens a collapsed bubble (expands + focuses)", async () => {
+    installDom();
+    const { editor } = makeEditor();
+    const layer = attachCommentLayer(editor);
+    layer.load([{ id: "a", author: "Ada", text: "hello", worldX: 10, worldY: 20 }]);
+    const overlay = layer.get("a")!;
+    expect(overlay.element.getAttribute("data-collapsed")).toBe("true");
+
+    const pin = overlay.element.querySelector(
+      ".gg-comment-pin"
+    ) as unknown as FakeEl;
+    pin.dispatchEvent({ type: "click" });
+
+    expect(overlay.element.getAttribute("data-collapsed")).toBe("false");
+    expect(overlay.element.getAttribute("data-mode")).toBe("editing");
+    await new Promise((r) => setTimeout(r, 5));
+    const input = overlay.element.querySelector(
+      ".gg-comment-input"
+    ) as unknown as FakeEl;
+    expect(input.focus).toHaveBeenCalled();
+  });
+
+  it("clicking the header avatar opens the composer too", () => {
+    installDom();
+    const { editor } = makeEditor();
+    const layer = attachCommentLayer(editor);
+    layer.load([{ id: "a", author: "Ada", text: "hello", worldX: 10, worldY: 20 }]);
+    const overlay = layer.get("a")!;
+
+    const avatar = overlay.element.querySelector(
+      ".gg-comment-avatar"
+    ) as unknown as FakeEl;
+    avatar.dispatchEvent({
+      type: "click",
+      stopPropagation: () => {},
+    } as unknown as Event);
+
+    expect(overlay.element.getAttribute("data-collapsed")).toBe("false");
+    expect(overlay.element.getAttribute("data-mode")).toBe("editing");
+  });
+
+  it("dragging the pin does not trigger the expand-on-click", () => {
+    installDom();
+    const { editor } = makeEditor();
+    const layer = attachCommentLayer(editor);
+    layer.load([{ id: "a", author: "Ada", text: "hello", worldX: 10, worldY: 20 }]);
+    const overlay = layer.get("a")!;
+    const pin = overlay.element.querySelector(
+      ".gg-comment-pin"
+    ) as unknown as FakeEl;
+
+    pin.dispatchEvent({
+      type: "pointerdown",
+      button: 0,
+      target: pin,
+      clientX: 0,
+      clientY: 0,
+      pointerId: 1,
+    } as unknown as PointerEvent);
+    pin.dispatchEvent({
+      type: "pointermove",
+      clientX: 20,
+      clientY: 0,
+      pointerId: 1,
+    } as unknown as PointerEvent);
+    pin.dispatchEvent({
+      type: "pointerup",
+      pointerId: 1,
+    } as unknown as PointerEvent);
+    expect(pin.getAttribute("data-dragged")).toBe("true");
+
+    pin.dispatchEvent({ type: "click" });
+    expect(overlay.element.getAttribute("data-collapsed")).toBe("true");
+    expect(overlay.element.getAttribute("data-mode")).toBe("saved");
+    expect(pin.getAttribute("data-dragged")).toBeNull();
   });
 
   it("setEnabled(false) stops spawning from pane clicks", () => {
