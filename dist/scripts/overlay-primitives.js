@@ -221,7 +221,11 @@ export function createCommentBubble(options) {
             }
         },
         focus() {
-            input.focus();
+            // Defer out of the current pointer/mouse task. Calling focus() during a
+            // mousedown on the (non-focusable) canvas gets reverted by the browser's
+            // default action, which would immediately blur an empty composer and
+            // cancel it. Running on the next task makes the focus stick.
+            setTimeout(() => input.focus(), 0);
         },
         getText() {
             return input.value;

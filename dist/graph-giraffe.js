@@ -10345,7 +10345,7 @@ function createCommentBubble(options) {
       }
     },
     focus() {
-      input.focus();
+      setTimeout(() => input.focus(), 0);
     },
     getText() {
       return input.value;

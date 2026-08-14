@@ -186,11 +186,12 @@ describe("overlay primitives", () => {
     expect(layer.get(overlay.id)).toBe(overlay);
   });
 
-  it("new bubbles auto-focus their composer", () => {
+  it("new bubbles auto-focus their composer", async () => {
     installDom();
     const { editor, added } = makeEditor();
     const layer = attachCommentLayer(editor);
     layer.add(1, 2);
+    await new Promise((r) => setTimeout(r, 5));
     const input = added[0].element.querySelector(
       ".gg-comment-input"
     ) as unknown as FakeEl;
