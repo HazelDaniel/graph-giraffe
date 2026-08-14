@@ -2,8 +2,6 @@ import {
   NodeEditor,
   shaders,
   Shell,
-  attachCommentLayer,
-  type CommentLayerController,
   type CommentRecord,
 } from "@graph-giraffe/core";
 
@@ -92,10 +90,10 @@ async function boot(): Promise<void> {
   new ResizeObserver(scheduleRender).observe(host);
   window.addEventListener("resize", scheduleRender);
 
-  const comments: CommentLayerController = attachCommentLayer(editor, {
-    author: "Guest",
-    enabled: false,
-  });
+  // The editor owns its comment layer; the action pane's Comment tool (or the
+  // header toggle) toggles it. We only listen for the lifecycle events — the
+  // library holds no chat state; persistence lives in this demo's state above.
+  const comments = editor.getCommentLayer();
 
   const log = document.getElementById("demo-log")!;
   const logEvent = (type: string, detail: string): void => {
@@ -116,9 +114,8 @@ async function boot(): Promise<void> {
   comments.on("delete", (p) => logEvent("delete", `bubble ${p.id}`));
   comments.on("load", (p) => logEvent("load", `${p.count} bubbles restored`));
 
-  // Keep the comment layer in sync with the action pane's Comment button.
+  // Keep the header's Comment toggle in sync with comment mode.
   editor.events.on("comment:modeChange", ({ enabled }) => {
-    comments.setEnabled(enabled);
     syncToggle(enabled);
   });
 
@@ -152,7 +149,7 @@ function syncToggle(enabled: boolean): void {
 
 function wireToolbar(
   editor: NodeEditor,
-  comments: CommentLayerController,
+  comments: ReturnType<NodeEditor["getCommentLayer"]>,
   logEvent: (type: string, detail: string) => void
 ): void {
   const toggle = document.getElementById("demo-comment-toggle");

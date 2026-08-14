@@ -10124,6 +10124,470 @@ const BUILTIN_DESCRIPTORS = [
   compositionChildDescriptor,
   subgraphDescriptor
 ];
+let layerSeq = 0;
+const BUBBLE_CSS = `
+  .gg-comment {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+  }
+  .gg-comment-pin {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--gg-comment-avatar, linear-gradient(135deg, #6366f1, #8b5cf6));
+    color: #fff;
+    font: 600 10px/1 system-ui, -apple-system, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    z-index: 1;
+    transition: transform 120ms ease;
+  }
+  .gg-comment-pin:hover {
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+  .gg-comment-tail {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 40px;
+    height: 40px;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .gg-comment-popover {
+    position: absolute;
+    left: 32px;
+    top: 32px;
+    width: 248px;
+    box-sizing: border-box;
+    background: var(--gg-comment-bg, #0f172a);
+    border: 1px solid var(--gg-comment-border, rgba(255, 255, 255, 0.12));
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+    color: var(--gg-comment-fg, #e2e8f0);
+    font: 13px/1.45 system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    z-index: 2;
+  }
+  .gg-comment-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    cursor: grab;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .gg-comment-head.gg-comment-dragging {
+    cursor: grabbing;
+  }
+  .gg-comment-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--gg-comment-avatar, linear-gradient(135deg, #6366f1, #8b5cf6));
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+  .gg-comment-author {
+    font-weight: 600;
+    font-size: 12px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .gg-comment-close {
+    border: 0;
+    background: transparent;
+    color: var(--gg-comment-muted, #94a3b8);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    flex: none;
+  }
+  .gg-comment-close:hover {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.12);
+  }
+  .gg-comment-body {
+    padding: 9px 12px 11px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 20px;
+  }
+  .gg-comment-input {
+    box-sizing: border-box;
+    width: calc(100% - 16px);
+    margin: 8px;
+    resize: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background: var(--gg-comment-input-bg, rgba(15, 23, 42, 0.9));
+    color: inherit;
+    padding: 7px 9px;
+    font: inherit;
+    min-height: 40px;
+    display: block;
+  }
+  .gg-comment-input:focus {
+    outline: none;
+    border-color: var(--gg-comment-accent, #6366f1);
+  }
+  .gg-comment[data-mode="editing"] .gg-comment-body {
+    display: none;
+  }
+  .gg-comment[data-mode="saved"] .gg-comment-input {
+    display: none;
+  }
+`;
+function ensureStyles() {
+  if (document.getElementById("gg-comment-overlay-styles")) return;
+  const style = document.createElement("style");
+  style.id = "gg-comment-overlay-styles";
+  style.textContent = BUBBLE_CSS;
+  document.head.appendChild(style);
+}
+function initials(name) {
+  var _a2;
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return (parts[0][0] + (((_a2 = parts[1]) == null ? void 0 : _a2[0]) ?? "")).toUpperCase();
+}
+function emitDom(element, type, detail) {
+  element.dispatchEvent(
+    new CustomEvent(type, { bubbles: true, composed: true, detail })
+  );
+}
+function createCommentBubble(options) {
+  ensureStyles();
+  const id = options.id ?? "";
+  const author = options.author ?? "Guest";
+  const element = document.createElement("div");
+  element.className = "gg-comment";
+  element.setAttribute("data-mode", options.editing === false ? "saved" : "editing");
+  const pin = document.createElement("div");
+  pin.className = "gg-comment-pin";
+  pin.title = author;
+  pin.textContent = initials(author);
+  pin.setAttribute("aria-label", `Comment by ${author}`);
+  const tail = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "svg"
+  );
+  tail.setAttribute("class", "gg-comment-tail");
+  tail.setAttribute("viewBox", "0 0 40 40");
+  const path = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "path"
+  );
+  path.setAttribute("d", "M13 13 C 20 14 22 18 26 26");
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "rgba(255,255,255,0.4)");
+  path.setAttribute("stroke-width", "2");
+  path.setAttribute("stroke-linecap", "round");
+  tail.appendChild(path);
+  const popover = document.createElement("div");
+  popover.className = "gg-comment-popover";
+  const head = document.createElement("div");
+  head.className = "gg-comment-head";
+  const avatar = document.createElement("span");
+  avatar.className = "gg-comment-avatar";
+  avatar.textContent = initials(author);
+  avatar.setAttribute("aria-hidden", "true");
+  const authorEl = document.createElement("span");
+  authorEl.className = "gg-comment-author";
+  authorEl.textContent = author;
+  const close = document.createElement("button");
+  close.className = "gg-comment-close";
+  close.type = "button";
+  close.setAttribute("aria-label", "Delete comment");
+  close.innerHTML = "&times;";
+  head.append(avatar, authorEl, close);
+  const body = document.createElement("div");
+  body.className = "gg-comment-body";
+  body.textContent = options.text ?? "";
+  const input = document.createElement("textarea");
+  input.className = "gg-comment-input";
+  input.rows = 2;
+  input.placeholder = options.placeholder ?? "Write a comment…";
+  input.value = options.text ?? "";
+  input.addEventListener("pointerdown", (event) => event.stopPropagation());
+  popover.append(head, body, input);
+  element.append(pin, tail, popover);
+  const overlay = {
+    id,
+    element,
+    worldX: options.worldX,
+    worldY: options.worldY,
+    scaleWithZoom: false,
+    setMode(mode) {
+      element.setAttribute("data-mode", mode);
+      if (mode === "editing") {
+        input.value = body.textContent;
+      } else {
+        body.textContent = input.value;
+      }
+    },
+    focus() {
+      input.focus();
+    },
+    getText() {
+      return input.value;
+    }
+  };
+  input.addEventListener("blur", () => {
+    var _a2;
+    return (_a2 = options.onBlur) == null ? void 0 : _a2.call(options, input.value);
+  });
+  close.addEventListener("click", (event) => {
+    var _a2;
+    event.stopPropagation();
+    (_a2 = options.onDismiss) == null ? void 0 : _a2.call(options, id);
+  });
+  pin.addEventListener("click", () => {
+    var _a2;
+    return (_a2 = options.onPinClick) == null ? void 0 : _a2.call(options, id);
+  });
+  return overlay;
+}
+function attachCommentLayer(editor, options = {}) {
+  ensureStyles();
+  const seq = ++layerSeq;
+  const overlays = /* @__PURE__ */ new Map();
+  const listeners = /* @__PURE__ */ new Map();
+  let counter = 0;
+  let enabled = options.enabled ?? true;
+  const canvas = options.canvas ?? document.getElementById("webgl-canvas") ?? null;
+  function emit(type, payload) {
+    for (const handler of listeners.get(type) ?? []) {
+      handler(payload);
+    }
+  }
+  function resolveCanvasRect() {
+    return canvas ? canvas.getBoundingClientRect() : null;
+  }
+  function spawnFromEvent(event) {
+    const rect = resolveCanvasRect();
+    if (!rect) return;
+    const { x, y } = editor.screenToWorld(
+      event.clientX - rect.left,
+      event.clientY - rect.top
+    );
+    add(x, y);
+  }
+  const onPaneClick = (payload) => {
+    if (!enabled) return;
+    spawnFromEvent(payload.event);
+  };
+  const unsubscribePane = editor.events.on("pane:click", onPaneClick);
+  function add(worldX, worldY, bubbleOptions = {}) {
+    const id = bubbleOptions.id ?? `gg-comment-${seq}-${++counter}`;
+    if (overlays.has(id)) remove(id);
+    const overlay = createCommentBubble({
+      ...bubbleOptions,
+      id,
+      worldX,
+      worldY,
+      author: bubbleOptions.author ?? options.author ?? "Guest",
+      editing: bubbleOptions.editing ?? true,
+      onBlur: (text) => handleBlur(overlay, text),
+      onDismiss: (bubbleId) => {
+        suppressBlur(overlay);
+        emit("delete", { id: bubbleId });
+        emitDom(overlay.element, "gg-comment:delete", { id: bubbleId });
+        remove(bubbleId);
+      },
+      onPinClick: (bubbleId) => {
+        const target = overlays.get(bubbleId);
+        if (!target) return;
+        target.setMode("editing");
+        target.focus();
+      }
+    });
+    overlays.set(id, overlay);
+    editor.addOverlay(overlay);
+    wireBubbleDrag(editor, overlay);
+    if (overlay.element.getAttribute("data-mode") === "editing") {
+      overlay.focus();
+    }
+    emit("create", { id, author: overlayAuthor(overlay), worldX, worldY });
+    emitDom(overlay.element, "gg-comment:create", {
+      id,
+      worldX,
+      worldY
+    });
+    return id;
+  }
+  function overlayAuthor(overlay) {
+    var _a2;
+    return ((_a2 = overlay.element.querySelector(".gg-comment-author")) == null ? void 0 : _a2.textContent) ?? "Guest";
+  }
+  function handleBlur(overlay, text) {
+    const trimmed = text.trim();
+    const id = overlay.id;
+    const author = overlayAuthor(overlay);
+    const { worldX, worldY } = overlay;
+    if (trimmed) {
+      overlay.setMode("saved");
+      emit("save", { id, author, text: trimmed, worldX, worldY });
+      emitDom(overlay.element, "gg-comment:save", {
+        id,
+        author,
+        text: trimmed,
+        worldX,
+        worldY
+      });
+    } else {
+      emit("cancel", { id, author, worldX, worldY });
+      emitDom(overlay.element, "gg-comment:cancel", {
+        id,
+        worldX,
+        worldY
+      });
+      remove(id);
+    }
+  }
+  function suppressBlur(overlay) {
+    const input = overlay.element.querySelector(".gg-comment-input");
+    if (input && typeof input.blur === "function") {
+      input.blur();
+    }
+  }
+  function load(records) {
+    for (const record of records) {
+      if (overlays.has(record.id)) remove(record.id);
+      const overlay = createCommentBubble({
+        id: record.id,
+        worldX: record.worldX,
+        worldY: record.worldY,
+        author: record.author,
+        text: record.text,
+        editing: false,
+        onBlur: (text) => handleBlur(overlay, text),
+        onDismiss: (bubbleId) => {
+          suppressBlur(overlay);
+          emit("delete", { id: bubbleId });
+          emitDom(overlay.element, "gg-comment:delete", { id: bubbleId });
+          remove(bubbleId);
+        },
+        onPinClick: (bubbleId) => {
+          const target = overlays.get(bubbleId);
+          if (!target) return;
+          target.setMode("editing");
+          target.focus();
+        }
+      });
+      overlays.set(record.id, overlay);
+      editor.addOverlay(overlay);
+      wireBubbleDrag(editor, overlay);
+    }
+    emit("load", { count: records.length });
+  }
+  function remove(id) {
+    const overlay = overlays.get(id);
+    if (!overlay) return;
+    editor.removeOverlay(id);
+    overlays.delete(id);
+  }
+  function get(id) {
+    return overlays.get(id);
+  }
+  function clear() {
+    for (const id of [...overlays.keys()]) remove(id);
+  }
+  function setEnabled(value) {
+    enabled = value;
+  }
+  function on(type, handler) {
+    if (!listeners.has(type)) listeners.set(type, /* @__PURE__ */ new Set());
+    const set = listeners.get(type);
+    set.add(handler);
+    return () => {
+      set.delete(handler);
+    };
+  }
+  function destroy() {
+    clear();
+    unsubscribePane();
+    listeners.clear();
+  }
+  return {
+    add,
+    load,
+    remove,
+    get,
+    clear,
+    setEnabled,
+    get enabled() {
+      return enabled;
+    },
+    on,
+    destroy
+  };
+}
+function wireBubbleDrag(editor, overlay) {
+  const head = overlay.element.querySelector(".gg-comment-head");
+  if (!head) return;
+  let startClientX = 0;
+  let startClientY = 0;
+  let startWorldX = 0;
+  let startWorldY = 0;
+  let dragging = false;
+  head.addEventListener("pointerdown", (event) => {
+    const pointer = event;
+    const target = pointer.target;
+    if (target.closest("button") || target.closest("textarea")) return;
+    if (pointer.button !== 0) return;
+    startClientX = pointer.clientX;
+    startClientY = pointer.clientY;
+    startWorldX = overlay.worldX;
+    startWorldY = overlay.worldY;
+    dragging = true;
+    event.currentTarget.classList.add("gg-comment-dragging");
+    event.currentTarget.setPointerCapture(pointer.pointerId);
+  });
+  head.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    const pointer = event;
+    const zoom = editor.getCameraState().zoom || 1;
+    const nextX = startWorldX + (pointer.clientX - startClientX) / zoom;
+    const nextY = startWorldY + (pointer.clientY - startClientY) / zoom;
+    overlay.worldX = nextX;
+    overlay.worldY = nextY;
+    editor.updateOverlayPosition(overlay.id, nextX, nextY);
+  });
+  const stop = (event) => {
+    if (!dragging) return;
+    const pointer = event;
+    dragging = false;
+    event.currentTarget.classList.remove(
+      "gg-comment-dragging"
+    );
+    event.currentTarget.releasePointerCapture(
+      pointer.pointerId
+    );
+  };
+  head.addEventListener("pointerup", stop);
+  head.addEventListener("pointercancel", stop);
+}
 const EDIT = `
 <svg style="transform: scale(0.5);"  viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M18.9445 9.1875L14.9445 5.1875M18.9445 9.1875L13.946 14.1859C13.2873 14.8446 12.4878 15.3646 11.5699 15.5229C10.6431 15.6828 9.49294 15.736 8.94444 15.1875C8.39595 14.639 8.44915 13.4888 8.609 12.562C8.76731 11.6441 9.28735 10.8446 9.946 10.1859L14.9445 5.1875M18.9445 9.1875C18.9445 9.1875 21.9444 6.1875 19.9444 4.1875C17.9444 2.1875 14.9445 5.1875 14.9445 5.1875M20.5 12C20.5 18.5 18.5 20.5 12 20.5C5.5 20.5 3.5 18.5 3.5 12C3.5 5.5 5.5 3.5 12 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
 `;
@@ -10409,6 +10873,7 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "iconAtlas");
     __publicField(this, "dpr", 1);
     __publicField(this, "isCommentMode", false);
+    __publicField(this, "_commentLayer", null);
     __publicField(this, "zoomThrottleTimer", null);
     __publicField(this, "ZOOM_THROTTLE_MS", 180);
     this.canvasId = canvasId;
@@ -11467,6 +11932,7 @@ const _NodeEditor = class _NodeEditor {
   toggleCommentMode() {
     this.isCommentMode = !this.isCommentMode;
     this.controls.setCommentModeActive(this.isCommentMode);
+    this.getCommentLayer().setEnabled(this.isCommentMode);
     this.events.dispatch("comment:modeChange", { enabled: this.isCommentMode });
   }
   /**
@@ -11481,6 +11947,23 @@ const _NodeEditor = class _NodeEditor {
   setCommentMode(enabled) {
     if (this.isCommentMode === enabled) return;
     this.toggleCommentMode();
+  }
+  /**
+   * The editor's built-in comment layer, created lazily on first use. It owns
+   * no chat state — bubbles spawn from `pane:click` and lifecycle events
+   * (`create`/`save`/`cancel`/`delete`/`load`) are emitted for the consumer to
+   * persist. The action pane's comment tool toggles it; a consumer can also
+   * `load()` bubbles back from their own state or build a custom layer with
+   * `attachCommentLayer` instead.
+   */
+  getCommentLayer() {
+    if (!this._commentLayer) {
+      this._commentLayer = attachCommentLayer(this, {
+        enabled: this.isCommentMode,
+        canvas: this.canvas
+      });
+    }
+    return this._commentLayer;
   }
   selectNodeByClick(nodeId) {
     const canExtendSelection = this.isMultiSelectMode && (this.selectionKind === null || this.selectionKind === "node");
@@ -13381,470 +13864,6 @@ const _NodeEditor = class _NodeEditor {
 };
 __publicField(_NodeEditor, "_instance", null);
 let NodeEditor = _NodeEditor;
-let layerSeq = 0;
-const BUBBLE_CSS = `
-  .gg-comment {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 0;
-    height: 0;
-  }
-  .gg-comment-pin {
-    position: absolute;
-    left: 0;
-    top: 0;
-    transform: translate(-50%, -50%);
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--gg-comment-avatar, linear-gradient(135deg, #6366f1, #8b5cf6));
-    color: #fff;
-    font: 600 10px/1 system-ui, -apple-system, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    border: 2px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    z-index: 1;
-    transition: transform 120ms ease;
-  }
-  .gg-comment-pin:hover {
-    transform: translate(-50%, -50%) scale(1.12);
-  }
-  .gg-comment-tail {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 40px;
-    height: 40px;
-    pointer-events: none;
-    overflow: visible;
-  }
-  .gg-comment-popover {
-    position: absolute;
-    left: 32px;
-    top: 32px;
-    width: 248px;
-    box-sizing: border-box;
-    background: var(--gg-comment-bg, #0f172a);
-    border: 1px solid var(--gg-comment-border, rgba(255, 255, 255, 0.12));
-    border-radius: 12px;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
-    color: var(--gg-comment-fg, #e2e8f0);
-    font: 13px/1.45 system-ui, -apple-system, sans-serif;
-    overflow: hidden;
-    z-index: 2;
-  }
-  .gg-comment-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 10px;
-    cursor: grab;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .gg-comment-head.gg-comment-dragging {
-    cursor: grabbing;
-  }
-  .gg-comment-avatar {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--gg-comment-avatar, linear-gradient(135deg, #6366f1, #8b5cf6));
-    color: #fff;
-    font-size: 11px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-  }
-  .gg-comment-author {
-    font-weight: 600;
-    font-size: 12px;
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .gg-comment-close {
-    border: 0;
-    background: transparent;
-    color: var(--gg-comment-muted, #94a3b8);
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 6px;
-    flex: none;
-  }
-  .gg-comment-close:hover {
-    color: #f87171;
-    background: rgba(248, 113, 113, 0.12);
-  }
-  .gg-comment-body {
-    padding: 9px 12px 11px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    min-height: 20px;
-  }
-  .gg-comment-input {
-    box-sizing: border-box;
-    width: calc(100% - 16px);
-    margin: 8px;
-    resize: none;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    background: var(--gg-comment-input-bg, rgba(15, 23, 42, 0.9));
-    color: inherit;
-    padding: 7px 9px;
-    font: inherit;
-    min-height: 40px;
-    display: block;
-  }
-  .gg-comment-input:focus {
-    outline: none;
-    border-color: var(--gg-comment-accent, #6366f1);
-  }
-  .gg-comment[data-mode="editing"] .gg-comment-body {
-    display: none;
-  }
-  .gg-comment[data-mode="saved"] .gg-comment-input {
-    display: none;
-  }
-`;
-function ensureStyles() {
-  if (document.getElementById("gg-comment-overlay-styles")) return;
-  const style = document.createElement("style");
-  style.id = "gg-comment-overlay-styles";
-  style.textContent = BUBBLE_CSS;
-  document.head.appendChild(style);
-}
-function initials(name) {
-  var _a2;
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  return (parts[0][0] + (((_a2 = parts[1]) == null ? void 0 : _a2[0]) ?? "")).toUpperCase();
-}
-function emitDom(element, type, detail) {
-  element.dispatchEvent(
-    new CustomEvent(type, { bubbles: true, composed: true, detail })
-  );
-}
-function createCommentBubble(options) {
-  ensureStyles();
-  const id = options.id ?? "";
-  const author = options.author ?? "Guest";
-  const element = document.createElement("div");
-  element.className = "gg-comment";
-  element.setAttribute("data-mode", options.editing === false ? "saved" : "editing");
-  const pin = document.createElement("div");
-  pin.className = "gg-comment-pin";
-  pin.title = author;
-  pin.textContent = initials(author);
-  pin.setAttribute("aria-label", `Comment by ${author}`);
-  const tail = document.createElementNS(
-    "http://www.w3.org/2000/svg",
-    "svg"
-  );
-  tail.setAttribute("class", "gg-comment-tail");
-  tail.setAttribute("viewBox", "0 0 40 40");
-  const path = document.createElementNS(
-    "http://www.w3.org/2000/svg",
-    "path"
-  );
-  path.setAttribute("d", "M13 13 C 20 14 22 18 26 26");
-  path.setAttribute("fill", "none");
-  path.setAttribute("stroke", "rgba(255,255,255,0.4)");
-  path.setAttribute("stroke-width", "2");
-  path.setAttribute("stroke-linecap", "round");
-  tail.appendChild(path);
-  const popover = document.createElement("div");
-  popover.className = "gg-comment-popover";
-  const head = document.createElement("div");
-  head.className = "gg-comment-head";
-  const avatar = document.createElement("span");
-  avatar.className = "gg-comment-avatar";
-  avatar.textContent = initials(author);
-  avatar.setAttribute("aria-hidden", "true");
-  const authorEl = document.createElement("span");
-  authorEl.className = "gg-comment-author";
-  authorEl.textContent = author;
-  const close = document.createElement("button");
-  close.className = "gg-comment-close";
-  close.type = "button";
-  close.setAttribute("aria-label", "Delete comment");
-  close.innerHTML = "&times;";
-  head.append(avatar, authorEl, close);
-  const body = document.createElement("div");
-  body.className = "gg-comment-body";
-  body.textContent = options.text ?? "";
-  const input = document.createElement("textarea");
-  input.className = "gg-comment-input";
-  input.rows = 2;
-  input.placeholder = options.placeholder ?? "Write a comment…";
-  input.value = options.text ?? "";
-  input.addEventListener("pointerdown", (event) => event.stopPropagation());
-  popover.append(head, body, input);
-  element.append(pin, tail, popover);
-  const overlay = {
-    id,
-    element,
-    worldX: options.worldX,
-    worldY: options.worldY,
-    scaleWithZoom: false,
-    setMode(mode) {
-      element.setAttribute("data-mode", mode);
-      if (mode === "editing") {
-        input.value = body.textContent;
-      } else {
-        body.textContent = input.value;
-      }
-    },
-    focus() {
-      input.focus();
-    },
-    getText() {
-      return input.value;
-    }
-  };
-  input.addEventListener("blur", () => {
-    var _a2;
-    return (_a2 = options.onBlur) == null ? void 0 : _a2.call(options, input.value);
-  });
-  close.addEventListener("click", (event) => {
-    var _a2;
-    event.stopPropagation();
-    (_a2 = options.onDismiss) == null ? void 0 : _a2.call(options, id);
-  });
-  pin.addEventListener("click", () => {
-    var _a2;
-    return (_a2 = options.onPinClick) == null ? void 0 : _a2.call(options, id);
-  });
-  return overlay;
-}
-function attachCommentLayer(editor, options = {}) {
-  ensureStyles();
-  const seq = ++layerSeq;
-  const overlays = /* @__PURE__ */ new Map();
-  const listeners = /* @__PURE__ */ new Map();
-  let counter = 0;
-  let enabled = options.enabled ?? true;
-  const canvas = options.canvas ?? document.getElementById("webgl-canvas") ?? null;
-  function emit(type, payload) {
-    for (const handler of listeners.get(type) ?? []) {
-      handler(payload);
-    }
-  }
-  function resolveCanvasRect() {
-    return canvas ? canvas.getBoundingClientRect() : null;
-  }
-  function spawnFromEvent(event) {
-    const rect = resolveCanvasRect();
-    if (!rect) return;
-    const { x, y } = editor.screenToWorld(
-      event.clientX - rect.left,
-      event.clientY - rect.top
-    );
-    add(x, y);
-  }
-  const onPaneClick = (payload) => {
-    if (!enabled) return;
-    spawnFromEvent(payload.event);
-  };
-  const unsubscribePane = editor.events.on("pane:click", onPaneClick);
-  function add(worldX, worldY, bubbleOptions = {}) {
-    const id = bubbleOptions.id ?? `gg-comment-${seq}-${++counter}`;
-    if (overlays.has(id)) remove(id);
-    const overlay = createCommentBubble({
-      ...bubbleOptions,
-      id,
-      worldX,
-      worldY,
-      author: bubbleOptions.author ?? options.author ?? "Guest",
-      editing: bubbleOptions.editing ?? true,
-      onBlur: (text) => handleBlur(overlay, text),
-      onDismiss: (bubbleId) => {
-        suppressBlur(overlay);
-        emit("delete", { id: bubbleId });
-        emitDom(overlay.element, "gg-comment:delete", { id: bubbleId });
-        remove(bubbleId);
-      },
-      onPinClick: (bubbleId) => {
-        const target = overlays.get(bubbleId);
-        if (!target) return;
-        target.setMode("editing");
-        target.focus();
-      }
-    });
-    overlays.set(id, overlay);
-    editor.addOverlay(overlay);
-    wireBubbleDrag(editor, overlay);
-    if (overlay.element.getAttribute("data-mode") === "editing") {
-      overlay.focus();
-    }
-    emit("create", { id, author: overlayAuthor(overlay), worldX, worldY });
-    emitDom(overlay.element, "gg-comment:create", {
-      id,
-      worldX,
-      worldY
-    });
-    return id;
-  }
-  function overlayAuthor(overlay) {
-    var _a2;
-    return ((_a2 = overlay.element.querySelector(".gg-comment-author")) == null ? void 0 : _a2.textContent) ?? "Guest";
-  }
-  function handleBlur(overlay, text) {
-    const trimmed = text.trim();
-    const id = overlay.id;
-    const author = overlayAuthor(overlay);
-    const { worldX, worldY } = overlay;
-    if (trimmed) {
-      overlay.setMode("saved");
-      emit("save", { id, author, text: trimmed, worldX, worldY });
-      emitDom(overlay.element, "gg-comment:save", {
-        id,
-        author,
-        text: trimmed,
-        worldX,
-        worldY
-      });
-    } else {
-      emit("cancel", { id, author, worldX, worldY });
-      emitDom(overlay.element, "gg-comment:cancel", {
-        id,
-        worldX,
-        worldY
-      });
-      remove(id);
-    }
-  }
-  function suppressBlur(overlay) {
-    const input = overlay.element.querySelector(".gg-comment-input");
-    if (input && typeof input.blur === "function") {
-      input.blur();
-    }
-  }
-  function load(records) {
-    for (const record of records) {
-      if (overlays.has(record.id)) remove(record.id);
-      const overlay = createCommentBubble({
-        id: record.id,
-        worldX: record.worldX,
-        worldY: record.worldY,
-        author: record.author,
-        text: record.text,
-        editing: false,
-        onBlur: (text) => handleBlur(overlay, text),
-        onDismiss: (bubbleId) => {
-          suppressBlur(overlay);
-          emit("delete", { id: bubbleId });
-          emitDom(overlay.element, "gg-comment:delete", { id: bubbleId });
-          remove(bubbleId);
-        },
-        onPinClick: (bubbleId) => {
-          const target = overlays.get(bubbleId);
-          if (!target) return;
-          target.setMode("editing");
-          target.focus();
-        }
-      });
-      overlays.set(record.id, overlay);
-      editor.addOverlay(overlay);
-      wireBubbleDrag(editor, overlay);
-    }
-    emit("load", { count: records.length });
-  }
-  function remove(id) {
-    const overlay = overlays.get(id);
-    if (!overlay) return;
-    editor.removeOverlay(id);
-    overlays.delete(id);
-  }
-  function get(id) {
-    return overlays.get(id);
-  }
-  function clear() {
-    for (const id of [...overlays.keys()]) remove(id);
-  }
-  function setEnabled(value) {
-    enabled = value;
-  }
-  function on(type, handler) {
-    if (!listeners.has(type)) listeners.set(type, /* @__PURE__ */ new Set());
-    const set = listeners.get(type);
-    set.add(handler);
-    return () => {
-      set.delete(handler);
-    };
-  }
-  function destroy() {
-    clear();
-    unsubscribePane();
-    listeners.clear();
-  }
-  return {
-    add,
-    load,
-    remove,
-    get,
-    clear,
-    setEnabled,
-    get enabled() {
-      return enabled;
-    },
-    on,
-    destroy
-  };
-}
-function wireBubbleDrag(editor, overlay) {
-  const head = overlay.element.querySelector(".gg-comment-head");
-  if (!head) return;
-  let startClientX = 0;
-  let startClientY = 0;
-  let startWorldX = 0;
-  let startWorldY = 0;
-  let dragging = false;
-  head.addEventListener("pointerdown", (event) => {
-    const pointer = event;
-    const target = pointer.target;
-    if (target.closest("button") || target.closest("textarea")) return;
-    if (pointer.button !== 0) return;
-    startClientX = pointer.clientX;
-    startClientY = pointer.clientY;
-    startWorldX = overlay.worldX;
-    startWorldY = overlay.worldY;
-    dragging = true;
-    event.currentTarget.classList.add("gg-comment-dragging");
-    event.currentTarget.setPointerCapture(pointer.pointerId);
-  });
-  head.addEventListener("pointermove", (event) => {
-    if (!dragging) return;
-    const pointer = event;
-    const zoom = editor.getCameraState().zoom || 1;
-    const nextX = startWorldX + (pointer.clientX - startClientX) / zoom;
-    const nextY = startWorldY + (pointer.clientY - startClientY) / zoom;
-    overlay.worldX = nextX;
-    overlay.worldY = nextY;
-    editor.updateOverlayPosition(overlay.id, nextX, nextY);
-  });
-  const stop = (event) => {
-    if (!dragging) return;
-    const pointer = event;
-    dragging = false;
-    event.currentTarget.classList.remove(
-      "gg-comment-dragging"
-    );
-    event.currentTarget.releasePointerCapture(
-      pointer.pointerId
-    );
-  };
-  head.addEventListener("pointerup", stop);
-  head.addEventListener("pointercancel", stop);
-}
 const BASE_STYLE = `
   :host { display: block; }
   .card {

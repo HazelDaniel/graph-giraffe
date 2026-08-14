@@ -4,6 +4,7 @@ import {
   createCommentBubble,
 } from "../src/scripts/overlay-primitives.js";
 import type { NodeEditor } from "../src/scripts/node-editor.js";
+import { NodeEditor as NodeEditorClass } from "../src/scripts/node-editor.js";
 import type { CustomOverlay } from "../src/scripts/types.js";
 
 class FakeEl {
@@ -112,7 +113,11 @@ function makeEditor() {
   const added: CustomOverlay[] = [];
   const removed: string[] = [];
   const handlers: Record<string, Array<(payload: unknown) => void>> = {};
+  const active: Record<string, boolean> = {};
+  const canvas = new FakeEl();
+  canvas.id = "webgl-canvas";
   const editor = {
+    canvas,
     screenToWorld: (sx: number, sy: number) => ({ x: sx, y: sy }),
     getCameraState: () => ({ panX: 0, panY: 0, zoom: 1 }),
     addOverlay: (o: CustomOverlay) => {
@@ -124,6 +129,11 @@ function makeEditor() {
     updateOverlayPosition: (id: string) => {
       removed.push(`move:${id}`);
     },
+    controls: {
+      setCommentModeActive: (v: boolean) => {
+        active.comment = v;
+      },
+    },
     events: {
       on: (event: string, handler: (payload: unknown) => void) => {
         if (!handlers[event]) handlers[event] = [];
@@ -132,9 +142,18 @@ function makeEditor() {
           handlers[event] = handlers[event].filter((h) => h !== handler);
         };
       },
+      dispatch: (event: string, payload: unknown) => {
+        for (const handler of handlers[event] ?? []) handler(payload);
+      },
     },
   };
-  return { editor: editor as unknown as NodeEditor, added, removed, handlers };
+  return {
+    editor: editor as unknown as NodeEditor,
+    added,
+    removed,
+    handlers,
+    active,
+  };
 }
 
 describe("overlay primitives", () => {
@@ -298,5 +317,54 @@ describe("overlay primitives", () => {
     expect(removed).toContain(idA);
     expect(removed).toContain(idB);
     expect(handlers["pane:click"]?.length).toBe(0);
+  });
+});
+
+describe("editor built-in comment layer", () => {
+  function withEditorMethods(mock: NodeEditor): NodeEditor {
+    const proto = NodeEditorClass.prototype as unknown as Record<string, unknown>;
+    for (const name of [
+      "setCommentMode",
+      "getCommentMode",
+      "toggleCommentMode",
+      "getCommentLayer",
+    ]) {
+      (mock as unknown as Record<string, unknown>)[name] = proto[name];
+    }
+    return mock;
+  }
+
+  it("setCommentMode(true) creates the layer, enables it, and spawns on pane:click", () => {
+    installDom();
+    const { editor, added, handlers, active } = makeEditor();
+    withEditorMethods(editor);
+
+    editor.setCommentMode(true);
+    expect(editor.getCommentMode()).toBe(true);
+    expect(active.comment).toBe(true);
+
+    const layer = editor.getCommentLayer();
+    expect(layer.enabled).toBe(true);
+
+    handlers["pane:click"]![0]({ event: { clientX: 60, clientY: 80 } });
+    expect(added.length).toBe(1);
+    expect(added[0].worldX).toBe(50);
+    expect(added[0].worldY).toBe(60);
+  });
+
+  it("setCommentMode(false) disables spawning but keeps the layer", () => {
+    installDom();
+    const { editor, added, handlers } = makeEditor();
+    withEditorMethods(editor);
+
+    editor.setCommentMode(true);
+    const layer = editor.getCommentLayer();
+
+    editor.setCommentMode(false);
+    expect(editor.getCommentMode()).toBe(false);
+    expect(layer.enabled).toBe(false);
+
+    handlers["pane:click"]![0]({ event: { clientX: 10, clientY: 10 } });
+    expect(added.length).toBe(0);
   });
 });

@@ -20,6 +20,7 @@ import { NodeTypeRegistry } from "./node-type-registry.js";
 import { DomNodeLayer } from "./dom-node-layer.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import { computeCameraStateFromWorldPoint, } from "../components/minimap.js";
+import { attachCommentLayer, } from "./overlay-primitives.js";
 import { CLONE, COLLAPSE, DELETE, EDIT, EXPAND, SPOTLIGHT, UNGRAPH, } from "../sprite.js";
 import { serializeGraph, deserializeGraph, } from "./graph-serialization.js";
 const baseButtons = (items) => items.map(([action, glyph, label]) => ({ action, glyph, label }));
@@ -1159,9 +1160,11 @@ export class NodeEditor {
         this.controls.setMultiSelectActive(this.isMultiSelectMode);
     }
     isCommentMode = false;
+    _commentLayer = null;
     toggleCommentMode() {
         this.isCommentMode = !this.isCommentMode;
         this.controls.setCommentModeActive(this.isCommentMode);
+        this.getCommentLayer().setEnabled(this.isCommentMode);
         this.events.dispatch("comment:modeChange", { enabled: this.isCommentMode });
     }
     /**
@@ -1177,6 +1180,23 @@ export class NodeEditor {
         if (this.isCommentMode === enabled)
             return;
         this.toggleCommentMode();
+    }
+    /**
+     * The editor's built-in comment layer, created lazily on first use. It owns
+     * no chat state — bubbles spawn from `pane:click` and lifecycle events
+     * (`create`/`save`/`cancel`/`delete`/`load`) are emitted for the consumer to
+     * persist. The action pane's comment tool toggles it; a consumer can also
+     * `load()` bubbles back from their own state or build a custom layer with
+     * `attachCommentLayer` instead.
+     */
+    getCommentLayer() {
+        if (!this._commentLayer) {
+            this._commentLayer = attachCommentLayer(this, {
+                enabled: this.isCommentMode,
+                canvas: this.canvas,
+            });
+        }
+        return this._commentLayer;
     }
     selectNodeByClick(nodeId) {
         const canExtendSelection = this.isMultiSelectMode &&

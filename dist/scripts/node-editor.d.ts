@@ -1,6 +1,7 @@
 import { GraphEventEmitter } from "./events.js";
 import { ConnectionMode, NodeEditorConfig, NodeData, AddUploadedTextureParams, CustomOverlay } from "./types.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
+import { type CommentLayerController } from "./overlay-primitives.js";
 import type { GraphSnapshot } from "./graph-serialization.js";
 /**
  * NodeEditor is the single public class exposed to the entry point.
@@ -211,6 +212,7 @@ export declare class NodeEditor {
     private clearSelectionAndHideProperties;
     private toggleMultiSelectMode;
     private isCommentMode;
+    private _commentLayer;
     private toggleCommentMode;
     /**
      * Get whether comment mode is active.
@@ -220,6 +222,15 @@ export declare class NodeEditor {
      * Programmatically enable/disable comment mode.
      */
     setCommentMode(enabled: boolean): void;
+    /**
+     * The editor's built-in comment layer, created lazily on first use. It owns
+     * no chat state — bubbles spawn from `pane:click` and lifecycle events
+     * (`create`/`save`/`cancel`/`delete`/`load`) are emitted for the consumer to
+     * persist. The action pane's comment tool toggles it; a consumer can also
+     * `load()` bubbles back from their own state or build a custom layer with
+     * `attachCommentLayer` instead.
+     */
+    getCommentLayer(): CommentLayerController;
     private selectNodeByClick;
     private selectEdgeByClick;
     private beginLabelEdit;

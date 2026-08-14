@@ -102,6 +102,10 @@ import {
 } from "../components/selection-toolbar.js";
 import { WAIT } from "./globals.js";
 import {
+  attachCommentLayer,
+  type CommentLayerController,
+} from "./overlay-primitives.js";
+import {
   CLONE,
   COLLAPSE,
   DELETE,
@@ -1594,9 +1598,12 @@ export class NodeEditor {
 
   private isCommentMode = false;
 
+  private _commentLayer: CommentLayerController | null = null;
+
   private toggleCommentMode(): void {
     this.isCommentMode = !this.isCommentMode;
     this.controls.setCommentModeActive(this.isCommentMode);
+    this.getCommentLayer().setEnabled(this.isCommentMode);
     this.events.dispatch("comment:modeChange", { enabled: this.isCommentMode });
   }
 
@@ -1613,6 +1620,24 @@ export class NodeEditor {
   setCommentMode(enabled: boolean): void {
     if (this.isCommentMode === enabled) return;
     this.toggleCommentMode();
+  }
+
+  /**
+   * The editor's built-in comment layer, created lazily on first use. It owns
+   * no chat state — bubbles spawn from `pane:click` and lifecycle events
+   * (`create`/`save`/`cancel`/`delete`/`load`) are emitted for the consumer to
+   * persist. The action pane's comment tool toggles it; a consumer can also
+   * `load()` bubbles back from their own state or build a custom layer with
+   * `attachCommentLayer` instead.
+   */
+  getCommentLayer(): CommentLayerController {
+    if (!this._commentLayer) {
+      this._commentLayer = attachCommentLayer(this, {
+        enabled: this.isCommentMode,
+        canvas: this.canvas,
+      });
+    }
+    return this._commentLayer;
   }
 
   private selectNodeByClick(nodeId: number): void {
