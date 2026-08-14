@@ -210,6 +210,18 @@ class ActionPane extends HTMLElement {
             <path d="M6 3V15M6 15C4.34315 15 3 16.3431 3 18C3 19.6569 4.34315 21 6 21C7.65685 21 9 19.6569 9 18C9 16.3431 7.65685 15 6 15ZM18 9C19.6569 9 21 7.65685 21 6C21 4.34315 19.6569 3 18 3C16.3431 3 15 4.34315 15 6C15 7.65685 16.3431 9 18 9ZM6 9C9.5 9 12 12 18 12V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
+
+        <button id="btn-comment-mode" title="Comment">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5V13C20 14.1046 19.1046 15 18 15H11.5L7 19V15H6C4.89543 15 4 14.1046 4 13V5Z"
+              fill="currentColor"
+            />
+            <circle cx="8" cy="9" r="1.4" fill="#0b0b0b" />
+            <circle cx="12" cy="9" r="1.4" fill="#0b0b0b" />
+            <circle cx="16" cy="9" r="1.4" fill="#0b0b0b" />
+          </svg>
+        </button>
       </div>
 
       <div class="panel-left">
@@ -337,18 +349,6 @@ class ActionPane extends HTMLElement {
                 stroke-linejoin="round"
               ></path>
             </g>
-          </svg>
-        </button>
-
-        <button id="btn-comment-mode" title="Comment">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5V13C20 14.1046 19.1046 15 18 15H11.5L7 19V15H6C4.89543 15 4 14.1046 4 13V5Z"
-              fill="currentColor"
-            />
-            <circle cx="8" cy="9" r="1.4" fill="#0b0b0b" />
-            <circle cx="12" cy="9" r="1.4" fill="#0b0b0b" />
-            <circle cx="16" cy="9" r="1.4" fill="#0b0b0b" />
           </svg>
         </button>
 
@@ -3764,6 +3764,13 @@ const STYLE_TEMPLATE = `
         width: 100%;
       }
 
+      /* Font color, node theme, and node textures only exist in the WebGL
+         pipeline. In DOM mode the editor renders primitives with CSS/DOM, so
+         these inputs are hidden via :host([data-render-mode="dom"]). */
+      :host([data-render-mode="dom"]) .webgl-only {
+        display: none;
+      }
+
       .sidebar-section {
         display: flex;
         flex-direction: column;
@@ -3876,12 +3883,12 @@ let UIControls$1 = (_a = class extends HTMLElement {
             <label for="bg-color-picker">Color</label>
             <input type="color" id="bg-color-picker" value="#0f172a" />
           </div>
-          <div class="settings-group">
+          <div class="settings-group webgl-only">
             <label for="font-color-picker">Font Color</label>
             <input type="color" id="font-color-picker" value="#ffffff" />
           </div>
 
-          <div class="settings-group vertical">
+          <div class="settings-group vertical webgl-only">
             <label for="theme-selector">Node Theme</label>
             <gg-select id="theme-selector">
               <gg-option value="dark">Dark (Glass)</gg-option>
@@ -3890,7 +3897,7 @@ let UIControls$1 = (_a = class extends HTMLElement {
             </gg-select>
           </div>
 
-          <div class="settings-group vertical">
+          <div class="settings-group vertical webgl-only">
             <label for="texture-selector">Texture Theme</label>
             <gg-texture-select id="texture-selector">
             </gg-texture-select>
@@ -8575,7 +8582,7 @@ class Renderer {
   }
 }
 class UIControls {
-  constructor(canvas, container, historyPane, toolPane, callbacks) {
+  constructor(canvas, container, historyPane, toolPane, callbacks, renderMode = "webgl") {
     __publicField(this, "addNodeButton");
     __publicField(this, "addBranchButton");
     __publicField(this, "createSubgraphButton");
@@ -8593,6 +8600,7 @@ class UIControls {
     __publicField(this, "nodePropGroup");
     var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s;
     this.sidebar = container;
+    container.setAttribute("data-render-mode", renderMode);
     this.addNodeButton = (_a2 = toolPane.shadowRoot) == null ? void 0 : _a2.querySelector(
       "#btn-add-node"
     );
@@ -11143,7 +11151,7 @@ const _NodeEditor = class _NodeEditor {
       onPointerUp: (e) => this.handlePointerUp(e, canvas),
       onPointerCancel: (e) => this.handlePointerCancel(e, canvas),
       onWheel: (e) => this.handleWheel(e, canvas)
-    });
+    }, this.renderMode);
     this.controls.setMultiSelectActive(this.isMultiSelectMode);
     this.resizeObserver = new ResizeObserver(() => this.handleResize(canvas));
     this.resizeObserver.observe(canvas.parentElement ?? canvas);

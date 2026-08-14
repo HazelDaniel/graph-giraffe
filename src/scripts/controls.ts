@@ -61,9 +61,13 @@ export class UIControls {
     container: HTMLElement,
     historyPane: HTMLElement,
     toolPane: HTMLElement,
-    callbacks: ControlCallbacks
+    callbacks: ControlCallbacks,
+    renderMode: "webgl" | "dom" = "webgl"
   ) {
     this.sidebar = container;
+    // Expose the render pipeline on the host so WebGL-only sidebar inputs
+    // (font color, node theme, node textures) can be hidden in DOM mode.
+    container.setAttribute("data-render-mode", renderMode);
     this.addNodeButton = toolPane.shadowRoot?.querySelector(
       "#btn-add-node"
     )! as HTMLButtonElement;

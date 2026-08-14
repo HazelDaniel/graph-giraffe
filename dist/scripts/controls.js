@@ -20,8 +20,11 @@ export class UIControls {
     nodeProperties;
     nodeLabelInput;
     nodePropGroup;
-    constructor(canvas, container, historyPane, toolPane, callbacks) {
+    constructor(canvas, container, historyPane, toolPane, callbacks, renderMode = "webgl") {
         this.sidebar = container;
+        // Expose the render pipeline on the host so WebGL-only sidebar inputs
+        // (font color, node theme, node textures) can be hidden in DOM mode.
+        container.setAttribute("data-render-mode", renderMode);
         this.addNodeButton = toolPane.shadowRoot?.querySelector("#btn-add-node");
         this.addGroupButton = toolPane.shadowRoot?.querySelector("#btn-add-group");
         this.addCompositionButton = toolPane.shadowRoot?.querySelector("#btn-add-composition");

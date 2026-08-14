@@ -49,7 +49,7 @@ export declare class UIControls {
     private nodeProperties;
     private nodeLabelInput;
     nodePropGroup: GGPropGroup;
-    constructor(canvas: HTMLCanvasElement, container: HTMLElement, historyPane: HTMLElement, toolPane: HTMLElement, callbacks: ControlCallbacks);
+    constructor(canvas: HTMLCanvasElement, container: HTMLElement, historyPane: HTMLElement, toolPane: HTMLElement, callbacks: ControlCallbacks, renderMode?: "webgl" | "dom");
     enableDelete(): void;
     disableDelete(): void;
     enableAddComposition(): void;

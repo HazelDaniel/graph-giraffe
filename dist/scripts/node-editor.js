@@ -290,7 +290,7 @@ export class NodeEditor {
             onPointerUp: (e) => this.handlePointerUp(e, canvas),
             onPointerCancel: (e) => this.handlePointerCancel(e, canvas),
             onWheel: (e) => this.handleWheel(e, canvas),
-        });
+        }, this.renderMode);
         this.controls.setMultiSelectActive(this.isMultiSelectMode);
         this.resizeObserver = new ResizeObserver(() => this.handleResize(canvas));
         this.resizeObserver.observe(canvas.parentElement ?? canvas);

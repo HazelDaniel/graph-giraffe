@@ -100,6 +100,13 @@ const STYLE_TEMPLATE = `
         width: 100%;
       }
 
+      /* Font color, node theme, and node textures only exist in the WebGL
+         pipeline. In DOM mode the editor renders primitives with CSS/DOM, so
+         these inputs are hidden via :host([data-render-mode="dom"]). */
+      :host([data-render-mode="dom"]) .webgl-only {
+        display: none;
+      }
+
       .sidebar-section {
         display: flex;
         flex-direction: column;
@@ -209,12 +216,12 @@ export class UIControls extends HTMLElement {
             <label for="bg-color-picker">Color</label>
             <input type="color" id="bg-color-picker" value="#0f172a" />
           </div>
-          <div class="settings-group">
+          <div class="settings-group webgl-only">
             <label for="font-color-picker">Font Color</label>
             <input type="color" id="font-color-picker" value="#ffffff" />
           </div>
 
-          <div class="settings-group vertical">
+          <div class="settings-group vertical webgl-only">
             <label for="theme-selector">Node Theme</label>
             <gg-select id="theme-selector">
               <gg-option value="dark">Dark (Glass)</gg-option>
@@ -223,7 +230,7 @@ export class UIControls extends HTMLElement {
             </gg-select>
           </div>
 
-          <div class="settings-group vertical">
+          <div class="settings-group vertical webgl-only">
             <label for="texture-selector">Texture Theme</label>
             <gg-texture-select id="texture-selector">
             </gg-texture-select>
