@@ -8,7 +8,6 @@
 
 ## Priority Features (from user's roadmap)
 - Handle-to-handle animation of edge labels
-- Minimap/radar view
 - Simulation system
 
 ## Known Bugs to Fix
