@@ -30,6 +30,7 @@ import {
   SelectionSnapshot,
   captureNodeHistorySnapshot,
   cloneNodeProps,
+  orderSnapshotsParentsFirst,
 } from "./history-snapshots.js";
 import {
   Command,
@@ -170,6 +171,14 @@ interface SelectionDragState {
   startWorldX: number;
   startWorldY: number;
   entries: SelectionDragEntry[];
+  /**
+   * Full snapshots of every dragged root (and its subtree) captured at drag
+   * START — before any live translation. applySelectionDrop runs at drop time
+   * when moveSelectionDrag has already translated the nodes, so re-capturing
+   * there would record the post-drag state as "before" and undo could never
+   * revert the translation.
+   */
+  beforeSnapshots: NodeHistorySnapshot[];
 }
 
 /**
@@ -1288,6 +1297,9 @@ export class NodeEditor {
         beforePlacement: this.captureNodePlacement(node),
         beforeWorld: getWorldPosition(node.id, this.store.allNodesMap),
       })),
+      beforeSnapshots: this.captureNodeSnapshots(
+        roots.map((node) => node.id)
+      ),
     };
   }
 
@@ -1400,7 +1412,10 @@ export class NodeEditor {
     didChange: boolean;
   }> {
     const rootIds = selectionDrag.entries.map((entry) => entry.nodeId);
-    const beforeSnapshots = this.captureNodeSnapshots(rootIds);
+    // Captured at drag start (pre-translation). Capturing here at drop time
+    // would snapshot the already-translated positions, making the command's
+    // undo unable to revert the drag.
+    const beforeSnapshots = selectionDrag.beforeSnapshots;
     const cloneSnapshots: NodeHistorySnapshot[] = [];
     const affectedParents = new Set<number>();
     const cloneIds: number[] = [];
@@ -1899,7 +1914,7 @@ export class NodeEditor {
   }
 
   private restoreNodeSnapshots(snapshots: NodeHistorySnapshot[]): void {
-    for (const snapshot of snapshots) {
+    for (const snapshot of orderSnapshotsParentsFirst(snapshots)) {
       this.applyNodeSnapshot(snapshot);
     }
   }
@@ -2456,7 +2471,10 @@ export class NodeEditor {
       subgraphId,
     ]);
 
-    this.store.removeContainerOnly(subgraphId);
+    // Abort when a child cannot be promoted (e.g. a composition inside a root
+    // subgraph): removeContainerOnly returns false without mutating, and we
+    // must not push a command for a removal that never happened.
+    if (!this.store.removeContainerOnly(subgraphId)) return;
     for (const snapshot of removedEdgeSnapshots) {
       const removed = this.edgeStore.remove(snapshot.id);
       if (removed) {
@@ -3707,6 +3725,7 @@ export class NodeEditor {
               beforePlacement,
               afterPlacement,
               selectionBefore,
+              owningSubgraphId: this.getOwningSubgraphId(sourceId),
             });
           }
         }

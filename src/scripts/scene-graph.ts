@@ -91,7 +91,8 @@ export function reparent(
   childId: number,
   newParentId: number | null,
   nodes: Map<number, NodeData>,
-  registry?: NodeTypeRegistry
+  registry?: NodeTypeRegistry,
+  removedAncestorId?: number
 ): boolean {
   const child = nodes.get(childId);
   if (!child) return false;
@@ -150,7 +151,12 @@ export function reparent(
     if (registry && !registry.isContainer(newParent.nodeType)) return false;
   }
 
-  if (newParentId !== null && isAncestor(newParentId, childId, nodes)) return false;
+  if (
+    newParentId !== null &&
+    isAncestor(newParentId, childId, nodes, removedAncestorId)
+  ) {
+    return false;
+  }
 
   const childWorld = getWorldPosition(childId, nodes, registry);
 
@@ -183,14 +189,21 @@ export function reparent(
 /**
  * Returns true if `ancestorId` is an ancestor of `nodeId` in the tree.
  * Used to prevent cycles when re-parenting.
+ *
+ * When `removedAncestorId` is given (the container being removed by
+ * removeContainerOnly), a path through that container is not treated as an
+ * ancestor chain: the children are being promoted past the removed container
+ * up to its parent, which cannot create a cycle.
  */
 function isAncestor(
   ancestorId: number,
   nodeId: number,
-  nodes: Map<number, NodeData>
+  nodes: Map<number, NodeData>,
+  removedAncestorId?: number
 ): boolean {
   let current = nodes.get(nodeId);
   while (current && current.parentId !== null) {
+    if (current.parentId === removedAncestorId) return false;
     if (current.parentId === ancestorId) return true;
     current = nodes.get(current.parentId);
   }

@@ -9,6 +9,7 @@ import {
   captureEdgeHistorySnapshot,
   captureNodeHistorySnapshot,
   cloneNodeProps,
+  orderSnapshotsParentsFirst,
 } from "./history-snapshots.js";
 import {
   CloneSubgraphCommand,
@@ -18,10 +19,14 @@ import {
   CreateNodeCommand,
   CreateSubgraphCommand,
   ConnectCommand,
+  DeleteEdgeCommand,
   DeleteNodeCommand,
+  DeleteSelectionCommand,
   DuplicateIntoCompositionCommand,
+  MoveNodeCommand,
   MoveSelectionCommand,
   ReparentCommand,
+  ToggleLockCommand,
   ToggleSubgraphCollapseCommand,
   UngraphCommand,
   UpdateLabelCommand,
@@ -228,6 +233,168 @@ export class WorldActionDriver {
     }));
   }
 
+  /**
+   * Single edge deletion, mirroring the editor's `deleteEdgeWithHistory`.
+   *
+   * Removes the edge (and any composition reference it carried), syncs handle
+   * state on both endpoints, then pushes a {@link DeleteEdgeCommand}.
+   */
+  deleteEdge(edgeId: number): boolean {
+    const edge = this.edgeStore.get(edgeId);
+    if (!edge) return false;
+
+    const selectionBefore = this.captureSelectionSnapshot();
+    const snapshot: EdgeHistorySnapshot = { ...edge };
+
+    this.edgeStore.remove(edgeId);
+    this.clearCompositionReferenceForEdge(snapshot);
+    this.syncHandleStates(edge.sourceNodeId);
+    this.syncHandleStates(edge.targetNodeId);
+    this.clearSelectionState();
+    this.syncPropertiesPanel();
+
+    this.pushCommand(new DeleteEdgeCommand({
+      edgeSnapshot: snapshot,
+      selectionBefore,
+    }));
+
+    return true;
+  }
+
+  /**
+   * Multi-selection deletion (nodes and/or edges), mirroring the editor's
+   * `deleteCurrentSelectionWithHistory` dispatch: a lone node routes to
+   * {@link DeleteNodeCommand}, a lone edge to {@link DeleteEdgeCommand}, and
+   * anything larger to {@link DeleteSelectionCommand}.
+   */
+  deleteSelection(nodeIds: number[], edgeIds: number[]): boolean {
+    if (nodeIds.length === 1 && edgeIds.length === 0) {
+      this.deleteNode(nodeIds[0]);
+      return true;
+    }
+    if (nodeIds.length === 0 && edgeIds.length === 1) {
+      return this.deleteEdge(edgeIds[0]);
+    }
+    if (nodeIds.length === 0 && edgeIds.length === 0) return false;
+
+    const selectionBefore = this.captureSelectionSnapshot();
+    const removedIds = new Set<number>();
+    for (const nodeId of nodeIds) {
+      for (const removedId of this.store.collectRemovedIdsWithClones([nodeId])) {
+        removedIds.add(removedId);
+      }
+    }
+    const snapshots = this.captureNodeSnapshots(removedIds);
+    const edgeSnapshots = this.captureEdgeSnapshotsForSelection(
+      removedIds,
+      edgeIds
+    );
+    const referencedOriginals = this.captureReferencedOriginals(removedIds);
+    const parentIds = new Set<number>();
+    for (const nodeId of nodeIds) {
+      const node = this.store.get(nodeId);
+      if (node && node.parentId !== null) {
+        parentIds.add(node.parentId);
+      }
+    }
+
+    this.removeNodesAndEdges(removedIds, edgeIds);
+    this.clearSelectionState();
+    this.syncPropertiesPanel();
+    for (const parentId of parentIds) {
+      this.refreshContainerChain(parentId);
+    }
+
+    this.pushCommand(new DeleteSelectionCommand({
+      nodeSnapshots: snapshots,
+      edgeSnapshots,
+      selectionBefore,
+      removedNodeIds: [...removedIds],
+      removedEdgeIds: [...edgeIds],
+      parentIds: [...parentIds],
+      referencedOriginals,
+    }));
+
+    return true;
+  }
+
+  /**
+   * Single-node world-space translation, mirroring the editor's
+   * {@link MoveNodeCommand} fallback (no reparenting, no container refit).
+   *
+   * Production only routes leaf primitives through MoveNodeCommand — container
+   * roots (subgraph/group/composition) move via MoveSelectionCommand with
+   * subtree snapshots and descendant translation, so reject them here to keep
+   * the driver's command semantics identical.
+   */
+  moveNode(nodeId: number, deltaX: number, deltaY: number): boolean {
+    const node = this.store.get(nodeId);
+    if (!node) return false;
+    if (isContainerNodeType(node.nodeType)) return false;
+
+    const selectionBefore = this.captureSelectionSnapshot();
+    const beforePlacement = this.captureNodePlacement(node);
+    const world = getWorldPosition(node.id, this.store.allNodesMap);
+    const targetX = world.x + deltaX;
+    const targetY = world.y + deltaY;
+    if (node.parentId === null) {
+      node.localX = targetX;
+      node.localY = targetY;
+    } else {
+      const parentWorld = getParentFrameWorldPosition(
+        node.parentId,
+        this.store.allNodesMap
+      );
+      node.localX = targetX - parentWorld.x;
+      node.localY = targetY - parentWorld.y;
+    }
+    const afterPlacement = this.captureNodePlacement(node);
+    if (
+      beforePlacement.localX === afterPlacement.localX &&
+      beforePlacement.localY === afterPlacement.localY
+    ) {
+      return false;
+    }
+
+    // Mirror production's drag handler: moving a leaf inside a subgraph
+    // refreshes the owning subgraph's container chain so its bounds follow
+    // the child. Without this the recorded state is stale — a later command's
+    // refreshContainerChain would "correct" it and undo could not reproduce it.
+    const owningSubgraphId = this.getOwningSubgraphId(node.id);
+    if (owningSubgraphId !== null) {
+      this.refreshContainerChain(owningSubgraphId);
+    }
+
+    this.pushCommand(new MoveNodeCommand({
+      nodeId,
+      beforePlacement,
+      afterPlacement,
+      selectionBefore,
+      owningSubgraphId,
+    }));
+
+    return true;
+  }
+
+  /**
+   * Group lock/unlock toggle, mirroring the editor's lock-button click.
+   */
+  toggleLock(nodeId: number): boolean {
+    const node = this.store.get(nodeId);
+    if (!node) return false;
+
+    const beforeSnapshot = this.captureNodeSnapshot(node);
+    node.isLocked = !node.isLocked;
+    const afterSnapshot = this.captureNodeSnapshot(node);
+
+    this.pushCommand(new ToggleLockCommand({
+      beforeSnapshot,
+      afterSnapshot,
+    }));
+
+    return true;
+  }
+
   moveNodes(
     nodeIds: number[],
     deltaX: number,
@@ -240,46 +407,49 @@ export class WorldActionDriver {
     if (roots.length === 0) return;
 
     const selectionBefore = this.captureSelectionSnapshot();
-    const collapsedSubgraphRoot =
-      roots.length === 1 &&
-      roots[0]!.nodeType === "subgraph" &&
-      roots[0]!.isCollapsed
+    // A subgraph's own position does not contribute to its children's world
+    // position (contributesToChildWorldPosition = false), so a bare move of the
+    // shell would desync it from its contents — the next container refit snaps
+    // the shell back to wrap its children. Translate the whole subtree and
+    // snapshot it, so the move stays refit-consistent and fully undoable.
+    const subgraphRoot =
+      roots.length === 1 && roots[0]!.nodeType === "subgraph"
         ? roots[0]!
         : null;
 
-    if (collapsedSubgraphRoot) {
-      const beforeSnapshots = this.captureSubtreeSnapshots(collapsedSubgraphRoot.id);
-      const beforePlacement = this.captureNodePlacement(collapsedSubgraphRoot);
-      const world = getWorldPosition(collapsedSubgraphRoot.id, this.store.allNodesMap);
+    if (subgraphRoot) {
+      const beforeSnapshots = this.captureSubtreeSnapshots(subgraphRoot.id);
+      const beforePlacement = this.captureNodePlacement(subgraphRoot);
+      const world = getWorldPosition(subgraphRoot.id, this.store.allNodesMap);
       const targetX = world.x + deltaX;
       const targetY = world.y + deltaY;
-      if (collapsedSubgraphRoot.parentId === null) {
-        collapsedSubgraphRoot.localX = targetX;
-        collapsedSubgraphRoot.localY = targetY;
+      if (subgraphRoot.parentId === null) {
+        subgraphRoot.localX = targetX;
+        subgraphRoot.localY = targetY;
       } else {
         const parentWorld = getParentFrameWorldPosition(
-          collapsedSubgraphRoot.parentId,
+          subgraphRoot.parentId,
           this.store.allNodesMap
         );
-        collapsedSubgraphRoot.localX = targetX - parentWorld.x;
-        collapsedSubgraphRoot.localY = targetY - parentWorld.y;
+        subgraphRoot.localX = targetX - parentWorld.x;
+        subgraphRoot.localY = targetY - parentWorld.y;
       }
 
-      const appliedDeltaX = collapsedSubgraphRoot.localX - beforePlacement.localX;
-      const appliedDeltaY = collapsedSubgraphRoot.localY - beforePlacement.localY;
+      const appliedDeltaX = subgraphRoot.localX - beforePlacement.localX;
+      const appliedDeltaY = subgraphRoot.localY - beforePlacement.localY;
       this.store.translateDescendants(
-        collapsedSubgraphRoot.id,
+        subgraphRoot.id,
         appliedDeltaX,
         appliedDeltaY
       );
 
       const refreshIds = new Set<number | null>([
         ...affectedParentIds,
-        collapsedSubgraphRoot.id,
-        collapsedSubgraphRoot.parentId,
+        subgraphRoot.id,
+        subgraphRoot.parentId,
       ]);
       this.refreshContainerChains(refreshIds);
-      const afterSnapshots = this.captureSubtreeSnapshots(collapsedSubgraphRoot.id);
+      const afterSnapshots = this.captureSubtreeSnapshots(subgraphRoot.id);
 
       this.pushCommand(new MoveSelectionCommand({
         beforeSnapshots,
@@ -507,6 +677,11 @@ export class WorldActionDriver {
     }
 
     this.store.updateContainerBounds(subgraph.id, this.theme);
+    // Mirror production's createSubgraphFromSelection: refit the new subgraph
+    // AND its ancestor chain (the common parent may have gained a child and
+    // must be re-laid-out). The undo path refreshes this same chain, so
+    // skipping it here makes the recorded state unreproducible by undo.
+    this.refreshContainerChain(subgraph.id);
     const afterSnapshots = this.captureNodeSnapshots(rootIds);
     const subgraphSnapshot = this.captureNodeSnapshot(subgraph);
     this.clearSelectionState();
@@ -602,7 +777,10 @@ export class WorldActionDriver {
     const childBeforeSnapshots = this.captureNodeSnapshots(childIds);
     const removedEdgeSnapshots = this.removeBoundaryEdgesForRoots([subgraphId]);
 
-    this.store.removeContainerOnly(subgraphId);
+    // Abort when a child cannot be promoted (e.g. a composition inside a root
+    // subgraph): removeContainerOnly returns false without mutating, and we
+    // must not push a command for a removal that never happened.
+    if (!this.store.removeContainerOnly(subgraphId)) return false;
     const childAfterSnapshots = this.captureNodeSnapshots(childIds);
 
     this.clearSelectionState();
@@ -959,6 +1137,7 @@ export class WorldActionDriver {
     node.isSelected = snapshot.isSelected;
     node.isDropTarget = snapshot.isDropTarget;
     node.isLocked = snapshot.isLocked;
+    node.isCollapsed = snapshot.isCollapsed;
     node.childIds = [...snapshot.childIds];
     node.compositionRefId = snapshot.compositionRefId;
     node.subgraphRefId = snapshot.subgraphRefId;
@@ -983,7 +1162,7 @@ export class WorldActionDriver {
   }
 
   private restoreNodeSnapshots(snapshots: NodeHistorySnapshot[]): void {
-    for (const snapshot of snapshots) {
+    for (const snapshot of orderSnapshotsParentsFirst(snapshots)) {
       this.applyNodeSnapshot(snapshot);
     }
   }

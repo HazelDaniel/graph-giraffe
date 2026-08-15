@@ -307,6 +307,12 @@ export class NodeStore {
   /**
    * Removes a container while preserving its children in their current visual
    * positions by promoting them to the removed container's parent.
+   *
+   * Returns false (without mutating anything) when a child cannot legally be
+   * promoted anywhere up the container's ancestor chain — e.g. ungraphing a
+   * root subgraph whose child is a composition (canBeRoot: false). Aborting
+   * instead of orphaning keeps the tree consistent: a dangling parentId would
+   * otherwise be recorded by commands and become unreproducible by undo.
    */
   removeContainerOnly(id: number): boolean {
     const node = this.get(id);
@@ -314,8 +320,40 @@ export class NodeStore {
 
     const parentId = node.parentId;
     const allNodes = this.allNodesMap;
-    for (const childId of [...node.childIds]) {
-      reparent(childId, parentId, allNodes, this.registry);
+    const childIds = [...node.childIds];
+
+    // Pre-validate every child can be promoted to a legal target, walking up
+    // the container's ancestor chain from its parent. Abort before mutating
+    // if any child has no legal home.
+    const targets = new Map<number, number | null>();
+    for (const childId of childIds) {
+      const child = allNodes.get(childId);
+      if (!child) continue;
+      let target: number | null = parentId;
+      let legal = false;
+      while (!legal) {
+        const targetType =
+          target !== null ? allNodes.get(target)?.nodeType ?? null : null;
+        legal = this.registry
+          ? this.registry.canReparentTo(child.nodeType, targetType)
+          : reparent(childId, target, allNodes, this.registry) === true;
+        if (!legal) {
+          if (target === null) break;
+          const ancestor = allNodes.get(target);
+          target = ancestor ? ancestor.parentId : null;
+        }
+      }
+      if (!legal) return false;
+      targets.set(childId, target);
+    }
+
+    for (const childId of childIds) {
+      // Promote the child to its legal target. `id` (the container being
+      // removed) is passed so the ancestor-cycle guard does not reject the
+      // promotion: the child's path to the new parent goes through this
+      // container, which is about to disappear.
+      const target = targets.get(childId) ?? parentId;
+      reparent(childId, target, allNodes, this.registry, id);
       const child = allNodes.get(childId);
       if (child) {
         this.syncNodePresentation(childId);
@@ -535,6 +573,21 @@ export class NodeStore {
       if (node.nodeType === 'hub' && parent.nodeType === 'group') return false;
     }
 
+    if (node.parentId !== null && node.parentId === parentId) {
+      // Parent is unchanged: keep the existing sibling order. Repositioning a
+      // node must never reorder its parent's childIds, otherwise undo/redo of
+      // a simple move (or any snapshot restore) diverges from the execute path
+      // and container auto-layout (which iterates childIds) produces different
+      // positions for the same logical state.
+      const parent = this.get(parentId);
+      if (parent && parent.childIds.includes(childId)) {
+        node.localX = localX;
+        node.localY = localY;
+        this.syncNodePresentation(childId);
+        return true;
+      }
+    }
+
     if (node.parentId !== null) {
       const currentParent = this.get(node.parentId);
       if (currentParent) {
@@ -573,6 +626,18 @@ export class NodeStore {
       const parent = this.get(parentId);
       if (!parent || !isContainerNodeType(parent.nodeType)) return false;
       if (node.nodeType === 'hub' && parent.nodeType === 'group') return false;
+    }
+
+    if (node.parentId !== null && node.parentId === parentId) {
+      // Parent is unchanged: keep the existing sibling order (see the comment
+      // on restoreNodePlacement).
+      const parent = this.get(parentId);
+      if (parent && parent.childIds.includes(childId)) {
+        node.localX = localX;
+        node.localY = localY;
+        this.syncNodePresentation(childId);
+        return true;
+      }
     }
 
     if (node.parentId !== null) {

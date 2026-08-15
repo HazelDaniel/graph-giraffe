@@ -438,8 +438,13 @@ export class CreateSubgraphCommand implements Command {
   }
 
   undo(ctx: CommandContext): void {
-    ctx.removeContainerOnly(this.payload.subgraphSnapshot.id);
+    // Restore the children to their pre-subgraph parents first (emptying the
+    // subgraph), then remove the container. Restoring children before removal
+    // means removeContainerOnly has nothing left to promote — so it cannot
+    // abort on an un-promotable child (e.g. a composition that was at root
+    // before the subgraph wrapped it).
     ctx.restoreNodeSnapshots(this.payload.childBeforeSnapshots);
+    ctx.removeContainerOnly(this.payload.subgraphSnapshot.id);
     ctx.restoreEdgeSnapshots(this.payload.removedEdgeSnapshots);
     ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     ctx.refreshContainerChain(this.payload.subgraphSnapshot.parentId);
@@ -522,8 +527,9 @@ export class UngraphCommand implements Command {
     ctx.applyNodeSnapshot(this.payload.subgraphSnapshot);
     ctx.restoreNodeSnapshots(this.payload.childBeforeSnapshots);
     ctx.restoreEdgeSnapshots(this.payload.removedEdgeSnapshots);
-    ctx.clearSelectionState();
-    ctx.setNodeSelected(this.payload.subgraphSnapshot.id, true);
+    // The execute path clears selection (nothing selected after ungraph), so
+    // undo must restore the pre-command selection — not re-select the subgraph.
+    ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     ctx.refreshContainerChain(this.payload.subgraphSnapshot.id);
     ctx.syncPropertiesPanel();
     ctx.syncToolbarState();
@@ -539,7 +545,8 @@ export class UngraphCommand implements Command {
       }
     }
     ctx.restoreNodeSnapshots(this.payload.childAfterSnapshots);
-    ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+    // Mirror the execute path exactly: selection is cleared, nothing selected.
+    ctx.clearSelectionState();
     ctx.refreshContainerChain(this.payload.subgraphSnapshot.parentId);
     ctx.syncPropertiesPanel();
     ctx.syncToolbarState();
@@ -713,10 +720,23 @@ export class MoveNodeCommand implements Command {
     beforePlacement: NodePlacementSnapshot;
     afterPlacement: NodePlacementSnapshot;
     selectionBefore: SelectionSnapshot;
+    /**
+     * The owning subgraph's id when the moved leaf lives inside a subgraph.
+     * The execute path refreshes that container chain so the subgraph's bounds
+     * follow the moved child; undo/redo must refresh the same chain, or the
+     * subgraph stays stale after restore.
+     */
+    owningSubgraphId: number | null;
   };
 
   constructor(payload: MoveNodeCommand["payload"]) {
     this.payload = payload;
+  }
+
+  private refreshOwningSubgraph(ctx: CommandContext): void {
+    if (this.payload.owningSubgraphId !== null) {
+      ctx.refreshContainerChain(this.payload.owningSubgraphId);
+    }
   }
 
   undo(ctx: CommandContext): void {
@@ -726,6 +746,7 @@ export class MoveNodeCommand implements Command {
       this.payload.beforePlacement.localY,
       this.payload.beforePlacement.parentId
     );
+    this.refreshOwningSubgraph(ctx);
     ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     ctx.syncToolbarState();
   }
@@ -737,6 +758,7 @@ export class MoveNodeCommand implements Command {
       this.payload.afterPlacement.localY,
       this.payload.afterPlacement.parentId
     );
+    this.refreshOwningSubgraph(ctx);
     ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     ctx.syncToolbarState();
   }
