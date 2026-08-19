@@ -66,7 +66,7 @@ export function getOwningSubgraphId(nodeId, nodes) {
  * the same world position under the new parent. This prevents the node
  * from "jumping" when it is re-parented.
  */
-export function reparent(childId, newParentId, nodes, registry) {
+export function reparent(childId, newParentId, nodes, registry, removedAncestorId) {
     const child = nodes.get(childId);
     if (!child)
         return false;
@@ -128,8 +128,10 @@ export function reparent(childId, newParentId, nodes, registry) {
         if (registry && !registry.isContainer(newParent.nodeType))
             return false;
     }
-    if (newParentId !== null && isAncestor(newParentId, childId, nodes))
+    if (newParentId !== null &&
+        isAncestor(newParentId, childId, nodes, removedAncestorId)) {
         return false;
+    }
     const childWorld = getWorldPosition(childId, nodes, registry);
     if (child.parentId !== null) {
         const oldParent = nodes.get(child.parentId);
@@ -158,10 +160,17 @@ export function reparent(childId, newParentId, nodes, registry) {
 /**
  * Returns true if `ancestorId` is an ancestor of `nodeId` in the tree.
  * Used to prevent cycles when re-parenting.
+ *
+ * When `removedAncestorId` is given (the container being removed by
+ * removeContainerOnly), a path through that container is not treated as an
+ * ancestor chain: the children are being promoted past the removed container
+ * up to its parent, which cannot create a cycle.
  */
-function isAncestor(ancestorId, nodeId, nodes) {
+function isAncestor(ancestorId, nodeId, nodes, removedAncestorId) {
     let current = nodes.get(nodeId);
     while (current && current.parentId !== null) {
+        if (current.parentId === removedAncestorId)
+            return false;
         if (current.parentId === ancestorId)
             return true;
         current = nodes.get(current.parentId);

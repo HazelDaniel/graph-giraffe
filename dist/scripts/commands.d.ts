@@ -294,8 +294,16 @@ export declare class MoveNodeCommand implements Command {
         beforePlacement: NodePlacementSnapshot;
         afterPlacement: NodePlacementSnapshot;
         selectionBefore: SelectionSnapshot;
+        /**
+         * The owning subgraph's id when the moved leaf lives inside a subgraph.
+         * The execute path refreshes that container chain so the subgraph's bounds
+         * follow the moved child; undo/redo must refresh the same chain, or the
+         * subgraph stays stale after restore.
+         */
+        owningSubgraphId: number | null;
     };
     constructor(payload: MoveNodeCommand["payload"]);
+    private refreshOwningSubgraph;
     undo(ctx: CommandContext): void;
     redo(ctx: CommandContext): void;
 }

@@ -34,6 +34,34 @@ export declare class WorldActionDriver {
     createNode(nodeType: NodeType, worldX: number, worldY: number, parentId?: number | null): NodeData | null;
     connect(sourceNodeId: number, sourceHandleSide: HandleSide, targetNodeId: number, targetHandleSide: HandleSide): EdgeData | null;
     deleteNode(nodeId: number): void;
+    /**
+     * Single edge deletion, mirroring the editor's `deleteEdgeWithHistory`.
+     *
+     * Removes the edge (and any composition reference it carried), syncs handle
+     * state on both endpoints, then pushes a {@link DeleteEdgeCommand}.
+     */
+    deleteEdge(edgeId: number): boolean;
+    /**
+     * Multi-selection deletion (nodes and/or edges), mirroring the editor's
+     * `deleteCurrentSelectionWithHistory` dispatch: a lone node routes to
+     * {@link DeleteNodeCommand}, a lone edge to {@link DeleteEdgeCommand}, and
+     * anything larger to {@link DeleteSelectionCommand}.
+     */
+    deleteSelection(nodeIds: number[], edgeIds: number[]): boolean;
+    /**
+     * Single-node world-space translation, mirroring the editor's
+     * {@link MoveNodeCommand} fallback (no reparenting, no container refit).
+     *
+     * Production only routes leaf primitives through MoveNodeCommand — container
+     * roots (subgraph/group/composition) move via MoveSelectionCommand with
+     * subtree snapshots and descendant translation, so reject them here to keep
+     * the driver's command semantics identical.
+     */
+    moveNode(nodeId: number, deltaX: number, deltaY: number): boolean;
+    /**
+     * Group lock/unlock toggle, mirroring the editor's lock-button click.
+     */
+    toggleLock(nodeId: number): boolean;
     moveNodes(nodeIds: number[], deltaX: number, deltaY: number, affectedParentIds?: Array<number | null>): void;
     reparentNode(nodeId: number, parentId: number | null): boolean;
     duplicateIntoComposition(sourceId: number, compositionId: number): NodeData | null;

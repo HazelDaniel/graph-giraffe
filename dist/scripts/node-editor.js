@@ -8,7 +8,7 @@ import { NodeStore } from "./node-store.js";
 import { Renderer } from "./renderer.js";
 import { UIControls } from "./controls.js";
 import { HistoryStack } from "./history.js";
-import { captureNodeHistorySnapshot, cloneNodeProps, } from "./history-snapshots.js";
+import { captureNodeHistorySnapshot, cloneNodeProps, orderSnapshotsParentsFirst, } from "./history-snapshots.js";
 import { CreateNodeCommand, CreateHubFromConnectionDropCommand, CreateSubgraphCommand, CloneSubgraphCommand, ConnectCommand, DeleteNodeCommand, DeleteEdgeCommand, DeleteSelectionCommand, DuplicateIntoCompositionCommand, MoveNodeCommand, MoveSelectionCommand, ReparentCommand, ToggleLockCommand, ToggleSubgraphCollapseCommand, UngraphCommand, UpdateLabelCommand, UpdatePropCommand, } from "./commands.js";
 import { GraphEventEmitter } from "./events.js";
 import { DEFAULT_HANDLE_STYLE, NODE_LAYOUT, isCandidateNodeType, isContainerNodeType, isNodePrimitiveType, getSubgraphLinkLocal, } from "./types.js";
@@ -918,6 +918,7 @@ export class NodeEditor {
                 beforePlacement: this.captureNodePlacement(node),
                 beforeWorld: getWorldPosition(node.id, this.store.allNodesMap),
             })),
+            beforeSnapshots: this.captureNodeSnapshots(roots.map((node) => node.id)),
         };
     }
     moveSelectionDrag(worldX, worldY, screenX, screenY) {
@@ -988,7 +989,10 @@ export class NodeEditor {
     }
     async applySelectionDrop(selectionDrag, hoveredContainer) {
         const rootIds = selectionDrag.entries.map((entry) => entry.nodeId);
-        const beforeSnapshots = this.captureNodeSnapshots(rootIds);
+        // Captured at drag start (pre-translation). Capturing here at drop time
+        // would snapshot the already-translated positions, making the command's
+        // undo unable to revert the drag.
+        const beforeSnapshots = selectionDrag.beforeSnapshots;
         const cloneSnapshots = [];
         const affectedParents = new Set();
         const cloneIds = [];
@@ -1402,7 +1406,7 @@ export class NodeEditor {
         this.markMinimapDirty();
     }
     restoreNodeSnapshots(snapshots) {
-        for (const snapshot of snapshots) {
+        for (const snapshot of orderSnapshotsParentsFirst(snapshots)) {
             this.applyNodeSnapshot(snapshot);
         }
     }
@@ -1515,13 +1519,13 @@ export class NodeEditor {
         const targetPanY = canvas.height / 2 - centerY * targetZoom;
         this.camera.animateTo(targetPanX, targetPanY, targetZoom);
     }
-    /** Check if a node is a locked group or is a descendant of one. */
+    /** Check if a node is locked (any type) or is a descendant of a locked group. */
     isInLockedGroup(nodeId) {
         const node = this.store.get(nodeId);
         if (!node)
             return false;
-        // A locked group itself cannot be dragged
-        if (node.isLocked && node.nodeType === "group")
+        // A locked node of any type cannot be dragged
+        if (node.isLocked)
             return true;
         // Walk ancestor chain — any locked group ancestor blocks dragging
         let currentId = node.parentId;
@@ -1832,7 +1836,11 @@ export class NodeEditor {
         const removedEdgeSnapshots = this.captureBoundaryEdgeSnapshots([
             subgraphId,
         ]);
-        this.store.removeContainerOnly(subgraphId);
+        // Abort when a child cannot be promoted (e.g. a composition inside a root
+        // subgraph): removeContainerOnly returns false without mutating, and we
+        // must not push a command for a removal that never happened.
+        if (!this.store.removeContainerOnly(subgraphId))
+            return;
         for (const snapshot of removedEdgeSnapshots) {
             const removed = this.edgeStore.remove(snapshot.id);
             if (removed) {
@@ -2836,6 +2844,7 @@ export class NodeEditor {
                             beforePlacement,
                             afterPlacement,
                             selectionBefore,
+                            owningSubgraphId: this.getOwningSubgraphId(sourceId),
                         });
                     }
                 }

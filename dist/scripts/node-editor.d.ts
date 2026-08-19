@@ -254,7 +254,7 @@ export declare class NodeEditor {
     private removeCompositionReferenceEdgesForNode;
     /** Zoom the camera to center a group node in the viewport with padding. */
     private spotlightGroup;
-    /** Check if a node is a locked group or is a descendant of one. */
+    /** Check if a node is locked (any type) or is a descendant of a locked group. */
     private isInLockedGroup;
     /** Returns the nearest subgraph ancestor that owns this node, if any. */
     private getOwningSubgraphId;

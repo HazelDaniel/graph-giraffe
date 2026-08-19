@@ -25,4 +25,4 @@ export declare function getOwningSubgraphId(nodeId: number, nodes: Map<number, N
  * the same world position under the new parent. This prevents the node
  * from "jumping" when it is re-parented.
  */
-export declare function reparent(childId: number, newParentId: number | null, nodes: Map<number, NodeData>, registry?: NodeTypeRegistry): boolean;
+export declare function reparent(childId: number, newParentId: number | null, nodes: Map<number, NodeData>, registry?: NodeTypeRegistry, removedAncestorId?: number): boolean;

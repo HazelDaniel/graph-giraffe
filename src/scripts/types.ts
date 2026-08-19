@@ -334,7 +334,7 @@ export interface NodeData {
   /** Lookup table: ids of subgraph clones that reference this subgraph as their original. */
   subgraphRefIds?: number[];
   isDropTarget?: boolean;
-  /** When true on a group node, neither the group nor its children can be dragged. */
+  /** When true, the node cannot be dragged. On a group, children are also blocked. */
   isLocked?: boolean;
   /** When true on a subgraph, descendants are hidden and the subgraph draws compactly. */
   isCollapsed?: boolean;

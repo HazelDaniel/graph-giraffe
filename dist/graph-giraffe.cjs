@@ -1003,7 +1003,7 @@ function getParentFrameWorldPosition(parentId, nodes, registry) {
   }
   return getWorldPosition(parentId, nodes, registry);
 }
-function reparent(childId, newParentId, nodes, registry) {
+function reparent(childId, newParentId, nodes, registry, removedAncestorId) {
   var _a2, _b;
   const child = nodes.get(childId);
   if (!child) return false;
@@ -1052,7 +1052,9 @@ function reparent(childId, newParentId, nodes, registry) {
     if (!registry && !isContainerNodeType(newParent.nodeType)) return false;
     if (registry && !registry.isContainer(newParent.nodeType)) return false;
   }
-  if (newParentId !== null && isAncestor(newParentId, childId, nodes)) return false;
+  if (newParentId !== null && isAncestor(newParentId, childId, nodes, removedAncestorId)) {
+    return false;
+  }
   const childWorld = getWorldPosition(childId, nodes, registry);
   if (child.parentId !== null) {
     const oldParent = nodes.get(child.parentId);
@@ -1076,9 +1078,10 @@ function reparent(childId, newParentId, nodes, registry) {
   child.parentId = newParentId;
   return true;
 }
-function isAncestor(ancestorId, nodeId, nodes) {
+function isAncestor(ancestorId, nodeId, nodes, removedAncestorId) {
   let current = nodes.get(nodeId);
   while (current && current.parentId !== null) {
+    if (current.parentId === removedAncestorId) return false;
     if (current.parentId === ancestorId) return true;
     current = nodes.get(current.parentId);
   }
@@ -5627,14 +5630,41 @@ class NodeStore {
   /**
    * Removes a container while preserving its children in their current visual
    * positions by promoting them to the removed container's parent.
+   *
+   * Returns false (without mutating anything) when a child cannot legally be
+   * promoted anywhere up the container's ancestor chain — e.g. ungraphing a
+   * root subgraph whose child is a composition (canBeRoot: false). Aborting
+   * instead of orphaning keeps the tree consistent: a dangling parentId would
+   * otherwise be recorded by commands and become unreproducible by undo.
    */
   removeContainerOnly(id) {
+    var _a2;
     const node = this.get(id);
     if (!node || !isContainerNodeType(node.nodeType)) return false;
     const parentId = node.parentId;
     const allNodes = this.allNodesMap;
-    for (const childId of [...node.childIds]) {
-      reparent(childId, parentId, allNodes, this.registry);
+    const childIds = [...node.childIds];
+    const targets = /* @__PURE__ */ new Map();
+    for (const childId of childIds) {
+      const child = allNodes.get(childId);
+      if (!child) continue;
+      let target = parentId;
+      let legal = false;
+      while (!legal) {
+        const targetType = target !== null ? ((_a2 = allNodes.get(target)) == null ? void 0 : _a2.nodeType) ?? null : null;
+        legal = this.registry ? this.registry.canReparentTo(child.nodeType, targetType) : reparent(childId, target, allNodes, this.registry) === true;
+        if (!legal) {
+          if (target === null) break;
+          const ancestor = allNodes.get(target);
+          target = ancestor ? ancestor.parentId : null;
+        }
+      }
+      if (!legal) return false;
+      targets.set(childId, target);
+    }
+    for (const childId of childIds) {
+      const target = targets.get(childId) ?? parentId;
+      reparent(childId, target, allNodes, this.registry, id);
       const child = allNodes.get(childId);
       if (child) {
         this.syncNodePresentation(childId);
@@ -5811,6 +5841,15 @@ class NodeStore {
       if (!parent || !isContainerNodeType(parent.nodeType)) return false;
       if (node.nodeType === "hub" && parent.nodeType === "group") return false;
     }
+    if (node.parentId !== null && node.parentId === parentId) {
+      const parent = this.get(parentId);
+      if (parent && parent.childIds.includes(childId)) {
+        node.localX = localX;
+        node.localY = localY;
+        this.syncNodePresentation(childId);
+        return true;
+      }
+    }
     if (node.parentId !== null) {
       const currentParent = this.get(node.parentId);
       if (currentParent) {
@@ -5839,6 +5878,15 @@ class NodeStore {
       const parent = this.get(parentId);
       if (!parent || !isContainerNodeType(parent.nodeType)) return false;
       if (node.nodeType === "hub" && parent.nodeType === "group") return false;
+    }
+    if (node.parentId !== null && node.parentId === parentId) {
+      const parent = this.get(parentId);
+      if (parent && parent.childIds.includes(childId)) {
+        node.localX = localX;
+        node.localY = localY;
+        this.syncNodePresentation(childId);
+        return true;
+      }
     }
     if (node.parentId !== null) {
       const currentParent = this.get(node.parentId);
@@ -8893,6 +8941,27 @@ function captureNodeHistorySnapshot(node) {
     }))
   };
 }
+function orderSnapshotsParentsFirst(snapshots) {
+  const byId = /* @__PURE__ */ new Map();
+  for (const snapshot of snapshots) {
+    byId.set(snapshot.id, snapshot);
+  }
+  const ordered = [];
+  const emitted = /* @__PURE__ */ new Set();
+  const visit = (snapshot) => {
+    if (emitted.has(snapshot.id)) return;
+    emitted.add(snapshot.id);
+    if (snapshot.parentId !== null) {
+      const parent = byId.get(snapshot.parentId);
+      if (parent) visit(parent);
+    }
+    ordered.push(snapshot);
+  };
+  for (const snapshot of snapshots) {
+    visit(snapshot);
+  }
+  return ordered;
+}
 class UpdatePropCommand {
   constructor(payload) {
     __publicField(this, "type", "update-prop");
@@ -9127,8 +9196,8 @@ class CreateSubgraphCommand {
     this.payload = payload;
   }
   undo(ctx) {
-    ctx.removeContainerOnly(this.payload.subgraphSnapshot.id);
     ctx.restoreNodeSnapshots(this.payload.childBeforeSnapshots);
+    ctx.removeContainerOnly(this.payload.subgraphSnapshot.id);
     ctx.restoreEdgeSnapshots(this.payload.removedEdgeSnapshots);
     ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     ctx.refreshContainerChain(this.payload.subgraphSnapshot.parentId);
@@ -9190,8 +9259,7 @@ class UngraphCommand {
     ctx.applyNodeSnapshot(this.payload.subgraphSnapshot);
     ctx.restoreNodeSnapshots(this.payload.childBeforeSnapshots);
     ctx.restoreEdgeSnapshots(this.payload.removedEdgeSnapshots);
-    ctx.clearSelectionState();
-    ctx.setNodeSelected(this.payload.subgraphSnapshot.id, true);
+    ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     ctx.refreshContainerChain(this.payload.subgraphSnapshot.id);
     ctx.syncPropertiesPanel();
     ctx.syncToolbarState();
@@ -9206,7 +9274,7 @@ class UngraphCommand {
       }
     }
     ctx.restoreNodeSnapshots(this.payload.childAfterSnapshots);
-    ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+    ctx.clearSelectionState();
     ctx.refreshContainerChain(this.payload.subgraphSnapshot.parentId);
     ctx.syncPropertiesPanel();
     ctx.syncToolbarState();
@@ -9330,6 +9398,11 @@ class MoveNodeCommand {
     __publicField(this, "payload");
     this.payload = payload;
   }
+  refreshOwningSubgraph(ctx) {
+    if (this.payload.owningSubgraphId !== null) {
+      ctx.refreshContainerChain(this.payload.owningSubgraphId);
+    }
+  }
   undo(ctx) {
     ctx.store.restoreNodePlacement(
       this.payload.nodeId,
@@ -9337,6 +9410,7 @@ class MoveNodeCommand {
       this.payload.beforePlacement.localY,
       this.payload.beforePlacement.parentId
     );
+    this.refreshOwningSubgraph(ctx);
     ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     ctx.syncToolbarState();
   }
@@ -9347,6 +9421,7 @@ class MoveNodeCommand {
       this.payload.afterPlacement.localY,
       this.payload.afterPlacement.parentId
     );
+    this.refreshOwningSubgraph(ctx);
     ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
     ctx.syncToolbarState();
   }
@@ -11751,7 +11826,10 @@ const _NodeEditor = class _NodeEditor {
         nodeId: node.id,
         beforePlacement: this.captureNodePlacement(node),
         beforeWorld: getWorldPosition(node.id, this.store.allNodesMap)
-      }))
+      })),
+      beforeSnapshots: this.captureNodeSnapshots(
+        roots.map((node) => node.id)
+      )
     };
   }
   moveSelectionDrag(worldX, worldY, screenX, screenY) {
@@ -11823,7 +11901,7 @@ const _NodeEditor = class _NodeEditor {
   }
   async applySelectionDrop(selectionDrag, hoveredContainer) {
     const rootIds = selectionDrag.entries.map((entry) => entry.nodeId);
-    const beforeSnapshots = this.captureNodeSnapshots(rootIds);
+    const beforeSnapshots = selectionDrag.beforeSnapshots;
     const cloneSnapshots = [];
     const affectedParents = /* @__PURE__ */ new Set();
     const cloneIds = [];
@@ -12217,7 +12295,7 @@ const _NodeEditor = class _NodeEditor {
     this.markMinimapDirty();
   }
   restoreNodeSnapshots(snapshots) {
-    for (const snapshot of snapshots) {
+    for (const snapshot of orderSnapshotsParentsFirst(snapshots)) {
       this.applyNodeSnapshot(snapshot);
     }
   }
@@ -12327,11 +12405,11 @@ const _NodeEditor = class _NodeEditor {
     const targetPanY = canvas.height / 2 - centerY * targetZoom;
     this.camera.animateTo(targetPanX, targetPanY, targetZoom);
   }
-  /** Check if a node is a locked group or is a descendant of one. */
+  /** Check if a node is locked (any type) or is a descendant of a locked group. */
   isInLockedGroup(nodeId) {
     const node = this.store.get(nodeId);
     if (!node) return false;
-    if (node.isLocked && node.nodeType === "group") return true;
+    if (node.isLocked) return true;
     let currentId = node.parentId;
     while (currentId !== null) {
       const ancestor = this.store.get(currentId);
@@ -12647,7 +12725,7 @@ const _NodeEditor = class _NodeEditor {
     const removedEdgeSnapshots = this.captureBoundaryEdgeSnapshots([
       subgraphId
     ]);
-    this.store.removeContainerOnly(subgraphId);
+    if (!this.store.removeContainerOnly(subgraphId)) return;
     for (const snapshot of removedEdgeSnapshots) {
       const removed = this.edgeStore.remove(snapshot.id);
       if (removed) {
@@ -13638,7 +13716,8 @@ const _NodeEditor = class _NodeEditor {
               nodeId: sourceId,
               beforePlacement,
               afterPlacement,
-              selectionBefore
+              selectionBefore,
+              owningSubgraphId: this.getOwningSubgraphId(sourceId)
             });
           }
         }

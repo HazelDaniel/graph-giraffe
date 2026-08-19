@@ -48,4 +48,37 @@ export function captureNodeHistorySnapshot(node) {
 export function captureEdgeHistorySnapshot(edge) {
     return { ...edge };
 }
+/**
+ * Orders node snapshots so every parent is restored before its children.
+ *
+ * Snapshot arrays are built from Set-insertion order, which is input-order
+ * dependent (e.g. deleteSelection may list a child before its parent). When a
+ * child is restored before its parent exists, applyNodeSnapshot cannot
+ * re-attach it (forceRestoreNodePlacement bails on a missing parent) and the
+ * child ends up orphaned. Parents-first ordering makes undo/redo deterministic
+ * regardless of capture order.
+ */
+export function orderSnapshotsParentsFirst(snapshots) {
+    const byId = new Map();
+    for (const snapshot of snapshots) {
+        byId.set(snapshot.id, snapshot);
+    }
+    const ordered = [];
+    const emitted = new Set();
+    const visit = (snapshot) => {
+        if (emitted.has(snapshot.id))
+            return;
+        emitted.add(snapshot.id);
+        if (snapshot.parentId !== null) {
+            const parent = byId.get(snapshot.parentId);
+            if (parent)
+                visit(parent);
+        }
+        ordered.push(snapshot);
+    };
+    for (const snapshot of snapshots) {
+        visit(snapshot);
+    }
+    return ordered;
+}
 //# sourceMappingURL=history-snapshots.js.map

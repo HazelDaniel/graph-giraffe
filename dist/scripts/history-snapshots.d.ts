@@ -40,6 +40,17 @@ export interface EdgeHistorySnapshot {
 export declare function cloneNodeProps(props: NodePropType | undefined): NodePropType | undefined;
 export declare function captureNodeHistorySnapshot(node: NodeData): NodeHistorySnapshot;
 export declare function captureEdgeHistorySnapshot(edge: EdgeData): EdgeHistorySnapshot;
+/**
+ * Orders node snapshots so every parent is restored before its children.
+ *
+ * Snapshot arrays are built from Set-insertion order, which is input-order
+ * dependent (e.g. deleteSelection may list a child before its parent). When a
+ * child is restored before its parent exists, applyNodeSnapshot cannot
+ * re-attach it (forceRestoreNodePlacement bails on a missing parent) and the
+ * child ends up orphaned. Parents-first ordering makes undo/redo deterministic
+ * regardless of capture order.
+ */
+export declare function orderSnapshotsParentsFirst(snapshots: NodeHistorySnapshot[]): NodeHistorySnapshot[];
 export type SelectionKind = "node" | "edge" | null;
 export interface SelectionSnapshot {
     kind: SelectionKind;

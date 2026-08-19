@@ -258,8 +258,13 @@ export class CreateSubgraphCommand {
         this.payload = payload;
     }
     undo(ctx) {
-        ctx.removeContainerOnly(this.payload.subgraphSnapshot.id);
+        // Restore the children to their pre-subgraph parents first (emptying the
+        // subgraph), then remove the container. Restoring children before removal
+        // means removeContainerOnly has nothing left to promote — so it cannot
+        // abort on an un-promotable child (e.g. a composition that was at root
+        // before the subgraph wrapped it).
         ctx.restoreNodeSnapshots(this.payload.childBeforeSnapshots);
+        ctx.removeContainerOnly(this.payload.subgraphSnapshot.id);
         ctx.restoreEdgeSnapshots(this.payload.removedEdgeSnapshots);
         ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
         ctx.refreshContainerChain(this.payload.subgraphSnapshot.parentId);
@@ -322,8 +327,9 @@ export class UngraphCommand {
         ctx.applyNodeSnapshot(this.payload.subgraphSnapshot);
         ctx.restoreNodeSnapshots(this.payload.childBeforeSnapshots);
         ctx.restoreEdgeSnapshots(this.payload.removedEdgeSnapshots);
-        ctx.clearSelectionState();
-        ctx.setNodeSelected(this.payload.subgraphSnapshot.id, true);
+        // The execute path clears selection (nothing selected after ungraph), so
+        // undo must restore the pre-command selection — not re-select the subgraph.
+        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
         ctx.refreshContainerChain(this.payload.subgraphSnapshot.id);
         ctx.syncPropertiesPanel();
         ctx.syncToolbarState();
@@ -338,7 +344,8 @@ export class UngraphCommand {
             }
         }
         ctx.restoreNodeSnapshots(this.payload.childAfterSnapshots);
-        ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
+        // Mirror the execute path exactly: selection is cleared, nothing selected.
+        ctx.clearSelectionState();
         ctx.refreshContainerChain(this.payload.subgraphSnapshot.parentId);
         ctx.syncPropertiesPanel();
         ctx.syncToolbarState();
@@ -462,13 +469,20 @@ export class MoveNodeCommand {
     constructor(payload) {
         this.payload = payload;
     }
+    refreshOwningSubgraph(ctx) {
+        if (this.payload.owningSubgraphId !== null) {
+            ctx.refreshContainerChain(this.payload.owningSubgraphId);
+        }
+    }
     undo(ctx) {
         ctx.store.restoreNodePlacement(this.payload.nodeId, this.payload.beforePlacement.localX, this.payload.beforePlacement.localY, this.payload.beforePlacement.parentId);
+        this.refreshOwningSubgraph(ctx);
         ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
         ctx.syncToolbarState();
     }
     redo(ctx) {
         ctx.store.restoreNodePlacement(this.payload.nodeId, this.payload.afterPlacement.localX, this.payload.afterPlacement.localY, this.payload.afterPlacement.parentId);
+        this.refreshOwningSubgraph(ctx);
         ctx.restoreSelectionSnapshot(this.payload.selectionBefore);
         ctx.syncToolbarState();
     }

@@ -77,6 +77,12 @@ export declare class NodeStore {
     /**
      * Removes a container while preserving its children in their current visual
      * positions by promoting them to the removed container's parent.
+     *
+     * Returns false (without mutating anything) when a child cannot legally be
+     * promoted anywhere up the container's ancestor chain — e.g. ungraphing a
+     * root subgraph whose child is a composition (canBeRoot: false). Aborting
+     * instead of orphaning keeps the tree consistent: a dangling parentId would
+     * otherwise be recorded by commands and become unreproducible by undo.
      */
     removeContainerOnly(id: number): boolean;
     /**

@@ -2063,13 +2063,13 @@ export class NodeEditor {
     this.camera.animateTo(targetPanX, targetPanY, targetZoom);
   }
 
-  /** Check if a node is a locked group or is a descendant of one. */
+  /** Check if a node is locked (any type) or is a descendant of a locked group. */
   private isInLockedGroup(nodeId: number): boolean {
     const node = this.store.get(nodeId);
     if (!node) return false;
 
-    // A locked group itself cannot be dragged
-    if (node.isLocked && node.nodeType === "group") return true;
+    // A locked node of any type cannot be dragged
+    if (node.isLocked) return true;
 
     // Walk ancestor chain — any locked group ancestor blocks dragging
     let currentId: number | null = node.parentId;
