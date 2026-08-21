@@ -20,6 +20,7 @@ export * from './components/ui-controls.js';
 // ─── Core ────────────────────────────────────────────────
 
 export { NodeEditor } from './scripts/node-editor.js';
+export type { CreateEdgeParams } from './scripts/edge-store.js';
 
 // ─── Node Type Registry ─────────────────────────────────
 

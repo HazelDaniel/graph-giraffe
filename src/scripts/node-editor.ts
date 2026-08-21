@@ -13,7 +13,7 @@ import {
 } from "./shader.js";
 import { PickFBO } from "./pick-fbo.js";
 import { Camera } from "./camera.js";
-import { EdgeStore } from "./edge-store.js";
+import { EdgeStore, type CreateEdgeParams } from "./edge-store.js";
 import {
   buildEdgeRouteGeometry,
   hitTestEdgePolyline,
@@ -899,6 +899,68 @@ export class NodeEditor {
       );
     }
     return this.createNodeWithHistory(nodeType, worldX, worldY, parentId, label);
+  }
+
+  /**
+   * Create an edge through the public command path.
+   *
+   * Adapters must use this instead of reaching into EdgeStore. Connection
+   * validation, before-hooks, composition semantics, handle state, history,
+   * and the public connect event all remain owned by the editor.
+   */
+  async addEdge(params: CreateEdgeParams): Promise<EdgeData | null> {
+    const sourceNode = this.store.get(params.sourceNodeId);
+    const targetNode = this.store.get(params.targetNodeId);
+    if (!sourceNode || !targetNode) return null;
+
+    if (!this.isValidConnection(
+      params.sourceNodeId,
+      params.sourceHandleSide,
+      params.targetNodeId,
+      params.targetHandleSide
+    )) return null;
+
+    const allowed = await this.events.dispatchBefore("before:connect", {
+      sourceId: params.sourceNodeId,
+      sourceType: sourceNode.nodeType,
+      targetId: params.targetNodeId,
+      targetType: targetNode.nodeType,
+      sourceHandleSide: params.sourceHandleSide,
+      targetHandleSide: params.targetHandleSide,
+    });
+    if (!allowed) return null;
+
+    const edge = this.edgeStore.add({
+      ...params,
+      sourceCanHaveMultipleConnections:
+        params.sourceCanHaveMultipleConnections ?? this.typeRegistry.allowsMultiConnect(sourceNode.nodeType),
+      targetCanHaveMultipleConnections:
+        params.targetCanHaveMultipleConnections ?? this.typeRegistry.allowsMultiConnect(targetNode.nodeType),
+    });
+    if (!edge) return null;
+
+    this.syncHandleStates(edge.sourceNodeId);
+    this.syncHandleStates(edge.targetNodeId);
+    this.applyCompositionReferenceForEdge(edge);
+    this.pushCommand(new ConnectCommand({ edgeSnapshot: { ...edge } }));
+    this.events.dispatch("connect", {
+      sourceId: edge.sourceNodeId,
+      sourceType: sourceNode.nodeType,
+      targetId: edge.targetNodeId,
+      targetType: targetNode.nodeType,
+      edgeId: edge.id,
+    });
+    return edge;
+  }
+
+  /** Remove a node tree through the public command path. */
+  async removeNode(nodeId: number): Promise<void> {
+    await this.deleteNodeTreeWithHistory(nodeId);
+  }
+
+  /** Remove an edge through the public command path. */
+  removeEdge(edgeId: number): EdgeData | null {
+    return this.deleteEdgeWithHistory(edgeId);
   }
 
   /**
@@ -2179,9 +2241,9 @@ export class NodeEditor {
     );
   }
 
-  private deleteEdgeWithHistory(edgeId: number): void {
+  private deleteEdgeWithHistory(edgeId: number): EdgeData | null {
     const edge = this.edgeStore.get(edgeId);
-    if (!edge) return;
+    if (!edge) return null;
 
     this.activeLabelEdit = null;
     const selectionBefore = this.captureSelectionSnapshot();
