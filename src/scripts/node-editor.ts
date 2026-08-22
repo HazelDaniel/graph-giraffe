@@ -301,6 +301,15 @@ export class NodeEditor {
     return this._instance;
   }
 
+  /**
+   * Release the singleton slot for framework adapters that own the editor's
+   * host DOM. The adapter must remove its container after calling this method.
+   * A future full dispose lifecycle can extend this without exposing internals.
+   */
+  static release(): void {
+    this._instance = null;
+  }
+
   private msdfAtlas!: MsdfAtlas;
   private iconAtlas!: MsdfAtlas;
 
@@ -2261,6 +2270,7 @@ export class NodeEditor {
         selectionBefore,
       })
     );
+    return edge;
   }
 
   private async deleteCurrentSelectionWithHistory(): Promise<void> {
