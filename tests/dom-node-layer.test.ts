@@ -5,6 +5,7 @@ import { NodeStore } from "../src/scripts/node-store.js";
 import { DEFAULT_HANDLE_STYLE } from "../src/scripts/types.js";
 import { GraphEventEmitter } from "../src/scripts/events.js";
 import { DomNodeLayer } from "../src/scripts/dom-node-layer.js";
+import { PrimitiveGeometry } from "../src/scripts/primitive-geometry.js";
 
 class FakeElement {
   style: Record<string, string> = {};
@@ -89,12 +90,18 @@ function buildHarness(domType = "dom-test") {
     DEFAULT_HANDLE_STYLE,
     registry
   );
+  const geometry = new PrimitiveGeometry();
 
   const container = new FakeElement("div");
   const layer = new DomNodeLayer({
     store,
     registry,
     events,
+    getPrimitiveFrame: (nodeId) => {
+      const node = store.get(nodeId);
+      if (!node) return undefined;
+      return geometry.resolve(node, node.localX, node.localY);
+    },
     container: container as unknown as HTMLElement,
   });
 

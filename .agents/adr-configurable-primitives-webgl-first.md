@@ -4,6 +4,10 @@
 
 **Date:** 2026-08-21
 
+**Latest architectural update:** 2026-09-20 — intrinsic measurement templates
+and renderer-neutral resolved geometry. See
+`changes-intrinsic-measurement-20260920.md`.
+
 **Scope:** `@graph-giraffe/core`, `@graph-giraffe/react`, and Proctor v2
 
 ## Context
@@ -49,6 +53,19 @@ receive safe utility APIs and constrained draw commands. Advanced plugins may op
 into direct WebGL access through an explicitly marked escape hatch with a
 versioned contract.
 
+Primitive dimensions may be resolved by hidden, off-screen DOM measurement
+templates generated from the primitive descriptor and configuration props. These
+templates are measurement-only geometry oracles; they do not reuse the visible
+DOM/React primitive renderer and are not a second visible rendering path.
+
+Intrinsic measurement takes precedence over explicit declarative dimensions,
+which take precedence over descriptor defaults. The editor should defer the first
+visible frame until required measurements resolve. The resulting resolved,
+renderer-neutral primitive frame is consumed by WebGL, picking, handles, edge
+routing, bounds, overlays, and DOM/other renderer alignment. Resize observation
+invalidates affected measurements and dependent layout. Measurement changes are
+derived runtime updates, not graph-history or collaboration commands.
+
 ### State ownership
 
 The core graph store owns graph state inside Graph Giraffe. A controlled adapter
@@ -92,6 +109,11 @@ Costs and constraints:
 - Command synchronization needs deterministic ordering, permissions, validation,
   and recovery design before Redux graph removal.
 - Existing descriptor and adapter APIs must remain compatible during migration.
+- Measurement templates add an initialization/readiness phase and require
+  invalidation tests for resize and geometry-dependent consumers.
+- A shared resolved frame prevents application-specific padding and independent
+  renderer hit-test math, but makes geometry publication an explicit core/backend
+  boundary.
 
 ## Public boundary audit — Phase 0
 

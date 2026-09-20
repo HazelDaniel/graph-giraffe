@@ -89,6 +89,7 @@ import {
 import { TextureRegistry } from "./texture-registry.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
 import { DomNodeLayer } from "./dom-node-layer.js";
+import { PrimitiveGeometry } from "./primitive-geometry.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import { LoadingScreen } from "../components/loading-screen.js";
 import {
@@ -254,6 +255,7 @@ export class NodeEditor {
   private scalingOverlayContainer!: HTMLElement;
   private fixedOverlayContainer!: HTMLElement;
   private domNodeLayer: DomNodeLayer | null = null;
+  private primitiveGeometry = new PrimitiveGeometry();
 
   private resizeObserver!: ResizeObserver;
 
@@ -429,6 +431,12 @@ export class NodeEditor {
         store: this.store,
         registry: this.typeRegistry,
         events: this.events,
+        getPrimitiveFrame: (nodeId) => {
+          const node = this.store.get(nodeId);
+          if (!node) return undefined;
+          const world = getWorldPosition(nodeId, this.store.allNodesMap, this.typeRegistry);
+          return this.primitiveGeometry.resolve(node, world.x, world.y);
+        },
         container: this.scalingOverlayContainer,
       });
       this.domNodeLayer.syncAll();

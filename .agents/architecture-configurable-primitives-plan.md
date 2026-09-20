@@ -4,6 +4,10 @@
 
 **Date:** 2026-08-21
 
+**Latest architectural update:** 2026-09-20 — intrinsic measurement templates
+and renderer-neutral resolved geometry. See
+`changes-intrinsic-measurement-20260920.md`.
+
 **Scope:** `@graph-giraffe/core`, `@graph-giraffe/react`, and the Proctor v2 adapter
 
 **Related analysis:**
@@ -136,6 +140,40 @@ API literally. Concrete node and edge types should retain strong generic types f
 their data and props. The important separation is between semantic capabilities,
 interaction, layout, and renderer implementations.
 
+### 3.3 Intrinsic measurement and resolved geometry
+
+Primitive dimensions may be resolved by hidden, off-screen DOM measurement
+templates generated directly from a primitive descriptor and its configuration
+props. A measurement template is a geometry oracle only; it is not a visible
+renderer and must not reuse the visible DOM/React renderer as a second rendering
+path.
+
+The measurement pipeline is:
+
+```text
+descriptor + props
+        │
+        ▼
+off-screen measurement template
+        │ intrinsic width/height
+        ▼
+resolved renderer-neutral primitive frame
+        ├── WebGL quad, picking, handles, routing, bounds, minimap
+        └── DOM/other renderer alignment transform
+```
+
+Intrinsic measurements have precedence over explicit declarative dimensions,
+which have precedence over descriptor/core defaults. The editor should defer its
+first visible frame until required measurements are ready, with a documented
+degraded fallback only for measurement failure or timeout.
+
+The resolved frame is the single source of geometry truth. Renderers may consume
+a translation/scale diff (with a full affine transform retained internally when
+needed), but renderer-specific padding or hit-test corrections are prohibited.
+Measurements are stable until resize observation invalidates the affected
+primitive and its dependent layout. These derived layout updates do not become
+graph-history or collaboration commands.
+
 ## 4. Architectural rules
 
 These rules govern all implementation work under this plan:
@@ -165,6 +203,13 @@ These rules govern all implementation work under this plan:
 9. **Feature work must carry tests.** Every primitive or interaction feature needs
    headless semantic tests and, where browser event ordering matters, a browser
    smoke test.
+10. **Intrinsic geometry is canonical.** Hidden measurement templates may resolve
+    application-specific primitive dimensions, but the resulting renderer-neutral
+    frame must drive WebGL, hit testing, routing, bounds, overlays, and alternate
+    renderer alignment.
+11. **Measurement is not a second renderer.** Measurement templates are generated
+    from descriptors and props and are used only to obtain intrinsic dimensions;
+    they must not reuse visible primitive renderers.
 
 ## 5. Implementation phases
 
@@ -193,6 +238,9 @@ Refactor incrementally; do not move behavior and rename everything in one change
 - Move type-name checks into registry capability queries.
 - Keep the existing WebGL path behaviorally unchanged while adding contract tests.
 - Keep `WorldActionDriver` as the semantic test backend.
+- Introduce the intrinsic measurement state and resolved primitive frame boundary;
+  measurement invalidation should be scoped to resized primitives and dependent
+  geometry.
 
 **Exit criteria:** graph creation, movement, parenting, connection validation,
 selection, undo/redo, and serialization can be exercised without WebGL or DOM.
@@ -202,6 +250,13 @@ adapter now uses them instead of private stores, camera state, or DOM-layer
 internals. Core build/typecheck and tests pass, and React typecheck passes. The
 remaining singleton reset fallback is isolated for a later lifecycle API slice;
 the renderer-neutral projection/interaction extraction remains in progress.
+
+The first geometry slice is now in place: `DomNodeLayer` consumes a shared
+renderer-neutral `PrimitiveFrame` provider rather than calculating world
+coordinates and dimensions independently. `PrimitiveGeometry` establishes
+intrinsic-measurement precedence and publishes translation/scale alignment
+diffs; it currently falls back to declared node dimensions until the shadow DOM
+measurement provider is added.
 
 ### Phase 2 — Generalize the primitive registry
 
@@ -368,6 +423,14 @@ The following decisions are now part of the plan:
 7. **Redux:** remove Redux as Proctor's authoritative graph store once command sync
    and the core subscription/selector bridge are working. Retain Redux only for
    domain/UI concerns that still benefit from it.
+8. **Intrinsic dimensions:** hidden off-screen measurement templates are the
+   initialization-time geometry oracle. Intrinsic measurements outrank declared
+   and default dimensions, and resolved frames are shared by WebGL, interaction
+   geometry, and alternate renderer alignment.
+9. **Measurement lifecycle:** defer the initial visible frame until required
+   measurements resolve; resize events invalidate affected measurements and
+   dependent layout, while measurement updates remain derived state rather than
+   commands.
 
 ## 10. Remaining implementation questions
 

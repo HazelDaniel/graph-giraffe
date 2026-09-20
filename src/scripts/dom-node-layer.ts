@@ -6,12 +6,14 @@ import type {
   DomNodeViewContext,
   NodeTypeRegistry,
 } from "./node-type-registry.js";
-import { getWorldPosition } from "./scene-graph.js";
+import type { PrimitiveFrame } from "./primitive-geometry.js";
 
 export interface DomNodeLayerOptions {
   store: NodeStore;
   registry: NodeTypeRegistry;
   events: GraphEventEmitter;
+  /** Resolved geometry shared with the WebGL/backend projection. */
+  getPrimitiveFrame: (nodeId: number) => PrimitiveFrame | undefined;
   /**
    * World-space anchor container. The layer nests its own root inside it so
    * every view inherits the container's camera transform (translate+scale),
@@ -138,9 +140,9 @@ export class DomNodeLayer {
       const node = store.get(id);
       if (!node) continue;
 
-      const { x, y } = getWorldPosition(id, store.allNodesMap);
-      const width = node.width;
-      const height = node.height;
+      const frame = this.options.getPrimitiveFrame(id);
+      if (!frame) continue;
+      const { worldX: x, worldY: y, width, height } = frame;
 
       // Viewport culling: views fully outside the camera viewport are already
       // skipped by the WebGL draw pass, so skip their DOM diff too. Kept
@@ -219,7 +221,9 @@ export class DomNodeLayer {
     const renderer = this.options.registry.getDomRenderer(node.nodeType);
     if (!renderer) return;
 
-    const { x, y } = getWorldPosition(node.id, this.options.store.allNodesMap);
+    const frame = this.options.getPrimitiveFrame(node.id);
+    if (!frame) return;
+    const { worldX: x, worldY: y } = frame;
     const placeholder = document.createElement("div");
     const ctx = this.createContext(node, x, y, placeholder);
     const element = renderer.createView(ctx) ?? placeholder;
@@ -232,8 +236,8 @@ export class DomNodeLayer {
     element.style.transformOrigin = "0 0";
     element.style.left = `${x}px`;
     element.style.top = `${y}px`;
-    element.style.width = `${node.width}px`;
-    element.style.height = `${node.height}px`;
+    element.style.width = `${frame.width}px`;
+    element.style.height = `${frame.height}px`;
 
     const view: DomNodeView = {
       element,
@@ -267,16 +271,18 @@ export class DomNodeLayer {
     if (!view || !node) return;
 
     const snapshot = view.snapshot;
-    const { x, y } = getWorldPosition(node.id, this.options.store.allNodesMap);
+    const frame = this.options.getPrimitiveFrame(node.id);
+    if (!frame) return;
+    const { worldX: x, worldY: y } = frame;
 
     snapshot.x = x;
     snapshot.y = y;
-    snapshot.width = node.width;
-    snapshot.height = node.height;
+    snapshot.width = frame.width;
+    snapshot.height = frame.height;
     view.element.style.left = `${x}px`;
     view.element.style.top = `${y}px`;
-    view.element.style.width = `${node.width}px`;
-    view.element.style.height = `${node.height}px`;
+    view.element.style.width = `${frame.width}px`;
+    view.element.style.height = `${frame.height}px`;
 
     this.applyZIndex(view, node);
     this.applyState(view, node);
@@ -287,8 +293,8 @@ export class DomNodeLayer {
     return {
       x,
       y,
-      width: node.width,
-      height: node.height,
+      width: this.options.getPrimitiveFrame(node.id)?.width ?? node.width,
+      height: this.options.getPrimitiveFrame(node.id)?.height ?? node.height,
       zIndex: this.computeZIndex(node),
       selected: !!node.isSelected,
       locked: !!node.isLocked,
@@ -378,18 +384,20 @@ export class DomNodeLayer {
     worldY: number,
     element: HTMLElement
   ): DomNodeViewContext {
+    const frame = this.options.getPrimitiveFrame(node.id);
     return {
       node,
       element,
       worldX,
       worldY,
-      width: node.width,
-      height: node.height,
+      width: frame?.width ?? node.width,
+      height: frame?.height ?? node.height,
       isCollapsed: this.isNodeCollapsed(node),
       isSelected: !!node.isSelected,
       isLocked: !!node.isLocked,
       isDropTarget: !!node.isDropTarget,
       getNode: (id) => this.options.store.get(id),
+      stopGraphPropagation: (event) => event.stopPropagation(),
     };
   }
 }
