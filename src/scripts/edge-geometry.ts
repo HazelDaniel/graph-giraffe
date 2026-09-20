@@ -4,6 +4,10 @@ import { NodeStore } from './node-store.js';
 import { getWorldPosition } from './scene-graph.js';
 import { EdgeData, HandleSide, NodeHandleData } from './types.js';
 
+export type PrimitiveDimensionsResolver = (
+  nodeId: number
+) => { width: number; height: number } | undefined;
+
 export interface Point2D {
   x: number;
   y: number;
@@ -30,7 +34,8 @@ const SAMPLE_DISTANCE_STEP = 42;
 export function buildEdgeRouteGeometry(
   edge: EdgeData,
   store: NodeStore,
-  camera: Camera
+  camera: Camera,
+  resolveDimensions?: PrimitiveDimensionsResolver
 ): EdgeRouteGeometry | null {
   const sourceNode = store.get(edge.sourceNodeId);
   const targetNode = store.get(edge.targetNodeId);
@@ -44,8 +49,8 @@ export function buildEdgeRouteGeometry(
   );
   if (!sourceHandle || !targetHandle) return null;
 
-  const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera);
-  const targetWorld = getHandleWorldPoint(targetNode.id, targetHandle, store, camera);
+  const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera, resolveDimensions);
+  const targetWorld = getHandleWorldPoint(targetNode.id, targetHandle, store, camera, resolveDimensions);
 
   const route = buildCubicRoute(
     sourceWorld,
@@ -74,7 +79,8 @@ export function buildConnectionPreviewGeometry(
   screenX: number,
   screenY: number,
   store: NodeStore,
-  camera: Camera
+  camera: Camera,
+  resolveDimensions?: PrimitiveDimensionsResolver
 ): EdgeRouteGeometry | null {
   const sourceNode = store.get(sourceNodeId);
   if (!sourceNode) return null;
@@ -82,7 +88,7 @@ export function buildConnectionPreviewGeometry(
   const sourceHandle = sourceNode.handles.find((handle) => handle.side === sourceHandleSide);
   if (!sourceHandle) return null;
 
-  const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera);
+  const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera, resolveDimensions);
   const targetWorld = camera.screenToWorld(screenX, screenY);
   const oppositeSide: HandleSide = getOppositeSide(sourceHandleSide);
   const route = buildOrthogonalRoute(sourceWorld, sourceHandleSide, targetWorld, oppositeSide);
@@ -218,13 +224,23 @@ function getHandleWorldPoint(
   nodeId: number,
   handle: NodeHandleData,
   store: NodeStore,
-  camera: Camera
+  camera: Camera,
+  resolveDimensions?: PrimitiveDimensionsResolver
 ): Point2D {
   const node = store.get(nodeId);
   if (!node) return { x: 0, y: 0 };
 
   const { x, y } = getWorldPosition(node.id, store.allNodesMap);
-  const geometry = getHandleScreenGeometry(x, y, node, handle, camera.zoom, camera.panX, camera.panY);
+  const geometry = getHandleScreenGeometry(
+    x,
+    y,
+    node,
+    handle,
+    camera.zoom,
+    camera.panX,
+    camera.panY,
+    resolveDimensions?.(node.id)
+  );
   return camera.screenToWorld(geometry.centerX, geometry.centerY);
 }
 

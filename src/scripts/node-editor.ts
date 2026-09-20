@@ -472,6 +472,7 @@ export class NodeEditor {
       () => this.bgColor,
       () => this.fontColor,
       () => this.selectedNodeIds,
+      (nodeId) => this.getPrimitiveFrame(nodeId),
       () => {
         this.updateSelectionToolbarPosition();
         this.domNodeLayer?.syncFrame();
@@ -586,6 +587,13 @@ export class NodeEditor {
   private syncPrimitiveMeasurements(): void {
     if (!this.store) return;
     this.primitiveMeasurements.sync(this.store.allNodesMap.values());
+  }
+
+  private getPrimitiveFrame(nodeId: number) {
+    const node = this.store.get(nodeId);
+    if (!node) return undefined;
+    const world = getWorldPosition(nodeId, this.store.allNodesMap, this.typeRegistry);
+    return this.primitiveGeometry.resolve(node, world.x, world.y);
   }
 
   private setupPropGroupListener(): void {
@@ -2676,6 +2684,7 @@ export class NodeEditor {
       if (node.handles.length === 0) continue;
 
       const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
+      const frame = this.getPrimitiveFrame(node.id);
 
       for (const handle of node.handles) {
         const geometry = getHandleScreenGeometry(
@@ -2685,7 +2694,8 @@ export class NodeEditor {
           handle,
           this.camera.zoom,
           this.camera.panX,
-          this.camera.panY
+          this.camera.panY,
+          frame ? { width: frame.width, height: frame.height } : undefined
         );
 
         if (isPointInsideHandle(screenX, screenY, geometry)) {
@@ -4049,7 +4059,11 @@ export class NodeEditor {
       const geometry = buildEdgeRouteGeometry(
         edges[i],
         this.store,
-        this.camera
+        this.camera,
+        (nodeId) => {
+          const frame = this.getPrimitiveFrame(nodeId);
+          return frame ? { width: frame.width, height: frame.height } : undefined;
+        }
       );
       if (!geometry) continue;
       const sourceNode = this.store.get(edges[i].sourceNodeId);

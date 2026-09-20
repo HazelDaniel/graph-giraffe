@@ -45,6 +45,8 @@ export interface NodeDrawContext {
   node: NodeData;
   worldX: number;
   worldY: number;
+  width: number;
+  height: number;
   z: number;
   renderer: RendererDrawAPI;
 }
@@ -53,6 +55,8 @@ export interface NodeOverlayContext {
   node: NodeData;
   worldX: number;
   worldY: number;
+  width: number;
+  height: number;
   z: number;
   isCollapsed: boolean;
   textRenderer: MsdfTextRenderer;
