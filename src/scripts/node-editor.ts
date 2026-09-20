@@ -90,6 +90,7 @@ import { TextureRegistry } from "./texture-registry.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
 import { DomNodeLayer } from "./dom-node-layer.js";
 import { PrimitiveGeometry } from "./primitive-geometry.js";
+import { PrimitiveMeasurementProvider } from "./primitive-measurement.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import { LoadingScreen } from "../components/loading-screen.js";
 import {
@@ -256,6 +257,10 @@ export class NodeEditor {
   private fixedOverlayContainer!: HTMLElement;
   private domNodeLayer: DomNodeLayer | null = null;
   private primitiveGeometry = new PrimitiveGeometry();
+  private primitiveMeasurements = new PrimitiveMeasurementProvider(
+    this.typeRegistry,
+    this.primitiveGeometry
+  );
 
   private resizeObserver!: ResizeObserver;
 
@@ -373,6 +378,11 @@ export class NodeEditor {
   }
 
   private async init(): Promise<void> {
+    this.events.on("history:command", () => this.syncPrimitiveMeasurements());
+    this.events.on("controlled:apply", () => this.syncPrimitiveMeasurements());
+    this.events.on("node:propChange", ({ nodeId }) => {
+      this.primitiveMeasurements.refresh(nodeId);
+    });
     const canvas = document.getElementById(this.canvasId) as HTMLCanvasElement;
     const gl = canvas.getContext("webgl2") as WebGL2RenderingContext;
     const program = createProgram(gl, this.vsSource, this.fsSource);
@@ -422,6 +432,8 @@ export class NodeEditor {
     const fixedContainer = document.getElementById("gg-overlays-fixed");
     if (scalingContainer) this.scalingOverlayContainer = scalingContainer;
     if (fixedContainer) this.fixedOverlayContainer = fixedContainer;
+
+    this.syncPrimitiveMeasurements();
 
     // The DOM layer only exists in dom mode. In webgl mode ALL primitives are
     // drawn on the WebGL context and no DOM node views are ever created, so the
@@ -569,6 +581,11 @@ export class NodeEditor {
     this.handleResize(canvas);
     this.syncToolbarState();
     this.refreshMinimap();
+  }
+
+  private syncPrimitiveMeasurements(): void {
+    if (!this.store) return;
+    this.primitiveMeasurements.sync(this.store.allNodesMap.values());
   }
 
   private setupPropGroupListener(): void {

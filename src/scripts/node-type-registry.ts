@@ -97,6 +97,22 @@ export interface DomNodeRenderer {
   destroyView?(ctx: DomNodeViewContext): void;
 }
 
+/** Context for a measurement-only shadow template. */
+export interface PrimitiveMeasurementTemplateContext {
+  node: NodeData;
+  element: HTMLElement;
+}
+
+/**
+ * Creates an off-screen measurement template for a primitive.
+ *
+ * This is deliberately separate from `DomNodeRenderer`: the template is never
+ * mounted as visible UI and must not invoke the visible primitive renderer.
+ */
+export type PrimitiveMeasurementTemplate = (
+  ctx: PrimitiveMeasurementTemplateContext
+) => HTMLElement;
+
 // ─── Overlay Config ──────────────────────────────────────
 
 export interface NodeOverlayConfig {
@@ -143,6 +159,8 @@ export interface NodeTypeDescriptor {
   overlayConfig?: NodeOverlayConfig;
   /** DOM rendering hook — required when `renderMode` is `"dom"`. */
   domRenderer?: DomNodeRenderer;
+  /** Measurement-only shadow template for intrinsic primitive dimensions. */
+  measurementTemplate?: PrimitiveMeasurementTemplate;
 
   layoutChildren?: (
     container: NodeData,
@@ -321,5 +339,9 @@ export class NodeTypeRegistry {
 
   getDomRenderer(type: string): DomNodeRenderer | undefined {
     return this.descriptors.get(type)?.domRenderer;
+  }
+
+  getMeasurementTemplate(type: string): PrimitiveMeasurementTemplate | undefined {
+    return this.descriptors.get(type)?.measurementTemplate;
   }
 }

@@ -256,7 +256,10 @@ renderer-neutral `PrimitiveFrame` provider rather than calculating world
 coordinates and dimensions independently. `PrimitiveGeometry` establishes
 intrinsic-measurement precedence and publishes translation/scale alignment
 diffs; it currently falls back to declared node dimensions until the shadow DOM
-measurement provider is added.
+measurement provider is added. The provider is now implemented as a separate
+measurement-only template pipeline with input-key invalidation and
+`ResizeObserver` refresh; descriptors opt in through `measurementTemplate`, and
+visible `domRenderer` hooks are never invoked for measurement.
 
 ### Phase 2 — Generalize the primitive registry
 

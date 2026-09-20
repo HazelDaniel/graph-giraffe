@@ -35,10 +35,13 @@ export type {
   RendererDrawAPI,
   DomNodeRenderer,
   DomNodeViewContext,
+  PrimitiveMeasurementTemplate,
+  PrimitiveMeasurementTemplateContext,
 } from './scripts/node-type-registry.js';
 
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
+export { PrimitiveMeasurementProvider } from './scripts/primitive-measurement.js';
 
 // ─── Overlay primitives ───────────────────────────────────
 
