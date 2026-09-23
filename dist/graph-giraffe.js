@@ -5446,6 +5446,7 @@ class NodeStore {
     __publicField(this, "connectionMode");
     __publicField(this, "handleStyle");
     __publicField(this, "currentTheme", "dark");
+    __publicField(this, "resolvedBounds");
     this.gl = gl;
     this.registry = registry;
     this.a11yTree = new AccessibilityTree();
@@ -5477,6 +5478,14 @@ class NodeStore {
   /** Expose the registry for renderer-adjacent views like the minimap. */
   getRegistry() {
     return this.registry;
+  }
+  /**
+   * Supplies renderer-neutral dimensions to the existing container bounds
+   * calculation. The store still owns the layout algorithm; this only lets
+   * intrinsic child measurements participate in it.
+   */
+  setResolvedBoundsResolver(resolver) {
+    this.resolvedBounds = resolver;
   }
   /** The id that the next call to add() will assign. Useful for labelling. */
   get nextNodeId() {
@@ -6227,6 +6236,7 @@ class NodeStore {
     return result;
   }
   updateSubgraphBounds(subgraph) {
+    var _a2;
     const collapsed = Boolean(subgraph.isCollapsed);
     const defaultSize = getDefaultNodeSize("subgraph", collapsed);
     if (collapsed || subgraph.childIds.length === 0) {
@@ -6255,10 +6265,13 @@ class NodeStore {
       const childWorld = getWorldPosition(child.id, this.allNodesMap);
       const childX = childWorld.x - parentWorld.x;
       const childY = childWorld.y - parentWorld.y;
+      const resolved = (_a2 = this.resolvedBounds) == null ? void 0 : _a2.call(this, child.id);
+      const childWidth = (resolved == null ? void 0 : resolved.width) ?? child.width;
+      const childHeight = (resolved == null ? void 0 : resolved.height) ?? child.height;
       minX = Math.min(minX, childX);
       minY = Math.min(minY, childY);
-      maxX = Math.max(maxX, childX + child.width);
-      maxY = Math.max(maxY, childY + child.height);
+      maxX = Math.max(maxX, childX + childWidth);
+      maxY = Math.max(maxY, childY + childHeight);
     }
     subgraph.localX = minX - padding - parentWorld.x;
     subgraph.localY = minY - titleHeight - parentWorld.y;
@@ -7050,6 +7063,7 @@ class Renderer {
     __publicField(this, "edgeVertexBuffer");
     __publicField(this, "edgeHeadBuffer");
     __publicField(this, "edgeHeadTextures");
+    __publicField(this, "animationFrame", null);
     __publicField(this, "resolveNodeDimensions", (nodeId) => {
       const node = this.store.get(nodeId);
       if (!node) return void 0;
@@ -7159,7 +7173,14 @@ class Renderer {
   }
   /** Start the RAF-driven render loop. */
   startLoop() {
-    requestAnimationFrame(this.tick.bind(this));
+    if (this.animationFrame !== null) return;
+    this.animationFrame = requestAnimationFrame(() => this.tick());
+  }
+  /** Stop the RAF-driven render loop and release its pending callback. */
+  stopLoop() {
+    if (this.animationFrame === null) return;
+    cancelAnimationFrame(this.animationFrame);
+    this.animationFrame = null;
   }
   /**
    * Render a single frame on demand (background, nodes, edges, overlays, and
@@ -7174,8 +7195,9 @@ class Renderer {
     this.onFrame();
   }
   tick() {
+    this.animationFrame = null;
     this.renderFrame();
-    requestAnimationFrame(this.tick.bind(this));
+    this.startLoop();
   }
   invalidateTextures() {
     this.textureCache.invalidateAll();
@@ -9731,6 +9753,15 @@ class NodeTypeRegistry {
     if (collapsed && desc.collapsedSize) return { ...desc.collapsedSize };
     return { ...desc.defaultSize };
   }
+  /**
+   * Returns which layer owns the primitive's resolved bounds. Intrinsic
+   * measurement is the default; containers with dynamic scene-graph bounds
+   * can explicitly remain core-owned.
+   */
+  getBoundsAuthority(type) {
+    var _a2;
+    return ((_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.boundsAuthority) ?? "intrinsic";
+  }
   canReparentTo(childType, parentType) {
     const desc = this.descriptors.get(childType);
     if (!desc) return false;
@@ -10091,8 +10122,20 @@ class DomNodeLayer {
   }
   createContext(node, worldX, worldY, element) {
     const frame = this.options.getPrimitiveFrame(node.id);
+    const children = (node.childIds ?? []).map((childId) => this.options.store.get(childId)).filter((child) => Boolean(child)).map((child) => {
+      const childFrame = this.options.getPrimitiveFrame(child.id);
+      return {
+        node: child,
+        props: child.props,
+        isCollapsed: this.isNodeCollapsed(child),
+        width: (childFrame == null ? void 0 : childFrame.width) ?? child.width,
+        height: (childFrame == null ? void 0 : childFrame.height) ?? child.height
+      };
+    });
     return {
       node,
+      props: node.props,
+      children,
       element,
       worldX,
       worldY,
@@ -10102,6 +10145,7 @@ class DomNodeLayer {
       isSelected: !!node.isSelected,
       isLocked: !!node.isLocked,
       isDropTarget: !!node.isDropTarget,
+      isMeasurement: false,
       getNode: (id) => this.options.store.get(id),
       stopGraphPropagation: (event) => event.stopPropagation()
     };
@@ -10134,13 +10178,14 @@ function readDimension(element, axis) {
   return Number.isFinite(offsetValue) && offsetValue > 0 ? offsetValue : 0;
 }
 class PrimitiveMeasurementProvider {
-  constructor(registry, geometry, isCollapsed = (node) => Boolean(node.isCollapsed)) {
+  constructor(registry, geometry, isCollapsed = (node) => Boolean(node.isCollapsed), onMeasurementChange) {
     __publicField(this, "root", null);
     __publicField(this, "entries", /* @__PURE__ */ new Map());
     __publicField(this, "resizeObserver", null);
     this.registry = registry;
     this.geometry = geometry;
     this.isCollapsed = isCollapsed;
+    this.onMeasurementChange = onMeasurementChange;
   }
   setCollapseResolver(isCollapsed) {
     this.isCollapsed = isCollapsed;
@@ -10185,6 +10230,7 @@ class PrimitiveMeasurementProvider {
     const alive = /* @__PURE__ */ new Set();
     for (let depth = maxDepth; depth >= 0; depth -= 1) {
       for (const node of nodesByDepth.get(depth) ?? []) {
+        if (this.registry.getBoundsAuthority(node.nodeType) === "core") continue;
         const template = this.registry.getMeasurementTemplate(node.nodeType);
         if (!template || typeof document === "undefined") continue;
         alive.add(node.id);
@@ -10210,6 +10256,7 @@ class PrimitiveMeasurementProvider {
   }
   isReady(nodes) {
     for (const node of nodes) {
+      if (this.registry.getBoundsAuthority(node.nodeType) === "core") continue;
       if (!this.registry.getMeasurementTemplate(node.nodeType)) continue;
       const measurement = this.geometry.getIntrinsicMeasurement(node.id);
       if (!measurement || measurement.width <= 0 || measurement.height <= 0) {
@@ -10246,27 +10293,35 @@ class PrimitiveMeasurementProvider {
     return this.root;
   }
   mount(node, template, isCollapsed, children) {
-    var _a2;
+    var _a2, _b;
     const host = document.createElement("div");
     host.style.cssText = "display:block; width:max-content; height:max-content;";
-    const element = template({
+    const measurementRoot = this.ensureRoot();
+    measurementRoot.appendChild(host);
+    const context = {
       node,
       props: node.props,
       children,
       element: host,
       isCollapsed
-    });
+    };
+    const element = template(context);
     element.dataset.ggPrimitiveMeasurementNode = String(node.id);
     element.style.pointerEvents = "none";
-    this.ensureRoot().appendChild(element);
+    if (element !== host) {
+      host.remove();
+      measurementRoot.appendChild(element);
+    }
     const entry = {
       node,
       element,
+      context: { ...context, element },
+      cleanup: (_a2 = this.registry.get(node.nodeType)) == null ? void 0 : _a2.measurementCleanup,
       inputKey: measurementInputKey(node, isCollapsed, children),
       revision: 0
     };
     this.entries.set(node.id, entry);
-    (_a2 = this.resizeObserver) == null ? void 0 : _a2.observe(element);
+    (_b = this.resizeObserver) == null ? void 0 : _b.observe(element);
     this.measure(entry);
   }
   getChildren(node, nodesById) {
@@ -10283,21 +10338,26 @@ class PrimitiveMeasurementProvider {
     });
   }
   measure(entry) {
+    var _a2;
     const width = readDimension(entry.element, "width");
     const height = readDimension(entry.element, "height");
     if (width <= 0 || height <= 0) return;
+    const previous = this.geometry.getIntrinsicMeasurement(entry.node.id);
+    const changed = !previous || previous.width !== width || previous.height !== height;
     entry.revision += 1;
     this.geometry.setIntrinsicMeasurement(entry.node.id, {
       width,
       height,
       revision: entry.revision
     });
+    if (changed) (_a2 = this.onMeasurementChange) == null ? void 0 : _a2.call(this, entry.node.id);
   }
   destroy(nodeId) {
-    var _a2;
+    var _a2, _b;
     const entry = this.entries.get(nodeId);
     if (!entry) return;
-    (_a2 = this.resizeObserver) == null ? void 0 : _a2.unobserve(entry.element);
+    (_a2 = entry.cleanup) == null ? void 0 : _a2.call(entry, entry.context);
+    (_b = this.resizeObserver) == null ? void 0 : _b.unobserve(entry.element);
     entry.element.remove();
     this.entries.delete(nodeId);
     this.geometry.clearIntrinsicMeasurement(nodeId);
@@ -10526,14 +10586,10 @@ const compositionChildDescriptor = {
 const subgraphDescriptor = {
   type: "subgraph",
   category: "container",
+  boundsAuthority: "core",
   zTier: -0.05,
   defaultSize: { width: 220, height: 160 },
   collapsedSize: { width: 190, height: NODE_LAYOUT.headerHeight },
-  measurementTemplate: createBuiltinMeasurementTemplate(
-    { width: 220, height: 160 },
-    void 0,
-    NODE_LAYOUT.headerHeight
-  ),
   handles: {
     always: true,
     sides: ["left", "right"],
@@ -11427,7 +11483,9 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "primitiveGeometry", new PrimitiveGeometry());
     __publicField(this, "primitiveMeasurements", new PrimitiveMeasurementProvider(
       this.typeRegistry,
-      this.primitiveGeometry
+      this.primitiveGeometry,
+      (node) => Boolean(node.isCollapsed),
+      (nodeId) => this.handlePrimitiveMeasurementChange(nodeId)
     ));
     __publicField(this, "primitiveRenderReady", true);
     __publicField(this, "measurementLoadingScreen", null);
@@ -11488,6 +11546,10 @@ const _NodeEditor = class _NodeEditor {
       options.handleStyle ?? DEFAULT_HANDLE_STYLE,
       this.typeRegistry
     );
+    this.store.setResolvedBoundsResolver((nodeId) => {
+      const measurement = this.primitiveGeometry.getIntrinsicMeasurement(nodeId);
+      return measurement ? { width: measurement.width, height: measurement.height } : void 0;
+    });
     this.edgeStore = new EdgeStore();
     this.primitiveMeasurements.setCollapseResolver(
       (node) => this.store.isNodeCollapsed(node)
@@ -11527,6 +11589,22 @@ const _NodeEditor = class _NodeEditor {
    */
   static release() {
     this._instance = null;
+  }
+  /**
+   * Release DOM measurement roots and renderer-owned DOM resources. Framework
+   * adapters should call this before releasing the singleton and removing the
+   * host container.
+   */
+  dispose() {
+    var _a2, _b, _c, _d;
+    (_a2 = this.renderer) == null ? void 0 : _a2.stopLoop();
+    (_b = this.resizeObserver) == null ? void 0 : _b.disconnect();
+    (_c = this.domNodeLayer) == null ? void 0 : _c.dispose();
+    this.domNodeLayer = null;
+    this.primitiveMeasurements.dispose();
+    (_d = this.measurementLoadingScreen) == null ? void 0 : _d.remove();
+    this.measurementLoadingScreen = null;
+    this.measurementGatePromise = null;
   }
   async init() {
     var _a2;
@@ -11719,6 +11797,17 @@ const _NodeEditor = class _NodeEditor {
       this.store.allNodesMap.values()
     );
     if (!this.primitiveRenderReady) this.beginMeasurementGate();
+  }
+  handlePrimitiveMeasurementChange(nodeId) {
+    if (!this.store) return;
+    const node = this.store.get(nodeId);
+    if ((node == null ? void 0 : node.parentId) !== null && (node == null ? void 0 : node.parentId) !== void 0) {
+      this.refreshContainerChain(node.parentId);
+    }
+    this.primitiveRenderReady = this.primitiveMeasurements.isReady(
+      this.store.allNodesMap.values()
+    );
+    if (this.renderer) this.requestRender();
   }
   beginMeasurementGate() {
     if (this.measurementGatePromise) return;

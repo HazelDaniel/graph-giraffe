@@ -26,6 +26,7 @@ export class NodeStore {
     connectionMode;
     handleStyle;
     currentTheme = 'dark';
+    resolvedBounds;
     constructor(gl, connectionMode = 'node', handleStyle = DEFAULT_HANDLE_STYLE, registry) {
         this.gl = gl;
         this.registry = registry;
@@ -58,6 +59,14 @@ export class NodeStore {
     /** Expose the registry for renderer-adjacent views like the minimap. */
     getRegistry() {
         return this.registry;
+    }
+    /**
+     * Supplies renderer-neutral dimensions to the existing container bounds
+     * calculation. The store still owns the layout algorithm; this only lets
+     * intrinsic child measurements participate in it.
+     */
+    setResolvedBoundsResolver(resolver) {
+        this.resolvedBounds = resolver;
     }
     /** The id that the next call to add() will assign. Useful for labelling. */
     get nextNodeId() {
@@ -890,10 +899,13 @@ export class NodeStore {
             const childWorld = getWorldPosition(child.id, this.allNodesMap);
             const childX = childWorld.x - parentWorld.x;
             const childY = childWorld.y - parentWorld.y;
+            const resolved = this.resolvedBounds?.(child.id);
+            const childWidth = resolved?.width ?? child.width;
+            const childHeight = resolved?.height ?? child.height;
             minX = Math.min(minX, childX);
             minY = Math.min(minY, childY);
-            maxX = Math.max(maxX, childX + child.width);
-            maxY = Math.max(maxY, childY + child.height);
+            maxX = Math.max(maxX, childX + childWidth);
+            maxY = Math.max(maxY, childY + childHeight);
         }
         subgraph.localX = minX - padding - parentWorld.x;
         subgraph.localY = minY - titleHeight - parentWorld.y;

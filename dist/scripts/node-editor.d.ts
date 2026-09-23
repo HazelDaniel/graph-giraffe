@@ -91,11 +91,18 @@ export declare class NodeEditor {
      * A future full dispose lifecycle can extend this without exposing internals.
      */
     static release(): void;
+    /**
+     * Release DOM measurement roots and renderer-owned DOM resources. Framework
+     * adapters should call this before releasing the singleton and removing the
+     * host container.
+     */
+    dispose(): void;
     private msdfAtlas;
     private iconAtlas;
     private constructor();
     private init;
     private syncPrimitiveMeasurements;
+    private handlePrimitiveMeasurementChange;
     private beginMeasurementGate;
     private ensureMeasurementLoadingScreen;
     private getPrimitiveFrame;

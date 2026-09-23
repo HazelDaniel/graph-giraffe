@@ -115,7 +115,7 @@ export class NodeEditor {
     fixedOverlayContainer;
     domNodeLayer = null;
     primitiveGeometry = new PrimitiveGeometry();
-    primitiveMeasurements = new PrimitiveMeasurementProvider(this.typeRegistry, this.primitiveGeometry);
+    primitiveMeasurements = new PrimitiveMeasurementProvider(this.typeRegistry, this.primitiveGeometry, (node) => Boolean(node.isCollapsed), (nodeId) => this.handlePrimitiveMeasurementChange(nodeId));
     primitiveRenderReady = true;
     measurementLoadingScreen = null;
     measurementGatePromise = null;
@@ -143,6 +143,21 @@ export class NodeEditor {
      */
     static release() {
         this._instance = null;
+    }
+    /**
+     * Release DOM measurement roots and renderer-owned DOM resources. Framework
+     * adapters should call this before releasing the singleton and removing the
+     * host container.
+     */
+    dispose() {
+        this.renderer?.stopLoop();
+        this.resizeObserver?.disconnect();
+        this.domNodeLayer?.dispose();
+        this.domNodeLayer = null;
+        this.primitiveMeasurements.dispose();
+        this.measurementLoadingScreen?.remove();
+        this.measurementLoadingScreen = null;
+        this.measurementGatePromise = null;
     }
     msdfAtlas;
     iconAtlas;
@@ -186,6 +201,12 @@ export class NodeEditor {
         this.camera = new Camera(this);
         this.camera.setZoomRange(options.minZoom ?? 0.1, options.maxZoom ?? 5);
         this.store = new NodeStore(gl, this.connectionMode, options.handleStyle ?? DEFAULT_HANDLE_STYLE, this.typeRegistry);
+        this.store.setResolvedBoundsResolver((nodeId) => {
+            const measurement = this.primitiveGeometry.getIntrinsicMeasurement(nodeId);
+            return measurement
+                ? { width: measurement.width, height: measurement.height }
+                : undefined;
+        });
         this.edgeStore = new EdgeStore();
         this.primitiveMeasurements.setCollapseResolver((node) => this.store.isNodeCollapsed(node));
         this.history = new HistoryStack();
@@ -346,6 +367,19 @@ export class NodeEditor {
         this.primitiveRenderReady = this.primitiveMeasurements.isReady(this.store.allNodesMap.values());
         if (!this.primitiveRenderReady)
             this.beginMeasurementGate();
+    }
+    handlePrimitiveMeasurementChange(nodeId) {
+        if (!this.store)
+            return;
+        const node = this.store.get(nodeId);
+        if (node?.parentId !== null && node?.parentId !== undefined) {
+            // Re-run the existing container chain so groups, subgraphs, and any
+            // enclosing subgraphs consume the new child dimensions in order.
+            this.refreshContainerChain(node.parentId);
+        }
+        this.primitiveRenderReady = this.primitiveMeasurements.isReady(this.store.allNodesMap.values());
+        if (this.renderer)
+            this.requestRender();
     }
     beginMeasurementGate() {
         if (this.measurementGatePromise)

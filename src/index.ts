@@ -27,6 +27,7 @@ export type { CreateEdgeParams } from './scripts/edge-store.js';
 export { NodeTypeRegistry } from './scripts/node-type-registry.js';
 export type {
   NodeTypeDescriptor,
+  PrimitiveBoundsAuthority,
   NodeOverlayConfig,
   RoundedRectConfig,
   FlatConfig,
@@ -36,6 +37,7 @@ export type {
   DomNodeRenderer,
   DomNodeViewContext,
   PrimitiveMeasurementTemplate,
+  PrimitiveMeasurementCleanup,
   PrimitiveMeasurementTemplateContext,
 } from './scripts/node-type-registry.js';
 

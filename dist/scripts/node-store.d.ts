@@ -24,6 +24,7 @@ export declare class NodeStore {
     private connectionMode;
     private handleStyle;
     private currentTheme;
+    private resolvedBounds?;
     constructor(gl: WebGL2RenderingContext, connectionMode?: ConnectionMode, handleStyle?: HandleStyle, registry?: NodeTypeRegistry | undefined);
     getTheme(): ThemeName;
     /** Remove all nodes and reset internal counters. Used during graph import. */
@@ -35,6 +36,15 @@ export declare class NodeStore {
     restoreIdCounter(value: number): void;
     /** Expose the registry for renderer-adjacent views like the minimap. */
     getRegistry(): NodeTypeRegistry | undefined;
+    /**
+     * Supplies renderer-neutral dimensions to the existing container bounds
+     * calculation. The store still owns the layout algorithm; this only lets
+     * intrinsic child measurements participate in it.
+     */
+    setResolvedBoundsResolver(resolver: (nodeId: number) => {
+        width: number;
+        height: number;
+    } | undefined): void;
     /** The id that the next call to add() will assign. Useful for labelling. */
     get nextNodeId(): number;
     /**

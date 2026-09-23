@@ -92,6 +92,12 @@ describe("NodeTypeRegistry", () => {
       expect(reg.isContainer("custom-container")).toBe(true);
       expect(reg.isLeaf("custom-container")).toBe(false);
     });
+
+    it("defaults primitive bounds to intrinsic measurement and supports core ownership", () => {
+      const reg = createRegistry();
+      expect(reg.getBoundsAuthority("node")).toBe("intrinsic");
+      expect(reg.getBoundsAuthority("subgraph")).toBe("core");
+    });
   });
 
   describe("getZTier", () => {

@@ -12,6 +12,10 @@ and renderer-neutral resolved geometry. See
 frames and top-left WebGL alignment diffs. See
 `changes-measurement-first-geometry-20260923.md`.
 
+**Latest architectural update:** 2026-09-23 — React declarative primitives are
+the authoritative intrinsic measurement source through a synchronous hidden
+React commit. See `changes-react-authoritative-measurement-20260923.md`.
+
 **Scope:** `@graph-giraffe/core`, `@graph-giraffe/react`, and the Proctor v2 adapter
 
 **Related analysis:**
@@ -148,9 +152,10 @@ interaction, layout, and renderer implementations.
 
 Primitive dimensions may be resolved by hidden, off-screen DOM measurement
 templates generated directly from a primitive descriptor and its configuration
-props. A measurement template is a geometry oracle only; it is not a visible
-renderer and must not reuse the visible DOM/React renderer as a second rendering
-path.
+props. In the React adapter, the same declarative primitive component is also
+committed into the hidden measurement host with `flushSync`; this is a separate
+off-screen lifecycle, not a visible renderer invocation. The core remains
+framework-independent and only owns the measurement host contract.
 
 The measurement pipeline is:
 
@@ -177,6 +182,16 @@ needed), but renderer-specific padding or hit-test corrections are prohibited.
 Measurements are stable until resize observation invalidates the affected
 primitive and its dependent layout. These derived layout updates do not become
 graph-history or collaboration commands.
+
+Subgraphs are the intentional exception to intrinsic ownership. Their bounds
+are derived from the existing core scene-graph enclosure algorithm, including
+collapsed dimensions, nested ancestry, fit-to-content behavior, and clone
+refreshes. A descriptor therefore declares `boundsAuthority: "core"` for a
+core-owned primitive. Core measurement skips that primitive, while intrinsic
+child measurements are supplied as inputs to the existing container calculation
+and then propagated through the normal container refresh chain. The React
+adapter keeps the subgraph skin declarative and frame-driven, but does not
+mount a competing hidden measurement root for it.
 
 ## 4. Architectural rules
 
@@ -211,9 +226,11 @@ These rules govern all implementation work under this plan:
     application-specific primitive dimensions, but the resulting renderer-neutral
     frame must drive WebGL, hit testing, routing, bounds, overlays, and alternate
     renderer alignment.
-11. **Measurement is not a second renderer.** Measurement templates are generated
-    from descriptors and props and are used only to obtain intrinsic dimensions;
-    they must not reuse visible primitive renderers.
+11. **Measurement is not a visible second renderer.** Measurement is an
+    adapter-owned off-screen lifecycle. React may commit the same declarative
+    primitive there so JSX/CSS remains the dimension authority, but the visible
+    DOM renderer is never used as the measurement root and measurement effects
+    must be gated by `isMeasurement`.
 12. **Templates are dimension authorities.** Measurement templates consume the
     primitive configuration shape and effective presentation state, never
     already-resolved renderer dimensions. The core publishes a base scene frame,
@@ -222,6 +239,12 @@ These rules govern all implementation work under this plan:
     The initial anchor is top-left. Growable container templates receive child
     measurement inputs so core layout and measurement templates use the same
     child-size/gap/padding rules.
+13. **Dynamic containers declare bounds ownership.** Intrinsic measurement is
+    the default authority, but a container whose dimensions are derived from
+    scene-graph structure may declare `boundsAuthority: "core"`. Core-owned
+    containers do not receive intrinsic measurement templates; their visible
+    renderers consume the resolved frames produced by the existing core bounds
+    calculation.
 
 ## 5. Implementation phases
 
@@ -277,6 +300,14 @@ The render boundary now blocks WebGL/DOM frame publication while required
 intrinsic measurements are unresolved and mounts `gg-loading-screen` during that
 phase. Measurement completion releases the gate; a two-second timeout falls back
 to declared dimensions so the editor cannot remain permanently blocked.
+
+The React measurement slice is now implemented: `NodeEditor` accepts a canonical
+`primitives` map, uses each component for both visible DOM and hidden measurement
+rendering, queues hidden `flushSync` commits outside React lifecycle callbacks,
+shares the configured provider wrapper, caches through the existing measurement
+input keys, and cleans roots up through the core measurement lifecycle. Legacy `skins` remains a compatibility
+alias; the React-facing measurement-template escape hatch was removed so a React
+primitive cannot diverge from its own geometry.
 
 ### Phase 2 — Generalize the primitive registry
 

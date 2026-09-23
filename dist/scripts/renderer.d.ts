@@ -50,6 +50,7 @@ export declare class Renderer {
     private edgeVertexBuffer;
     private edgeHeadBuffer;
     private edgeHeadTextures;
+    private animationFrame;
     private frameFor;
     private quadFor;
     private resolveNodeDimensions;
@@ -61,6 +62,8 @@ export declare class Renderer {
     resize(width: number, height: number, dpr?: number): void;
     /** Start the RAF-driven render loop. */
     startLoop(): void;
+    /** Stop the RAF-driven render loop and release its pending callback. */
+    stopLoop(): void;
     /**
      * Render a single frame on demand (background, nodes, edges, overlays, and
      * the per-frame `onFrame` callback). Continuous animation is provided by

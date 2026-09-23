@@ -213,10 +213,10 @@ export const compositionChildDescriptor = {
 export const subgraphDescriptor = {
     type: "subgraph",
     category: "container",
+    boundsAuthority: "core",
     zTier: -0.05,
     defaultSize: { width: 220, height: 160 },
     collapsedSize: { width: 190, height: NODE_LAYOUT.headerHeight },
-    measurementTemplate: createBuiltinMeasurementTemplate({ width: 220, height: 160 }, undefined, NODE_LAYOUT.headerHeight),
     handles: {
         always: true,
         sides: ["left", "right"],

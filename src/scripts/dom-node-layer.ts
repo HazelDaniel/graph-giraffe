@@ -421,8 +421,23 @@ export class DomNodeLayer {
     element: HTMLElement
   ): DomNodeViewContext {
     const frame = this.options.getPrimitiveFrame(node.id);
+    const children = (node.childIds ?? [])
+      .map((childId) => this.options.store.get(childId))
+      .filter((child): child is NodeData => Boolean(child))
+      .map((child) => {
+        const childFrame = this.options.getPrimitiveFrame(child.id);
+        return {
+          node: child,
+          props: child.props,
+          isCollapsed: this.isNodeCollapsed(child),
+          width: childFrame?.width ?? child.width,
+          height: childFrame?.height ?? child.height,
+        };
+      });
     return {
       node,
+      props: node.props,
+      children,
       element,
       worldX,
       worldY,
@@ -432,6 +447,7 @@ export class DomNodeLayer {
       isSelected: !!node.isSelected,
       isLocked: !!node.isLocked,
       isDropTarget: !!node.isDropTarget,
+      isMeasurement: false,
       getNode: (id) => this.options.store.get(id),
       stopGraphPropagation: (event) => event.stopPropagation(),
     };

@@ -262,7 +262,9 @@ export class NodeEditor {
   private primitiveGeometry = new PrimitiveGeometry();
   private primitiveMeasurements = new PrimitiveMeasurementProvider(
     this.typeRegistry,
-    this.primitiveGeometry
+    this.primitiveGeometry,
+    (node) => Boolean(node.isCollapsed),
+    (nodeId) => this.handlePrimitiveMeasurementChange(nodeId)
   );
   private primitiveRenderReady = true;
   private measurementLoadingScreen: LoadingScreen | null = null;
@@ -323,6 +325,22 @@ export class NodeEditor {
     this._instance = null;
   }
 
+  /**
+   * Release DOM measurement roots and renderer-owned DOM resources. Framework
+   * adapters should call this before releasing the singleton and removing the
+   * host container.
+   */
+  dispose(): void {
+    this.renderer?.stopLoop();
+    this.resizeObserver?.disconnect();
+    this.domNodeLayer?.dispose();
+    this.domNodeLayer = null;
+    this.primitiveMeasurements.dispose();
+    this.measurementLoadingScreen?.remove();
+    this.measurementLoadingScreen = null;
+    this.measurementGatePromise = null;
+  }
+
   private msdfAtlas!: MsdfAtlas;
   private iconAtlas!: MsdfAtlas;
 
@@ -379,6 +397,12 @@ export class NodeEditor {
       options.handleStyle ?? DEFAULT_HANDLE_STYLE,
       this.typeRegistry
     );
+    this.store.setResolvedBoundsResolver((nodeId) => {
+      const measurement = this.primitiveGeometry.getIntrinsicMeasurement(nodeId);
+      return measurement
+        ? { width: measurement.width, height: measurement.height }
+        : undefined;
+    });
     this.edgeStore = new EdgeStore();
     this.primitiveMeasurements.setCollapseResolver((node) =>
       this.store.isNodeCollapsed(node)
@@ -610,6 +634,20 @@ export class NodeEditor {
       this.store.allNodesMap.values()
     );
     if (!this.primitiveRenderReady) this.beginMeasurementGate();
+  }
+
+  private handlePrimitiveMeasurementChange(nodeId: number): void {
+    if (!this.store) return;
+    const node = this.store.get(nodeId);
+    if (node?.parentId !== null && node?.parentId !== undefined) {
+      // Re-run the existing container chain so groups, subgraphs, and any
+      // enclosing subgraphs consume the new child dimensions in order.
+      this.refreshContainerChain(node.parentId);
+    }
+    this.primitiveRenderReady = this.primitiveMeasurements.isReady(
+      this.store.allNodesMap.values()
+    );
+    if (this.renderer) this.requestRender();
   }
 
   private beginMeasurementGate(): void {

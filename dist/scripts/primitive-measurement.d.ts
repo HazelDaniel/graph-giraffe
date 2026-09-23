@@ -9,10 +9,11 @@ export declare class PrimitiveMeasurementProvider {
     private registry;
     private geometry;
     private isCollapsed;
+    private onMeasurementChange?;
     private root;
     private entries;
     private resizeObserver;
-    constructor(registry: NodeTypeRegistry, geometry: PrimitiveGeometry, isCollapsed?: (node: NodeData) => boolean);
+    constructor(registry: NodeTypeRegistry, geometry: PrimitiveGeometry, isCollapsed?: (node: NodeData) => boolean, onMeasurementChange?: ((nodeId: number) => void) | undefined);
     setCollapseResolver(isCollapsed: (node: NodeData) => boolean): void;
     sync(nodes: Iterable<NodeData>): void;
     refresh(nodeId: number): void;

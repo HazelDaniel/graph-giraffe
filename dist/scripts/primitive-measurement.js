@@ -32,13 +32,15 @@ export class PrimitiveMeasurementProvider {
     registry;
     geometry;
     isCollapsed;
+    onMeasurementChange;
     root = null;
     entries = new Map();
     resizeObserver = null;
-    constructor(registry, geometry, isCollapsed = (node) => Boolean(node.isCollapsed)) {
+    constructor(registry, geometry, isCollapsed = (node) => Boolean(node.isCollapsed), onMeasurementChange) {
         this.registry = registry;
         this.geometry = geometry;
         this.isCollapsed = isCollapsed;
+        this.onMeasurementChange = onMeasurementChange;
     }
     setCollapseResolver(isCollapsed) {
         this.isCollapsed = isCollapsed;
@@ -90,6 +92,8 @@ export class PrimitiveMeasurementProvider {
         const alive = new Set();
         for (let depth = maxDepth; depth >= 0; depth -= 1) {
             for (const node of nodesByDepth.get(depth) ?? []) {
+                if (this.registry.getBoundsAuthority(node.nodeType) === "core")
+                    continue;
                 const template = this.registry.getMeasurementTemplate(node.nodeType);
                 if (!template || typeof document === "undefined")
                     continue;
@@ -119,6 +123,8 @@ export class PrimitiveMeasurementProvider {
     }
     isReady(nodes) {
         for (const node of nodes) {
+            if (this.registry.getBoundsAuthority(node.nodeType) === "core")
+                continue;
             if (!this.registry.getMeasurementTemplate(node.nodeType))
                 continue;
             const measurement = this.geometry.getIntrinsicMeasurement(node.id);
@@ -158,19 +164,29 @@ export class PrimitiveMeasurementProvider {
     mount(node, template, isCollapsed, children) {
         const host = document.createElement("div");
         host.style.cssText = "display:block; width:max-content; height:max-content;";
-        const element = template({
+        const measurementRoot = this.ensureRoot();
+        // Attach before the template is rendered. Framework-backed templates need
+        // a live layout tree when they synchronously commit and measure content.
+        measurementRoot.appendChild(host);
+        const context = {
             node,
             props: node.props,
             children,
             element: host,
             isCollapsed,
-        });
+        };
+        const element = template(context);
         element.dataset.ggPrimitiveMeasurementNode = String(node.id);
         element.style.pointerEvents = "none";
-        this.ensureRoot().appendChild(element);
+        if (element !== host) {
+            host.remove();
+            measurementRoot.appendChild(element);
+        }
         const entry = {
             node,
             element,
+            context: { ...context, element },
+            cleanup: this.registry.get(node.nodeType)?.measurementCleanup,
             inputKey: measurementInputKey(node, isCollapsed, children),
             revision: 0,
         };
@@ -199,17 +215,22 @@ export class PrimitiveMeasurementProvider {
         const height = readDimension(entry.element, "height");
         if (width <= 0 || height <= 0)
             return;
+        const previous = this.geometry.getIntrinsicMeasurement(entry.node.id);
+        const changed = !previous || previous.width !== width || previous.height !== height;
         entry.revision += 1;
         this.geometry.setIntrinsicMeasurement(entry.node.id, {
             width,
             height,
             revision: entry.revision,
         });
+        if (changed)
+            this.onMeasurementChange?.(entry.node.id);
     }
     destroy(nodeId) {
         const entry = this.entries.get(nodeId);
         if (!entry)
             return;
+        entry.cleanup?.(entry.context);
         this.resizeObserver?.unobserve(entry.element);
         entry.element.remove();
         this.entries.delete(nodeId);

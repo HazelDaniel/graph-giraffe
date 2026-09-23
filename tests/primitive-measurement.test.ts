@@ -43,6 +43,7 @@ describe("PrimitiveMeasurementProvider", () => {
     const registry = new NodeTypeRegistry();
     const visibleRenderer = vi.fn();
     const measurementContext = vi.fn();
+    const measurementCleanup = vi.fn();
     registry.register({
       type: "measured",
       category: "leaf",
@@ -60,6 +61,7 @@ describe("PrimitiveMeasurementProvider", () => {
         element.style.width = "240px";
         return element;
       },
+      measurementCleanup,
     });
 
     const geometry = new PrimitiveGeometry();
@@ -83,6 +85,9 @@ describe("PrimitiveMeasurementProvider", () => {
       })
     );
     provider.dispose();
+    expect(measurementCleanup).toHaveBeenCalledWith(
+      expect.objectContaining({ node, element: measured })
+    );
     Object.defineProperty(globalThis, "document", {
       configurable: true,
       value: oldDocument,
@@ -134,6 +139,51 @@ describe("PrimitiveMeasurementProvider", () => {
 
     expect(wasCollapsed).toBe(true);
     expect(geometry.getIntrinsicMeasurement(4)).toMatchObject({ height: 30 });
+
+    provider.dispose();
+    Object.defineProperty(globalThis, "document", {
+      configurable: true,
+      value: oldDocument,
+    });
+  });
+
+  it("does not measure primitives whose bounds belong to core layout", () => {
+    const oldDocument = globalThis.document;
+    const root = new FakeElement();
+    const measured = new FakeElement();
+    const measurementTemplate = vi.fn(() => measured as unknown as HTMLElement);
+    Object.defineProperty(globalThis, "document", {
+      configurable: true,
+      value: {
+        body: root,
+        createElement: () => measured,
+      },
+    });
+
+    const registry = new NodeTypeRegistry();
+    registry.register({
+      type: "core-bounds",
+      category: "container",
+      boundsAuthority: "core",
+      zTier: 0,
+      defaultSize: { width: 220, height: 160 },
+      handles: { always: true, sides: ["left", "right"], multiConnect: false },
+      isConnectionCandidate: () => true,
+      allowedParents: null,
+      canBeRoot: true,
+      defaultTextureIds: { body: "", head: "" },
+      measurementTemplate,
+    });
+
+    const geometry = new PrimitiveGeometry();
+    const provider = new PrimitiveMeasurementProvider(registry, geometry);
+    const coreNode = { ...node, nodeType: "core-bounds", childIds: [] } as NodeData;
+
+    provider.sync([coreNode]);
+
+    expect(measurementTemplate).not.toHaveBeenCalled();
+    expect(provider.isReady([coreNode])).toBe(true);
+    expect(geometry.getIntrinsicMeasurement(coreNode.id)).toBeUndefined();
 
     provider.dispose();
     Object.defineProperty(globalThis, "document", {

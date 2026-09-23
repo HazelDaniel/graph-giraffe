@@ -50,6 +50,10 @@ export interface NodeOverlayContext {
 }
 export interface DomNodeViewContext {
     node: NodeData;
+    /** Configuration shape shared by every renderer of this primitive. */
+    props: NodePropType | undefined;
+    /** Child inputs supplied to growable container primitives. */
+    children: readonly PrimitiveMeasurementChild[];
     element: HTMLElement;
     worldX: number;
     worldY: number;
@@ -59,6 +63,8 @@ export interface DomNodeViewContext {
     isSelected: boolean;
     isLocked: boolean;
     isDropTarget: boolean;
+    /** False for visible views; true only for adapter-owned measurement views. */
+    isMeasurement: boolean;
     /**
      * Resolve any node by id (used to show cross-references such as a subgraph
      * clone's original label). Undefined when the layer has no store access.
@@ -109,12 +115,17 @@ export interface PrimitiveMeasurementChild {
     height: number;
 }
 /**
- * Creates an off-screen measurement template for a primitive.
- *
- * This is deliberately separate from `DomNodeRenderer`: the template is never
- * mounted as visible UI and must not invoke the visible primitive renderer.
+ * Creates an off-screen measurement template for a primitive. The core never
+ * invokes `DomNodeRenderer` for measurement. Framework adapters may implement
+ * this callback by synchronously committing the same declarative primitive into
+ * the hidden host, while keeping that lifecycle outside the core.
  */
 export type PrimitiveMeasurementTemplate = (ctx: PrimitiveMeasurementTemplateContext) => HTMLElement;
+/**
+ * Releases resources created by a measurement template, such as a framework
+ * root mounted into the supplied off-screen element.
+ */
+export type PrimitiveMeasurementCleanup = (ctx: PrimitiveMeasurementTemplateContext) => void;
 export interface NodeOverlayConfig {
     titlePosition: "header" | "container-top" | "center";
     showTitle: boolean;
@@ -123,9 +134,12 @@ export interface NodeOverlayConfig {
     showProps: boolean;
     showCompositionRef: boolean;
 }
+export type PrimitiveBoundsAuthority = "intrinsic" | "core";
 export interface NodeTypeDescriptor {
     type: string;
     category: "leaf" | "container";
+    /** Selects the owner of this primitive's resolved bounds. */
+    boundsAuthority?: PrimitiveBoundsAuthority;
     zTier: number;
     defaultSize: {
         width: number;
@@ -161,6 +175,8 @@ export interface NodeTypeDescriptor {
     domRenderer?: DomNodeRenderer;
     /** Measurement-only shadow template for intrinsic primitive dimensions. */
     measurementTemplate?: PrimitiveMeasurementTemplate;
+    /** Optional cleanup for resources owned by `measurementTemplate`. */
+    measurementCleanup?: PrimitiveMeasurementCleanup;
     layoutChildren?: (container: NodeData, children: NodeData[], allNodes: Map<number, NodeData>) => void;
     contributesToChildWorldPosition?: boolean;
     toolbarActions?: string[];
@@ -200,6 +216,12 @@ export declare class NodeTypeRegistry {
         width: number;
         height: number;
     };
+    /**
+     * Returns which layer owns the primitive's resolved bounds. Intrinsic
+     * measurement is the default; containers with dynamic scene-graph bounds
+     * can explicitly remain core-owned.
+     */
+    getBoundsAuthority(type: string): PrimitiveBoundsAuthority;
     canReparentTo(childType: string, parentType: string | null): boolean;
     isConnectionCandidate(type: string, connectionMode: ConnectionMode): boolean;
     hasHandles(type: string, connectionMode: ConnectionMode): boolean;

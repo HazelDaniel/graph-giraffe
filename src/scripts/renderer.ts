@@ -124,6 +124,7 @@ export class Renderer {
   private edgeVertexBuffer: WebGLBuffer;
   private edgeHeadBuffer: WebGLBuffer;
   private edgeHeadTextures: EdgeHeadTextureLibrary;
+  private animationFrame: number | null = null;
 
   private frameFor(node: NodeData): PrimitiveFrame {
     const world = getWorldPosition(node.id, this.store.allNodesMap);
@@ -183,7 +184,15 @@ export class Renderer {
 
   /** Start the RAF-driven render loop. */
   startLoop(): void {
-    requestAnimationFrame(this.tick.bind(this));
+    if (this.animationFrame !== null) return;
+    this.animationFrame = requestAnimationFrame(() => this.tick());
+  }
+
+  /** Stop the RAF-driven render loop and release its pending callback. */
+  stopLoop(): void {
+    if (this.animationFrame === null) return;
+    cancelAnimationFrame(this.animationFrame);
+    this.animationFrame = null;
   }
 
   /**
@@ -200,8 +209,9 @@ export class Renderer {
   }
 
   private tick(): void {
+    this.animationFrame = null;
     this.renderFrame();
-    requestAnimationFrame(this.tick.bind(this));
+    this.startLoop();
   }
 
   invalidateTextures(): void {

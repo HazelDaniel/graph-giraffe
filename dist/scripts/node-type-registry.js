@@ -74,6 +74,14 @@ export class NodeTypeRegistry {
             return { ...desc.collapsedSize };
         return { ...desc.defaultSize };
     }
+    /**
+     * Returns which layer owns the primitive's resolved bounds. Intrinsic
+     * measurement is the default; containers with dynamic scene-graph bounds
+     * can explicitly remain core-owned.
+     */
+    getBoundsAuthority(type) {
+        return this.descriptors.get(type)?.boundsAuthority ?? "intrinsic";
+    }
     canReparentTo(childType, parentType) {
         const desc = this.descriptors.get(childType);
         if (!desc)

@@ -100,6 +100,7 @@ export class Renderer {
     edgeVertexBuffer;
     edgeHeadBuffer;
     edgeHeadTextures;
+    animationFrame = null;
     frameFor(node) {
         const world = getWorldPosition(node.id, this.store.allNodesMap);
         return this.getPrimitiveFrame(node.id) ?? {
@@ -153,7 +154,16 @@ export class Renderer {
     }
     /** Start the RAF-driven render loop. */
     startLoop() {
-        requestAnimationFrame(this.tick.bind(this));
+        if (this.animationFrame !== null)
+            return;
+        this.animationFrame = requestAnimationFrame(() => this.tick());
+    }
+    /** Stop the RAF-driven render loop and release its pending callback. */
+    stopLoop() {
+        if (this.animationFrame === null)
+            return;
+        cancelAnimationFrame(this.animationFrame);
+        this.animationFrame = null;
     }
     /**
      * Render a single frame on demand (background, nodes, edges, overlays, and
@@ -169,8 +179,9 @@ export class Renderer {
         this.onFrame();
     }
     tick() {
+        this.animationFrame = null;
         this.renderFrame();
-        requestAnimationFrame(this.tick.bind(this));
+        this.startLoop();
     }
     invalidateTextures() {
         this.textureCache.invalidateAll();

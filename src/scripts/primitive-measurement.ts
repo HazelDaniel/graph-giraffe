@@ -1,6 +1,8 @@
 import type {
+  PrimitiveMeasurementCleanup,
   NodeTypeRegistry,
   PrimitiveMeasurementChild,
+  PrimitiveMeasurementTemplateContext,
 } from "./node-type-registry.js";
 import type { NodeData } from "./types.js";
 import { PrimitiveGeometry } from "./primitive-geometry.js";
@@ -8,6 +10,8 @@ import { PrimitiveGeometry } from "./primitive-geometry.js";
 interface MeasurementEntry {
   node: NodeData;
   element: HTMLElement;
+  context: PrimitiveMeasurementTemplateContext;
+  cleanup?: PrimitiveMeasurementCleanup;
   inputKey: string;
   revision: number;
 }
@@ -56,7 +60,8 @@ export class PrimitiveMeasurementProvider {
   constructor(
     private registry: NodeTypeRegistry,
     private geometry: PrimitiveGeometry,
-    private isCollapsed: (node: NodeData) => boolean = (node) => Boolean(node.isCollapsed)
+    private isCollapsed: (node: NodeData) => boolean = (node) => Boolean(node.isCollapsed),
+    private onMeasurementChange?: (nodeId: number) => void
   ) {}
 
   setCollapseResolver(isCollapsed: (node: NodeData) => boolean): void {
@@ -112,6 +117,7 @@ export class PrimitiveMeasurementProvider {
 
     for (let depth = maxDepth; depth >= 0; depth -= 1) {
       for (const node of nodesByDepth.get(depth) ?? []) {
+        if (this.registry.getBoundsAuthority(node.nodeType) === "core") continue;
         const template = this.registry.getMeasurementTemplate(node.nodeType);
         if (!template || typeof document === "undefined") continue;
         alive.add(node.id);
@@ -142,6 +148,7 @@ export class PrimitiveMeasurementProvider {
 
   isReady(nodes: Iterable<NodeData>): boolean {
     for (const node of nodes) {
+      if (this.registry.getBoundsAuthority(node.nodeType) === "core") continue;
       if (!this.registry.getMeasurementTemplate(node.nodeType)) continue;
       const measurement = this.geometry.getIntrinsicMeasurement(node.id);
       if (!measurement || measurement.width <= 0 || measurement.height <= 0) {
@@ -188,20 +195,30 @@ export class PrimitiveMeasurementProvider {
   ): void {
     const host = document.createElement("div");
     host.style.cssText = "display:block; width:max-content; height:max-content;";
-    const element = template({
+    const measurementRoot = this.ensureRoot();
+    // Attach before the template is rendered. Framework-backed templates need
+    // a live layout tree when they synchronously commit and measure content.
+    measurementRoot.appendChild(host);
+    const context = {
       node,
       props: node.props,
       children,
       element: host,
       isCollapsed,
-    });
+    } satisfies Parameters<typeof template>[0];
+    const element = template(context);
     element.dataset.ggPrimitiveMeasurementNode = String(node.id);
     element.style.pointerEvents = "none";
-    this.ensureRoot().appendChild(element);
+    if (element !== host) {
+      host.remove();
+      measurementRoot.appendChild(element);
+    }
 
     const entry: MeasurementEntry = {
       node,
       element,
+      context: { ...context, element },
+      cleanup: this.registry.get(node.nodeType)?.measurementCleanup,
       inputKey: measurementInputKey(node, isCollapsed, children),
       revision: 0,
     };
@@ -235,17 +252,21 @@ export class PrimitiveMeasurementProvider {
     const height = readDimension(entry.element, "height");
     if (width <= 0 || height <= 0) return;
 
+    const previous = this.geometry.getIntrinsicMeasurement(entry.node.id);
+    const changed = !previous || previous.width !== width || previous.height !== height;
     entry.revision += 1;
     this.geometry.setIntrinsicMeasurement(entry.node.id, {
       width,
       height,
       revision: entry.revision,
     });
+    if (changed) this.onMeasurementChange?.(entry.node.id);
   }
 
   private destroy(nodeId: number): void {
     const entry = this.entries.get(nodeId);
     if (!entry) return;
+    entry.cleanup?.(entry.context);
     this.resizeObserver?.unobserve(entry.element);
     entry.element.remove();
     this.entries.delete(nodeId);
