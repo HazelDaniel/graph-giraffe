@@ -135,5 +135,8 @@ export class NodeTypeRegistry {
     getDomRenderer(type) {
         return this.descriptors.get(type)?.domRenderer;
     }
+    getMeasurementTemplate(type) {
+        return this.descriptors.get(type)?.measurementTemplate;
+    }
 }
 //# sourceMappingURL=node-type-registry.js.map

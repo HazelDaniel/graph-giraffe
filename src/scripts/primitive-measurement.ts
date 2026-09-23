@@ -1,4 +1,7 @@
-import type { NodeTypeRegistry } from "./node-type-registry.js";
+import type {
+  NodeTypeRegistry,
+  PrimitiveMeasurementChild,
+} from "./node-type-registry.js";
 import type { NodeData } from "./types.js";
 import { PrimitiveGeometry } from "./primitive-geometry.js";
 
@@ -9,12 +12,26 @@ interface MeasurementEntry {
   revision: number;
 }
 
-function measurementInputKey(node: NodeData): string {
+function measurementInputKey(
+  node: NodeData,
+  isCollapsed: boolean,
+  children: readonly PrimitiveMeasurementChild[] = []
+): string {
   return JSON.stringify({
     nodeType: node.nodeType,
     text: node.text,
+    width: node.width,
+    height: node.height,
     props: node.props,
-    isCollapsed: node.isCollapsed,
+    isCollapsed,
+    children: children.map((child) => ({
+      id: child.node.id,
+      nodeType: child.node.nodeType,
+      props: child.props,
+      isCollapsed: child.isCollapsed,
+      width: child.width,
+      height: child.height,
+    })),
   });
 }
 
@@ -38,26 +55,79 @@ export class PrimitiveMeasurementProvider {
 
   constructor(
     private registry: NodeTypeRegistry,
-    private geometry: PrimitiveGeometry
+    private geometry: PrimitiveGeometry,
+    private isCollapsed: (node: NodeData) => boolean = (node) => Boolean(node.isCollapsed)
   ) {}
 
+  setCollapseResolver(isCollapsed: (node: NodeData) => boolean): void {
+    this.isCollapsed = isCollapsed;
+  }
+
   sync(nodes: Iterable<NodeData>): void {
-    const alive = new Set<number>();
+    const allNodes = [...nodes];
+    const nodesById = new Map(allNodes.map((node) => [node.id, node]));
+    const depths = new Map<number, number>();
+    let maxDepth = 0;
+    const depthOf = (node: NodeData): number => {
+      const cached = depths.get(node.id);
+      if (cached !== undefined) return cached;
 
-    for (const node of nodes) {
-      const template = this.registry.getMeasurementTemplate(node.nodeType);
-      if (!template || typeof document === "undefined") continue;
-      alive.add(node.id);
-
-      const existing = this.entries.get(node.id);
-      const inputKey = measurementInputKey(node);
-      if (existing && existing.inputKey === inputKey) {
-        this.measure(existing);
-        continue;
+      const path: NodeData[] = [];
+      const visiting = new Set<number>();
+      let current: NodeData | undefined = node;
+      let baseDepth = -1;
+      while (current) {
+        const knownDepth = depths.get(current.id);
+        if (knownDepth !== undefined) {
+          baseDepth = knownDepth;
+          break;
+        }
+        if (visiting.has(current.id)) break;
+        visiting.add(current.id);
+        path.push(current);
+        current = current.parentId === null
+          ? undefined
+          : nodesById.get(current.parentId);
       }
 
-      if (existing) this.destroy(node.id);
-      this.mount(node, template);
+      for (let index = path.length - 1; index >= 0; index -= 1) {
+        baseDepth += 1;
+        depths.set(path[index]!.id, baseDepth);
+      }
+      return depths.get(node.id) ?? 0;
+    };
+
+    // Resolve descendants first so growable container templates receive the
+    // latest child measurements during the same synchronization pass. Depth
+    // buckets preserve that dependency order without an O(n log n) sort.
+    const nodesByDepth = new Map<number, NodeData[]>();
+    for (const node of allNodes) {
+      const depth = depthOf(node);
+      maxDepth = Math.max(maxDepth, depth);
+      const bucket = nodesByDepth.get(depth) ?? [];
+      bucket.push(node);
+      nodesByDepth.set(depth, bucket);
+    }
+    const alive = new Set<number>();
+
+    for (let depth = maxDepth; depth >= 0; depth -= 1) {
+      for (const node of nodesByDepth.get(depth) ?? []) {
+        const template = this.registry.getMeasurementTemplate(node.nodeType);
+        if (!template || typeof document === "undefined") continue;
+        alive.add(node.id);
+
+        const existing = this.entries.get(node.id);
+        const isCollapsed = this.isCollapsed(node);
+        const children = this.getChildren(node, nodesById);
+        const inputKey = measurementInputKey(node, isCollapsed, children);
+        if (existing && existing.inputKey === inputKey) {
+          this.measure(existing);
+          continue;
+        }
+
+        if (existing) this.destroy(node.id);
+        this.mount(node, template, isCollapsed, children);
+      }
     }
 
     for (const id of [...this.entries.keys()]) {
@@ -68,6 +138,17 @@ export class PrimitiveMeasurementProvider {
   refresh(nodeId: number): void {
     const entry = this.entries.get(nodeId);
     if (entry) this.measure(entry);
+  }
+
+  isReady(nodes: Iterable<NodeData>): boolean {
+    for (const node of nodes) {
+      if (!this.registry.getMeasurementTemplate(node.nodeType)) continue;
+      const measurement = this.geometry.getIntrinsicMeasurement(node.id);
+      if (!measurement || measurement.width <= 0 || measurement.height <= 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   dispose(): void {
@@ -101,11 +182,19 @@ export class PrimitiveMeasurementProvider {
 
   private mount(
     node: NodeData,
-    template: NonNullable<ReturnType<NodeTypeRegistry["getMeasurementTemplate"]>>
+    template: NonNullable<ReturnType<NodeTypeRegistry["getMeasurementTemplate"]>>,
+    isCollapsed: boolean,
+    children: readonly PrimitiveMeasurementChild[]
   ): void {
     const host = document.createElement("div");
     host.style.cssText = "display:block; width:max-content; height:max-content;";
-    const element = template({ node, element: host });
+    const element = template({
+      node,
+      props: node.props,
+      children,
+      element: host,
+      isCollapsed,
+    });
     element.dataset.ggPrimitiveMeasurementNode = String(node.id);
     element.style.pointerEvents = "none";
     this.ensureRoot().appendChild(element);
@@ -113,12 +202,32 @@ export class PrimitiveMeasurementProvider {
     const entry: MeasurementEntry = {
       node,
       element,
-      inputKey: measurementInputKey(node),
+      inputKey: measurementInputKey(node, isCollapsed, children),
       revision: 0,
     };
     this.entries.set(node.id, entry);
     this.resizeObserver?.observe(element);
     this.measure(entry);
+  }
+
+  private getChildren(
+    node: NodeData,
+    nodesById: ReadonlyMap<number, NodeData>
+  ): PrimitiveMeasurementChild[] {
+    return (node.childIds ?? [])
+      .map((childId) => nodesById.get(childId))
+      .filter((child): child is NodeData => Boolean(child))
+      .map((child) => {
+        const childCollapsed = this.isCollapsed(child);
+        const intrinsic = this.geometry.getIntrinsicMeasurement(child.id);
+        return {
+          node: child,
+          props: child.props,
+          isCollapsed: childCollapsed,
+          width: intrinsic?.width ?? child.width,
+          height: intrinsic?.height ?? child.height,
+        };
+      });
   }
 
   private measure(entry: MeasurementEntry): void {

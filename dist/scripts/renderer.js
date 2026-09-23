@@ -10,6 +10,7 @@ import { getIconBGLocations, getMSDFShaderLocations } from "./shader.js";
 import { MsdfTextRenderer } from "./msdf-text.js";
 import { IconBackgroundRenderer } from "./icon-background-renderer.js";
 import { dumbGlyphHeight, dumbGlyphWidth } from "./globals.js";
+import { applyPrimitiveDiff, } from "./primitive-geometry.js";
 /**
  * Owns the WebGL draw loop and all rendering logic.
  * It knows nothing about input events or UI — it only reads Camera and NodeStore state.
@@ -32,6 +33,8 @@ export class Renderer {
     getBgColor;
     getFontColor;
     getSelectedNodeIds;
+    getPrimitiveFrame;
+    canRender;
     onFrame;
     msdfProgram;
     iconBGProgram;
@@ -43,7 +46,7 @@ export class Renderer {
     projMatrix = new Matrix4();
     constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, 
     /** Callback so Renderer never stores bgColor itself — it belongs to the editor. */
-    getBgColor, getFontColor, getSelectedNodeIds, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry, renderMode = "webgl") {
+    getBgColor, getFontColor, getSelectedNodeIds, getPrimitiveFrame, canRender, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry, renderMode = "webgl") {
         this.gl = gl;
         this.canvas = canvas;
         this.bgCanvas = bgCanvas;
@@ -61,6 +64,8 @@ export class Renderer {
         this.getBgColor = getBgColor;
         this.getFontColor = getFontColor;
         this.getSelectedNodeIds = getSelectedNodeIds;
+        this.getPrimitiveFrame = getPrimitiveFrame;
+        this.canRender = canRender;
         this.onFrame = onFrame;
         this.msdfProgram = msdfProgram;
         this.iconBGProgram = iconBGProgram;
@@ -95,6 +100,37 @@ export class Renderer {
     edgeVertexBuffer;
     edgeHeadBuffer;
     edgeHeadTextures;
+    frameFor(node) {
+        const world = getWorldPosition(node.id, this.store.allNodesMap);
+        return this.getPrimitiveFrame(node.id) ?? {
+            id: node.id,
+            baseWorldX: world.x,
+            baseWorldY: world.y,
+            baseWidth: node.width,
+            baseHeight: node.height,
+            worldX: world.x,
+            worldY: world.y,
+            width: node.width,
+            height: node.height,
+            revision: 0,
+            diff: {
+                translateX: 0,
+                translateY: 0,
+                scaleX: 1,
+                scaleY: 1,
+            },
+        };
+    }
+    quadFor(node) {
+        return applyPrimitiveDiff(this.frameFor(node));
+    }
+    resolveNodeDimensions = (nodeId) => {
+        const node = this.store.get(nodeId);
+        if (!node)
+            return undefined;
+        const frame = this.frameFor(node);
+        return { width: frame.width, height: frame.height };
+    };
     edgeFrame = [];
     textureCache;
     isZooming = false;
@@ -126,6 +162,8 @@ export class Renderer {
      * meaningful change and let an idle graph cost nothing.
      */
     renderFrame() {
+        if (!this.canRender())
+            return;
         this.drawBGFrame();
         this.drawFrame();
         this.onFrame();
@@ -170,7 +208,7 @@ export class Renderer {
         const preview = this.getConnectionPreview();
         if (!preview)
             return;
-        const route = buildConnectionPreviewGeometry(preview.sourceNodeId, preview.sourceHandleSide, preview.screenX, preview.screenY, this.store, this.camera);
+        const route = buildConnectionPreviewGeometry(preview.sourceNodeId, preview.sourceHandleSide, preview.screenX, preview.screenY, this.store, this.camera, this.resolveNodeDimensions);
         if (!route)
             return;
         this.labelCtx.save();
@@ -250,8 +288,9 @@ export class Renderer {
                 if (node.nodeType !== "group")
                     continue;
             }
-            const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
-            if (!this.isRectInViewport(x, y, node.width, node.height))
+            const frame = this.frameFor(node);
+            const { worldX: x, worldY: y, width, height } = frame;
+            if (!this.isRectInViewport(x, y, width, height))
                 continue;
             const screenPos = this.camera.worldToScreen(node.localX, node.localY);
             this.labelCtx.fillStyle = "#f8fafc";
@@ -261,11 +300,12 @@ export class Renderer {
     drawHandles(node) {
         if (!this.labelCtx || node.handles.length === 0)
             return;
-        const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
+        const frame = this.frameFor(node);
+        const { worldX: x, worldY: y } = frame;
         const zoom = this.camera.zoom;
         const { panX, panY } = this.camera;
         for (const handle of node.handles) {
-            const geometry = getHandleScreenGeometry(x, y, node, handle, zoom, panX, panY);
+            const geometry = getHandleScreenGeometry(x, y, node, handle, zoom, panX, panY, { width: frame.width, height: frame.height });
             drawHandle(this.labelCtx, handle, geometry.centerX, geometry.centerY);
         }
     }
@@ -299,13 +339,15 @@ export class Renderer {
             const edgeZ = (sourceZ + targetZ) / 2;
             const sPos = getWorldPosition(sourceNode.id, this.store.allNodesMap);
             const tPos = getWorldPosition(targetNode.id, this.store.allNodesMap);
+            const sourceFrame = this.frameFor(sourceNode);
+            const targetFrame = this.frameFor(targetNode);
             const minX = Math.min(sPos.x, tPos.x);
             const minY = Math.min(sPos.y, tPos.y);
-            const maxX = Math.max(sPos.x + sourceNode.width, tPos.x + targetNode.width);
-            const maxY = Math.max(sPos.y + sourceNode.height, tPos.y + targetNode.height);
+            const maxX = Math.max(sPos.x + sourceFrame.width, tPos.x + targetFrame.width);
+            const maxY = Math.max(sPos.y + sourceFrame.height, tPos.y + targetFrame.height);
             if (!this.isRectInViewport(minX, minY, maxX - minX, maxY - minY, 100))
                 continue;
-            const geometry = buildEdgeRouteGeometry(edge, this.store, this.camera);
+            const geometry = buildEdgeRouteGeometry(edge, this.store, this.camera, this.resolveNodeDimensions);
             if (!geometry || geometry.worldPoints.length < 2)
                 continue;
             this.edgeFrame.push(geometry);
@@ -359,7 +401,7 @@ export class Renderer {
         }
         const selectedEdges = visibleEdges.filter((edge) => edge.isSelected);
         for (const selectedEdge of selectedEdges) {
-            const selectedGeometry = buildEdgeRouteGeometry(selectedEdge, this.store, this.camera);
+            const selectedGeometry = buildEdgeRouteGeometry(selectedEdge, this.store, this.camera, this.resolveNodeDimensions);
             if (selectedGeometry) {
                 this.drawSingleEdge(selectedGeometry, "rgba(245, 158, 11, 0.98)", "rgba(251, 191, 36, 1)");
             }
@@ -495,10 +537,10 @@ export class Renderer {
         gl.uniformMatrix4fv(this.locations.u_ViewMatrix, false, this.camera.getViewMatrix().elements);
         const selectedIds = this.getSelectedNodeIds();
         for (const node of this.store.visibleNodes()) {
-            // Scene graph: resolve the absolute world position before building model matrix
-            const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
+            const frame = this.quadFor(node);
+            const { worldX: x, worldY: y, width, height } = frame;
             // Viewport culling
-            if (!this.isRectInViewport(x, y, node.width, node.height)) {
+            if (!this.isRectInViewport(x, y, width, height)) {
                 continue;
             }
             const z = this.store.getZForNode(node.id, selectedIds);
@@ -542,13 +584,15 @@ export class Renderer {
     }
     drawNode(node, worldX, worldY, z, picking) {
         const gl = this.gl;
+        const frame = this.quadFor(node);
+        const { width, height } = frame;
         if (picking) {
             // Flat color silhouette — the RGB encodes the node id
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform1i(this.locations.u_RenderMode, 0);
             gl.uniform4f(this.locations.u_Color, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1.0);
-            this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+            this.setModelMatrix(worldX, worldY, width, height, z);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
             return;
         }
@@ -567,7 +611,7 @@ export class Renderer {
             const desc = this.registry.get(node.nodeType);
             if (desc?.rawDraw) {
                 const ctx = {
-                    gl, node, worldX, worldY, z,
+                    gl, node, worldX, worldY, width, height, z,
                     renderer: this.getDrawAPI(),
                 };
                 if (desc.rawDraw(ctx))
@@ -610,7 +654,7 @@ export class Renderer {
             }
         }
         if (node.isDropTarget) {
-            this.setModelMatrix(worldX - 6, worldY - 6, node.width + 12, node.height + 12, z);
+            this.setModelMatrix(worldX - 6, worldY - 6, width + 12, height + 12, z);
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform1i(this.locations.u_RenderMode, 0);
@@ -619,7 +663,7 @@ export class Renderer {
         }
         else if (node.isSelected) {
             // Selection glow: draw a slightly larger quad behind the node
-            this.setModelMatrix(worldX - 2, worldY - 2, node.width + 4, node.height + 4, z);
+            this.setModelMatrix(worldX - 2, worldY - 2, width + 4, height + 4, z);
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform1i(this.locations.u_RenderMode, 0);
@@ -629,13 +673,13 @@ export class Renderer {
         // Draw body
         const bodyCache = this.textureCache.getTexture(node.textureIds.body);
         if (bodyCache) {
-            this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+            this.setModelMatrix(worldX, worldY, width, height, z);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
             gl.uniform1i(this.locations.u_UseTexture, 1);
             gl.uniform1i(this.locations.u_Use9Slice, 1);
             gl.uniform1i(this.locations.u_RenderMode, 0);
-            gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+            gl.uniform2f(this.locations.u_Dimensions, width, height);
             gl.uniform2f(this.locations.u_TextureSize, bodyCache.nativeWidth, bodyCache.nativeHeight);
             gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
             gl.uniform1i(this.locations.u_Sampler, 0);
@@ -643,28 +687,28 @@ export class Renderer {
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         }
         // Draw head
-        let headHeight = node.height;
+        let headHeight = height;
         if (this.registry) {
             const desc = this.registry.get(node.nodeType);
-            headHeight = (desc?.category === "leaf") ? NODE_LAYOUT.headerHeight : node.height;
+            headHeight = (desc?.category === "leaf") ? NODE_LAYOUT.headerHeight : height;
         }
         else {
             if (node.nodeType === "node" || node.nodeType === "composition-child") {
                 headHeight = NODE_LAYOUT.headerHeight;
             }
             else if (node.nodeType === "group" || node.nodeType === "composition") {
-                headHeight = node.height;
+                headHeight = height;
             }
         }
         const headCache = this.textureCache.getTexture(node.textureIds.head);
         if (headCache) {
-            this.setModelMatrix(worldX, worldY, node.width, headHeight, z);
+            this.setModelMatrix(worldX, worldY, width, headHeight, z);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
             gl.uniform1i(this.locations.u_UseTexture, 1);
             gl.uniform1i(this.locations.u_Use9Slice, 1);
             gl.uniform1i(this.locations.u_RenderMode, 0);
-            gl.uniform2f(this.locations.u_Dimensions, node.width, headHeight);
+            gl.uniform2f(this.locations.u_Dimensions, width, headHeight);
             gl.uniform2f(this.locations.u_TextureSize, headCache.nativeWidth, headCache.nativeHeight);
             gl.uniform4f(this.locations.u_SliceMargins, 16.0, 16.0, 16.0, 16.0);
             gl.uniform1i(this.locations.u_Sampler, 0);
@@ -680,7 +724,7 @@ export class Renderer {
                 !isCollapsed
                 ? 20
                 : headOnly
-                    ? node.height / 2
+                    ? height / 2
                     : NODE_LAYOUT.headerHeight / 2;
             if (node.nodeType === "node" ||
                 node.nodeType === "composition-child" ||
@@ -689,7 +733,7 @@ export class Renderer {
             }
             // Group Lock Icon
             if (node.nodeType === "group") {
-                const lockX = node.width / 2;
+                const lockX = width / 2;
                 const lockY = NODE_LAYOUT.lockBtnTopY;
                 const isLocked = Boolean(node.isLocked);
                 this.iconBackgroundRenderer.addQuad(worldX + lockX, worldY + lockY + 1.2, r, g, b, isLocked ? 0.12 : 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "circle");
@@ -698,8 +742,8 @@ export class Renderer {
             }
             // Group Add (+) Icon
             if (node.nodeType === "group" && !isCollapsed) {
-                const xPos = node.width / 2;
-                const yPos = node.height - NODE_LAYOUT.plusBtnPaddingBottom;
+                const xPos = width / 2;
+                const yPos = height - NODE_LAYOUT.plusBtnPaddingBottom;
                 this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + yPos + 1.2, r, g, b, 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "circle");
                 this.textRenderer.addText("+", worldX + xPos, worldY + yPos, 20, r, g, b, 1.0, "center", "middle");
             }
@@ -725,9 +769,9 @@ export class Renderer {
                             gl.useProgram(this.program);
                             for (let i = 0; i < Math.min(children.length, 5); i++) {
                                 const child = children[i];
-                                const childWidth = Math.min(child.width, node.width - 40);
+                                const childWidth = Math.min(child.width, width - 40);
                                 const childHeight = Math.max(NODE_LAYOUT.headerHeight, child.height);
-                                const x = worldX + (node.width - childWidth) / 2;
+                                const x = worldX + (width - childWidth) / 2;
                                 const y = worldY + yOffset;
                                 // Draw child body
                                 const bodyCache = this.textureCache.getTexture(child.textureIds.body);
@@ -772,7 +816,7 @@ export class Renderer {
                     if (node.props) {
                         let cursorY = worldY + NODE_LAYOUT.headerHeight + 16;
                         const xLeft = worldX + NODE_LAYOUT.padding + 4;
-                        const xRight = worldX + node.width - NODE_LAYOUT.padding - 4;
+                        const xRight = worldX + width - NODE_LAYOUT.padding - 4;
                         // Draw ungrouped items (iterate maps directly — no temp arrays)
                         const boolU = node.props.booleans["ungrouped"];
                         const textU = node.props.texts["ungrouped"];
@@ -860,6 +904,7 @@ export class Renderer {
     }
     drawGenericRoundedRect(node, worldX, worldY, z, desc) {
         const gl = this.gl;
+        const { width, height } = this.frameFor(node);
         const config = desc.renderConfig;
         const radius = config?.radius ?? 12;
         const borderWidth = config?.borderWidth ?? 1.5;
@@ -867,22 +912,22 @@ export class Renderer {
         const [borderR, borderG, borderB, borderA] = config?.borderColor ?? [1.0, 1.0, 1.0, 0.9];
         const isCollapsed = this.store.isNodeCollapsed(node);
         if (node.isDropTarget || node.isSelected) {
-            this.setModelMatrix(worldX - 3, worldY - 3, node.width + 6, node.height + 6, z);
+            this.setModelMatrix(worldX - 3, worldY - 3, width + 6, height + 6, z);
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform1i(this.locations.u_RenderMode, 1);
-            gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
+            gl.uniform2f(this.locations.u_Dimensions, width + 6, height + 6);
             gl.uniform4f(this.locations.u_Color, node.isDropTarget ? 0.04 : 0.08, node.isDropTarget ? 0.38 : 0.14, node.isDropTarget ? 0.16 : 0.68, 0.09);
             gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1.0, 0.95);
             gl.uniform1f(this.locations.u_BorderWidth, 2.0);
             gl.uniform1f(this.locations.u_Radius, isCollapsed ? 8.0 : radius);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         }
-        this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+        this.setModelMatrix(worldX, worldY, width, height, z);
         gl.uniform1i(this.locations.u_UseTexture, 0);
         gl.uniform1i(this.locations.u_Use9Slice, 0);
         gl.uniform1i(this.locations.u_RenderMode, 1);
-        gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+        gl.uniform2f(this.locations.u_Dimensions, width, height);
         gl.uniform4f(this.locations.u_Color, fillR, fillG, fillB, isCollapsed ? 0.9 : fillA);
         gl.uniform4f(this.locations.u_BorderColor, borderR, borderG, borderB, borderA);
         gl.uniform1f(this.locations.u_BorderWidth, isCollapsed ? borderWidth : borderWidth);
@@ -892,10 +937,10 @@ export class Renderer {
         // Hub icon slot (built-in special case)
         if (node.nodeType === "hub") {
             const slotPadding = 10;
-            const iconSlotWidth = Math.max(48, Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28))));
-            const iconSlotHeight = Math.max(0, node.height - slotPadding * 2);
+            const iconSlotWidth = Math.max(48, Math.min(Math.round(height * 0.62), Math.max(56, Math.round(width * 0.28))));
+            const iconSlotHeight = Math.max(0, height - slotPadding * 2);
             const iconCenterX = worldX + slotPadding + iconSlotWidth / 2;
-            const iconCenterY = worldY + node.height / 2;
+            const iconCenterY = worldY + height / 2;
             this.setModelMatrix(worldX + slotPadding, worldY + slotPadding, iconSlotWidth, iconSlotHeight, z);
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
@@ -915,13 +960,13 @@ export class Renderer {
         if (overlayConfig) {
             let titleY;
             if (isCollapsed) {
-                titleY = node.height / 2;
+                titleY = height / 2;
             }
             else if (overlayConfig.titlePosition === "container-top") {
                 titleY = 20;
             }
             else if (overlayConfig.titlePosition === "center") {
-                titleY = node.height / 2;
+                titleY = height / 2;
             }
             else {
                 titleY = NODE_LAYOUT.headerHeight / 2;
@@ -929,23 +974,23 @@ export class Renderer {
             // For hub, offset title past the icon slot
             let titleX = worldX + NODE_LAYOUT.padding;
             if (node.nodeType === "hub") {
-                const iconSlotWidth = Math.max(48, Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28))));
+                const iconSlotWidth = Math.max(48, Math.min(Math.round(height * 0.62), Math.max(56, Math.round(width * 0.28))));
                 titleX = worldX + iconSlotWidth + NODE_LAYOUT.padding * 1.5;
-                titleY = node.height / 2;
+                titleY = height / 2;
             }
             if (overlayConfig.showTitle || isCollapsed) {
                 this.textRenderer.addText(node.text, titleX, worldY + titleY, 14, r, g, b, 1.0, "left", "middle");
             }
             if (overlayConfig.showLockIcon) {
-                const lockX = node.width / 2;
+                const lockX = width / 2;
                 const lockY = NODE_LAYOUT.lockBtnTopY;
                 const isLocked = Boolean(node.isLocked);
                 this.iconBackgroundRenderer.addQuad(worldX + lockX, worldY + lockY + 1.2, r, g, b, isLocked ? 0.12 : 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "circle");
                 this.iconRenderer.addText(isLocked ? "" : "", worldX + lockX, worldY + lockY, 16, r, g, b, 1.0, "center", "middle");
             }
             if (overlayConfig.showAddIcon && !isCollapsed) {
-                const xPos = node.width / 2;
-                const yPos = node.height - NODE_LAYOUT.plusBtnPaddingBottom;
+                const xPos = width / 2;
+                const yPos = height - NODE_LAYOUT.plusBtnPaddingBottom;
                 this.iconBackgroundRenderer.addQuad(worldX + xPos, worldY + yPos + 1.2, r, g, b, 0.05, dumbGlyphWidth, dumbGlyphHeight, this.iconAtlas.common?.base || 0, this.iconAtlas.common?.lineHeight || 0, 16, "center", undefined, "circle");
                 this.textRenderer.addText("+", worldX + xPos, worldY + yPos, 20, r, g, b, 1.0, "center", "middle");
             }
@@ -953,7 +998,7 @@ export class Renderer {
         // Custom overlay hook
         if (desc.drawOverlay) {
             desc.drawOverlay({
-                node, worldX, worldY, z, isCollapsed,
+                node, worldX, worldY, width, height, z, isCollapsed,
                 textRenderer: this.textRenderer,
                 iconRenderer: this.iconRenderer,
                 iconBackgroundRenderer: this.iconBackgroundRenderer,
@@ -963,6 +1008,7 @@ export class Renderer {
     }
     drawBranchNode(node, worldX, worldY, z, picking, desc) {
         const gl = this.gl;
+        const { width, height } = this.frameFor(node);
         const config = desc?.renderConfig;
         const radius = config?.radius ?? 10;
         const borderWidth = config?.borderWidth ?? 1.8;
@@ -974,12 +1020,12 @@ export class Renderer {
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform1i(this.locations.u_RenderMode, 2);
-            gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+            gl.uniform2f(this.locations.u_Dimensions, width, height);
             gl.uniform4f(this.locations.u_Color, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1.0);
             gl.uniform4f(this.locations.u_BorderColor, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1.0);
             gl.uniform1f(this.locations.u_BorderWidth, 0.0);
             gl.uniform1f(this.locations.u_Radius, radius);
-            this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+            this.setModelMatrix(worldX, worldY, width, height, z);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
             gl.uniform1i(this.locations.u_RenderMode, 0);
             return;
@@ -987,11 +1033,11 @@ export class Renderer {
         const [r, g, b, _] = this.getFontColor();
         // Selection / drop-target glow (rounded triangle outline)
         if (node.isDropTarget || node.isSelected) {
-            this.setModelMatrix(worldX - 4, worldY - 4, node.width + 8, node.height + 8, z);
+            this.setModelMatrix(worldX - 4, worldY - 4, width + 8, height + 8, z);
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform1i(this.locations.u_RenderMode, 2);
-            gl.uniform2f(this.locations.u_Dimensions, node.width + 8, node.height + 8);
+            gl.uniform2f(this.locations.u_Dimensions, width + 8, height + 8);
             gl.uniform4f(this.locations.u_Color, node.isDropTarget ? 0.04 : 0.08, node.isDropTarget ? 0.38 : 0.14, node.isDropTarget ? 0.16 : 0.68, 0.09);
             gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1.0, 0.95);
             gl.uniform1f(this.locations.u_BorderWidth, 2.5);
@@ -999,11 +1045,11 @@ export class Renderer {
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         }
         // Body: rounded triangle
-        this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+        this.setModelMatrix(worldX, worldY, width, height, z);
         gl.uniform1i(this.locations.u_UseTexture, 0);
         gl.uniform1i(this.locations.u_Use9Slice, 0);
         gl.uniform1i(this.locations.u_RenderMode, 2);
-        gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+        gl.uniform2f(this.locations.u_Dimensions, width, height);
         gl.uniform4f(this.locations.u_Color, fillR, fillG, fillB, fillA);
         gl.uniform4f(this.locations.u_BorderColor, borderR, borderG, borderB, borderA);
         gl.uniform1f(this.locations.u_BorderWidth, borderWidth);
@@ -1013,80 +1059,82 @@ export class Renderer {
         // Centered icon (placeholder branch glyph)
         // Position the icon at the visual centroid of the triangle
         // For triangle pointing up, centroid is at 1/3 from the bottom
-        const iconCenterX = worldX + node.width / 2;
-        const iconCenterY = worldY + node.height * 0.45;
-        const iconSize = Math.min(node.width, node.height) * 0.22;
+        const iconCenterX = worldX + width / 2;
+        const iconCenterY = worldY + height * 0.45;
+        const iconSize = Math.min(width, height) * 0.22;
         this.iconRenderer.addText("", iconCenterX, iconCenterY, iconSize, 1, 1, 1, 0.85, "center", "middle");
         // Title centered below the icon
-        const titleY = worldY + node.height * 0.68;
-        this.textRenderer.addText(node.text, worldX + node.width / 2, titleY, 12, r, g, b, 1.0, "center", "middle");
+        const titleY = worldY + height * 0.68;
+        this.textRenderer.addText(node.text, worldX + width / 2, titleY, 12, r, g, b, 1.0, "center", "middle");
     }
     drawSubgraphNode(node, worldX, worldY, z) {
         const gl = this.gl;
+        const { width, height } = this.frameFor(node);
         const [r, g, b, _] = this.getFontColor();
         const collapsed = Boolean(node.isCollapsed);
         if (node.isDropTarget || node.isSelected) {
-            this.setModelMatrix(worldX - 3, worldY - 3, node.width + 6, node.height + 6, z);
+            this.setModelMatrix(worldX - 3, worldY - 3, width + 6, height + 6, z);
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform1i(this.locations.u_RenderMode, 1);
-            gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
+            gl.uniform2f(this.locations.u_Dimensions, width + 6, height + 6);
             gl.uniform4f(this.locations.u_Color, node.isDropTarget ? 0.04 : 0.08, node.isDropTarget ? 0.38 : 0.14, node.isDropTarget ? 0.16 : 0.68, 0.09);
             gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1.0, 0.95);
             gl.uniform1f(this.locations.u_BorderWidth, 2.0);
             gl.uniform1f(this.locations.u_Radius, collapsed ? 8.0 : 12.0);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         }
-        this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+        this.setModelMatrix(worldX, worldY, width, height, z);
         gl.uniform1i(this.locations.u_UseTexture, 0);
         gl.uniform1i(this.locations.u_Use9Slice, 0);
         gl.uniform1i(this.locations.u_RenderMode, 1);
-        gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+        gl.uniform2f(this.locations.u_Dimensions, width, height);
         gl.uniform4f(this.locations.u_Color, 0.08, 0.09, 0.1, collapsed ? 0.9 : 0.22);
         gl.uniform4f(this.locations.u_BorderColor, 1.0, 1.0, 1.0, 0.9);
         gl.uniform1f(this.locations.u_BorderWidth, collapsed ? 1.5 : 2.0);
         gl.uniform1f(this.locations.u_Radius, collapsed ? 8.0 : 12.0);
         gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         gl.uniform1i(this.locations.u_RenderMode, 0);
-        const titleY = collapsed ? node.height / 2 : 20;
+        const titleY = collapsed ? height / 2 : 20;
         this.textRenderer.addText(node.text, worldX + NODE_LAYOUT.padding, worldY + titleY, 14, r, g, b, 1.0, "left", "middle");
     }
     drawHubNode(node, worldX, worldY, z, picking) {
         const gl = this.gl;
+        const { width, height } = this.frameFor(node);
         if (picking) {
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform1i(this.locations.u_RenderMode, 0);
             gl.uniform4f(this.locations.u_Color, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1.0);
-            this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+            this.setModelMatrix(worldX, worldY, width, height, z);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
             return;
         }
         const [r, g, b, _] = this.getFontColor();
         const slotPadding = 10;
-        const iconSlotWidth = Math.max(48, Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28))));
-        const iconSlotHeight = Math.max(0, node.height - slotPadding * 2);
+        const iconSlotWidth = Math.max(48, Math.min(Math.round(height * 0.62), Math.max(56, Math.round(width * 0.28))));
+        const iconSlotHeight = Math.max(0, height - slotPadding * 2);
         const iconCenterX = worldX + slotPadding + iconSlotWidth / 2;
-        const iconCenterY = worldY + node.height / 2;
+        const iconCenterY = worldY + height / 2;
         const labelX = worldX + iconSlotWidth + NODE_LAYOUT.padding * 1.5;
-        const titleY = node.height / 2;
+        const titleY = height / 2;
         if (node.isDropTarget || node.isSelected) {
-            this.setModelMatrix(worldX - 3, worldY - 3, node.width + 6, node.height + 6, z);
+            this.setModelMatrix(worldX - 3, worldY - 3, width + 6, height + 6, z);
             gl.uniform1i(this.locations.u_UseTexture, 0);
             gl.uniform1i(this.locations.u_Use9Slice, 0);
             gl.uniform1i(this.locations.u_RenderMode, 1);
-            gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
+            gl.uniform2f(this.locations.u_Dimensions, width + 6, height + 6);
             gl.uniform4f(this.locations.u_Color, node.isDropTarget ? 0.04 : 0.08, node.isDropTarget ? 0.38 : 0.14, node.isDropTarget ? 0.16 : 0.68, 0.09);
             gl.uniform4f(this.locations.u_BorderColor, 0.9, 0.95, 1.0, 0.95);
             gl.uniform1f(this.locations.u_BorderWidth, 2.0);
             gl.uniform1f(this.locations.u_Radius, 16.0);
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
         }
-        this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+        this.setModelMatrix(worldX, worldY, width, height, z);
         gl.uniform1i(this.locations.u_UseTexture, 0);
         gl.uniform1i(this.locations.u_Use9Slice, 0);
         gl.uniform1i(this.locations.u_RenderMode, 1);
-        gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+        gl.uniform2f(this.locations.u_Dimensions, width, height);
         gl.uniform4f(this.locations.u_Color, 0.08, 0.09, 0.1, 0.92);
         gl.uniform4f(this.locations.u_BorderColor, 1.0, 1.0, 1.0, 0.9);
         gl.uniform1f(this.locations.u_BorderWidth, 2.0);

@@ -34,6 +34,7 @@ export interface DomNodeLayerOptions {
 interface DomNodeView {
   element: HTMLElement;
   renderer: DomNodeRenderer;
+  interactiveObserver?: MutationObserver;
   /** Last-known node reference, retained so `destroyView` can clean up even
    *  after the node has been removed from the store. */
   node: NodeData;
@@ -83,6 +84,19 @@ export class DomNodeLayer {
       this.root.style.cssText =
         "position:absolute; top:0; left:0; width:0; height:0; overflow:visible; pointer-events:none;";
       container.appendChild(this.root);
+      if (typeof this.root.addEventListener === "function") this.root.addEventListener("click", (event) => {
+        const target = event.target as HTMLElement | null;
+        const host = target?.closest?.("[data-node-id]");
+        if (!host || event.defaultPrevented) return;
+        const nodeId = Number(host.getAttribute("data-node-id"));
+        const node = this.options.store.get(nodeId);
+        if (!node) return;
+        this.options.events.dispatch("node:click", {
+          nodeId,
+          nodeType: node.nodeType,
+          event: event as MouseEvent,
+        });
+      });
     }
     // Lifecycle mutations only go through commands, so `history:command` is
     // the single observation point for create/delete/label/prop/reparent.
@@ -232,6 +246,7 @@ export class DomNodeLayer {
     element.dataset.nodeType = node.nodeType;
     element.style.position = "absolute";
     element.style.pointerEvents = "none";
+    if (renderer.interactive) element.style.pointerEvents = "auto";
     element.style.boxSizing = "border-box";
     element.style.transformOrigin = "0 0";
     element.style.left = `${x}px`;
@@ -247,6 +262,13 @@ export class DomNodeLayer {
       culled: false,
     };
     this.views.set(node.id, view);
+    this.syncPointerEvents(view);
+    if (renderer.interactiveDescendants && typeof MutationObserver !== "undefined") {
+      view.interactiveObserver = new MutationObserver(() => {
+        this.syncPointerEvents(view);
+      });
+      view.interactiveObserver.observe(element, { childList: true, subtree: true });
+    }
     this.applyZIndex(view, node);
     this.applyState(view, node);
     if (this.root) this.root.appendChild(element);
@@ -260,6 +282,7 @@ export class DomNodeLayer {
     if (view.renderer.destroyView) {
       view.renderer.destroyView(this.createContext(node, 0, 0, view.element));
     }
+    view.interactiveObserver?.disconnect();
     view.element.remove();
     this.views.delete(nodeId);
   }
@@ -328,6 +351,19 @@ export class DomNodeLayer {
     const zIndex = this.computeZIndex(node);
     view.snapshot.zIndex = zIndex;
     view.element.style.zIndex = zIndex;
+  }
+
+  /**
+   * Keep the primitive surface transparent to the canvas. Only explicitly
+   * declared embedded controls may participate in native DOM interaction.
+   */
+  private syncPointerEvents(view: DomNodeView): void {
+    const { element, renderer } = view;
+    element.style.pointerEvents = renderer.interactive ? "auto" : "none";
+    if (!renderer.interactiveDescendants) return;
+    for (const control of element.querySelectorAll(renderer.interactiveDescendants)) {
+      (control as HTMLElement).style.pointerEvents = "auto";
+    }
   }
 
   private applyState(view: DomNodeView, node: NodeData): void {

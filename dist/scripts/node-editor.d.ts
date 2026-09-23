@@ -1,5 +1,6 @@
+import { type CreateEdgeParams } from "./edge-store.js";
 import { GraphEventEmitter } from "./events.js";
-import { ConnectionMode, NodeEditorConfig, NodeData, AddUploadedTextureParams, CustomOverlay } from "./types.js";
+import { ConnectionMode, EdgeData, NodeEditorConfig, NodeData, AddUploadedTextureParams, CustomOverlay, ControlledNode, ControlledEdge, GraphProjection } from "./types.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
 import { type CommentLayerController } from "./overlay-primitives.js";
 import type { GraphSnapshot } from "./graph-serialization.js";
@@ -68,6 +69,11 @@ export declare class NodeEditor {
     private scalingOverlayContainer;
     private fixedOverlayContainer;
     private domNodeLayer;
+    private primitiveGeometry;
+    private primitiveMeasurements;
+    private primitiveRenderReady;
+    private measurementLoadingScreen;
+    private measurementGatePromise;
     private resizeObserver;
     private activeTouches;
     private gestureMode;
@@ -79,10 +85,20 @@ export declare class NodeEditor {
     private backgroundCanvas;
     private static _instance;
     static create(canvasId: string, backgroundCanvasId: string, vsSource: string, fsSource: string, bgVsSource: string, bgFsSource: string, msdfVsSource: string, msdfFsSource: string, IconBGVsSource: string, IconBGFsSource: string, options?: NodeEditorConfig, nodeTextureUploadList?: AddUploadedTextureParams[]): Promise<NodeEditor>;
+    /**
+     * Release the singleton slot for framework adapters that own the editor's
+     * host DOM. The adapter must remove its container after calling this method.
+     * A future full dispose lifecycle can extend this without exposing internals.
+     */
+    static release(): void;
     private msdfAtlas;
     private iconAtlas;
     private constructor();
     private init;
+    private syncPrimitiveMeasurements;
+    private beginMeasurementGate;
+    private ensureMeasurementLoadingScreen;
+    private getPrimitiveFrame;
     private setupPropGroupListener;
     private syncPropertiesPanelForSelection;
     private updatePropValue;
@@ -101,6 +117,23 @@ export declare class NodeEditor {
      */
     requestRender(): void;
     setConnectionMode(connectionMode: ConnectionMode): void;
+    /** Configure the runtime zoom range used by wheel, pinch, restore, and animation. */
+    setZoomRange(minZoom: number, maxZoom: number): void;
+    getZoomRange(): {
+        minZoom: number;
+        maxZoom: number;
+    };
+    /** Return a detached copy of the current graph projection. */
+    getNodes(): NodeData[];
+    /** Return a detached copy of the current edge projection. */
+    getEdges(): EdgeData[];
+    /** Return one detached, renderer-neutral view of the complete graph. */
+    getGraph(): GraphProjection;
+    /**
+     * Apply a host-owned graph projection without creating history entries.
+     * Adapters use this to implement controlled React/Vue/Svelte integrations.
+     */
+    applyControlledGraph(nodes: ControlledNode[], edges: ControlledEdge[]): void;
     /**
      * Serialize the full graph state into a portable JSON-compatible snapshot.
      *
@@ -154,6 +187,13 @@ export declare class NodeEditor {
         panY: number;
         zoom: number;
     };
+    /** Set the viewport immediately, respecting the configured zoom range. */
+    setViewport(panX: number, panY: number, zoom: number): void;
+    /** Resolve a node's world-space position through the scene graph. */
+    getNodeWorldPosition(id: number): {
+        x: number;
+        y: number;
+    } | undefined;
     /**
      * Imperatively animate (lerp) the camera so the given world coordinate lands
      * at a screen position — by default the center of the canvas. Optionally
@@ -174,6 +214,18 @@ export declare class NodeEditor {
      * can block it). Returns the created node, or `null` if blocked.
      */
     addNode(nodeType: string, worldX: number, worldY: number, parentId?: number | null, label?: string): Promise<NodeData | null>;
+    /**
+     * Create an edge through the public command path.
+     *
+     * Adapters must use this instead of reaching into EdgeStore. Connection
+     * validation, before-hooks, composition semantics, handle state, history,
+     * and the public connect event all remain owned by the editor.
+     */
+    addEdge(params: CreateEdgeParams): Promise<EdgeData | null>;
+    /** Remove a node tree through the public command path. */
+    removeNode(nodeId: number): Promise<void>;
+    /** Remove an edge through the public command path. */
+    removeEdge(edgeId: number): EdgeData | null;
     /**
      * Synchronize overlay container transforms with current camera pan and zoom.
      */

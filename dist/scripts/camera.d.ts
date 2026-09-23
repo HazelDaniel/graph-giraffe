@@ -12,12 +12,18 @@ export declare class Camera {
     panX: number;
     panY: number;
     zoom: number;
+    private _minZoom;
+    private _maxZoom;
     private _animating;
     private _targetPanX;
     private _targetPanY;
     private _targetZoom;
     private _viewMatrix;
     constructor(editor?: NodeEditor | undefined);
+    get minZoom(): number;
+    get maxZoom(): number;
+    setZoomRange(minZoom: number, maxZoom: number): void;
+    private clampZoom;
     /** Translate the viewport by (dx, dy) in screen pixels. */
     pan(dx: number, dy: number): void;
     /**

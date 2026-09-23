@@ -68,6 +68,41 @@ export interface EdgeData {
     isSelected: boolean;
     visible: boolean;
 }
+/** Framework-neutral declarative node input for controlled integrations. */
+export interface ControlledNode {
+    id: number;
+    nodeType: string;
+    /** World coordinates, matching React Flow-style controlled node positions. */
+    position: {
+        x: number;
+        y: number;
+    };
+    parentId?: number | null;
+    width?: number;
+    height?: number;
+    label?: string;
+    props?: NodePropType;
+    textureIds?: NodeTextureIds;
+    isLocked?: boolean;
+    isCollapsed?: boolean;
+}
+/** Framework-neutral declarative edge input for controlled integrations. */
+export interface ControlledEdge {
+    id: number;
+    sourceNodeId: number;
+    sourceHandleSide: HandleSide;
+    targetNodeId: number;
+    targetHandleSide: HandleSide;
+    edgeType?: EdgeType;
+    headType?: EdgeHeadType;
+    headSkinId?: EdgeHeadSkinId;
+    label?: string;
+}
+/** Detached renderer-neutral graph view exposed to adapters and diagnostics. */
+export interface GraphProjection {
+    nodes: NodeData[];
+    edges: EdgeData[];
+}
 export interface CustomOverlay {
     id: string;
     element: HTMLElement;
@@ -94,6 +129,8 @@ export interface NodeEditorConfig {
      * adopt the editor's configured mode regardless of how they were authored.
      */
     renderMode?: "webgl" | "dom";
+    minZoom?: number;
+    maxZoom?: number;
 }
 export interface ConnectionPreviewData {
     sourceNodeId: number;

@@ -20,6 +20,7 @@ export { NodeEditor } from './scripts/node-editor.js';
 // ─── Node Type Registry ─────────────────────────────────
 export { NodeTypeRegistry } from './scripts/node-type-registry.js';
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
+export { PrimitiveMeasurementProvider } from './scripts/primitive-measurement.js';
 // ─── Overlay primitives ───────────────────────────────────
 export { createCommentBubble, attachCommentLayer, } from './scripts/overlay-primitives.js';
 // ─── Bundled DOM skins (renderMode: "dom") ───────────────

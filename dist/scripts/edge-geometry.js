@@ -3,7 +3,7 @@ import { getWorldPosition } from './scene-graph.js';
 const MIN_SAMPLE_COUNT = 48;
 const MAX_SAMPLE_COUNT = 72;
 const SAMPLE_DISTANCE_STEP = 42;
-export function buildEdgeRouteGeometry(edge, store, camera) {
+export function buildEdgeRouteGeometry(edge, store, camera, resolveDimensions) {
     const sourceNode = store.get(edge.sourceNodeId);
     const targetNode = store.get(edge.targetNodeId);
     if (!sourceNode || !targetNode)
@@ -12,8 +12,8 @@ export function buildEdgeRouteGeometry(edge, store, camera) {
     const targetHandle = targetNode.handles.find((handle) => handle.side === edge.targetHandleSide);
     if (!sourceHandle || !targetHandle)
         return null;
-    const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera);
-    const targetWorld = getHandleWorldPoint(targetNode.id, targetHandle, store, camera);
+    const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera, resolveDimensions);
+    const targetWorld = getHandleWorldPoint(targetNode.id, targetHandle, store, camera, resolveDimensions);
     const route = buildCubicRoute(sourceWorld, edge.sourceHandleSide, targetWorld, edge.targetHandleSide, 'orthogonal');
     const screenPoints = route.worldPoints.map((point) => camera.worldToScreen(point.x, point.y));
     const labelWorldPoint = getPolylineMidpoint(route.worldPoints);
@@ -27,14 +27,14 @@ export function buildEdgeRouteGeometry(edge, store, camera) {
         arrowhead: edge.headType === 'arrow' ? route.arrowhead : null,
     };
 }
-export function buildConnectionPreviewGeometry(sourceNodeId, sourceHandleSide, screenX, screenY, store, camera) {
+export function buildConnectionPreviewGeometry(sourceNodeId, sourceHandleSide, screenX, screenY, store, camera, resolveDimensions) {
     const sourceNode = store.get(sourceNodeId);
     if (!sourceNode)
         return null;
     const sourceHandle = sourceNode.handles.find((handle) => handle.side === sourceHandleSide);
     if (!sourceHandle)
         return null;
-    const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera);
+    const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera, resolveDimensions);
     const targetWorld = camera.screenToWorld(screenX, screenY);
     const oppositeSide = getOppositeSide(sourceHandleSide);
     const route = buildOrthogonalRoute(sourceWorld, sourceHandleSide, targetWorld, oppositeSide);
@@ -126,12 +126,12 @@ function derivativeAtEnd(control2, end) {
         y: 3 * (end.y - control2.y),
     };
 }
-function getHandleWorldPoint(nodeId, handle, store, camera) {
+function getHandleWorldPoint(nodeId, handle, store, camera, resolveDimensions) {
     const node = store.get(nodeId);
     if (!node)
         return { x: 0, y: 0 };
     const { x, y } = getWorldPosition(node.id, store.allNodesMap);
-    const geometry = getHandleScreenGeometry(x, y, node, handle, camera.zoom, camera.panX, camera.panY);
+    const geometry = getHandleScreenGeometry(x, y, node, handle, camera.zoom, camera.panX, camera.panY, resolveDimensions?.(node.id));
     return camera.screenToWorld(geometry.centerX, geometry.centerY);
 }
 function getPolylineMidpoint(points) {

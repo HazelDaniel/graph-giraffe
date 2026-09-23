@@ -11,6 +11,8 @@ export class Camera {
     panX = 0;
     panY = 0;
     zoom = 1;
+    _minZoom = 0.1;
+    _maxZoom = 5;
     _animating = false;
     _targetPanX = 0;
     _targetPanY = 0;
@@ -18,6 +20,19 @@ export class Camera {
     _viewMatrix = new Matrix4();
     constructor(editor) {
         this.editor = editor;
+    }
+    get minZoom() { return this._minZoom; }
+    get maxZoom() { return this._maxZoom; }
+    setZoomRange(minZoom, maxZoom) {
+        if (!Number.isFinite(minZoom) || !Number.isFinite(maxZoom) || minZoom <= 0 || maxZoom < minZoom) {
+            throw new Error("Camera.setZoomRange: expected 0 < minZoom <= maxZoom");
+        }
+        this._minZoom = minZoom;
+        this._maxZoom = maxZoom;
+        this.zoom = this.clampZoom(this.zoom);
+    }
+    clampZoom(zoom) {
+        return Math.max(this._minZoom, Math.min(zoom, this._maxZoom));
     }
     /** Translate the viewport by (dx, dy) in screen pixels. */
     pan(dx, dy) {
@@ -33,7 +48,7 @@ export class Camera {
         this._animating = false;
         const sensitivity = 0.001;
         const factor = 1.0 - deltaY * sensitivity;
-        const newZoom = Math.max(0.1, Math.min(this.zoom * factor, 5.0));
+        const newZoom = this.clampZoom(this.zoom * factor);
         const scaleChange = newZoom / this.zoom;
         // Adjust pan so the point under the cursor remains stationary
         this.panX = mouseX - (mouseX - this.panX) * scaleChange;
@@ -53,7 +68,7 @@ export class Camera {
         this._animating = false;
         this.panX = panX;
         this.panY = panY;
-        this.zoom = Math.max(0.1, Math.min(zoom, 5.0));
+        this.zoom = this.clampZoom(zoom);
         if (this.editor) {
             this.editor.cameraDirty = true;
         }
@@ -87,7 +102,7 @@ export class Camera {
     animateTo(panX, panY, zoom) {
         this._targetPanX = panX;
         this._targetPanY = panY;
-        this._targetZoom = Math.max(0.1, Math.min(zoom, 5.0));
+        this._targetZoom = this.clampZoom(zoom);
         this._animating = true;
         if (this.editor)
             this.editor.cameraDirty = true;

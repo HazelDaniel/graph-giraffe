@@ -3,7 +3,7 @@
 
  2. simulation
 
- 3. edge labels
+ 3[]. edge labels — GPU-rendered labels are implemented; interactive/custom label controls belong to the adapter overlay layer
 
  4[]. Command-based history system — replaces closures with serializable command objects + snapshots. This is foundational: it unblocks simulation (you
 		can replay command streams), persistence (serialize state), and multiplayer (sync commands). There's already a skill for this.
@@ -34,5 +34,4 @@
 	* exporting selections to sub-graphs and un-graphing subgraphs
 	* group node locking/unlocking
     * [others not yet mapped out]
-
 

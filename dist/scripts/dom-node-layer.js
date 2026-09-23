@@ -1,4 +1,3 @@
-import { getWorldPosition } from "./scene-graph.js";
 // z-index buckets mirror the WebGL z-tier stacking (groups behind leaves).
 const Z_GROUP = 1_000_000;
 const Z_COMPOSITION = 2_000_000;
@@ -26,6 +25,22 @@ export class DomNodeLayer {
             this.root.style.cssText =
                 "position:absolute; top:0; left:0; width:0; height:0; overflow:visible; pointer-events:none;";
             container.appendChild(this.root);
+            if (typeof this.root.addEventListener === "function")
+                this.root.addEventListener("click", (event) => {
+                    const target = event.target;
+                    const host = target?.closest?.("[data-node-id]");
+                    if (!host || event.defaultPrevented)
+                        return;
+                    const nodeId = Number(host.getAttribute("data-node-id"));
+                    const node = this.options.store.get(nodeId);
+                    if (!node)
+                        return;
+                    this.options.events.dispatch("node:click", {
+                        nodeId,
+                        nodeType: node.nodeType,
+                        event: event,
+                    });
+                });
         }
         // Lifecycle mutations only go through commands, so `history:command` is
         // the single observation point for create/delete/label/prop/reparent.
@@ -76,9 +91,10 @@ export class DomNodeLayer {
             const node = store.get(id);
             if (!node)
                 continue;
-            const { x, y } = getWorldPosition(id, store.allNodesMap);
-            const width = node.width;
-            const height = node.height;
+            const frame = this.options.getPrimitiveFrame(id);
+            if (!frame)
+                continue;
+            const { worldX: x, worldY: y, width, height } = frame;
             // Viewport culling: views fully outside the camera viewport are already
             // skipped by the WebGL draw pass, so skip their DOM diff too. Kept
             // mounted (just hidden) so scrolling back into view is cheap and avoids
@@ -147,7 +163,10 @@ export class DomNodeLayer {
         const renderer = this.options.registry.getDomRenderer(node.nodeType);
         if (!renderer)
             return;
-        const { x, y } = getWorldPosition(node.id, this.options.store.allNodesMap);
+        const frame = this.options.getPrimitiveFrame(node.id);
+        if (!frame)
+            return;
+        const { worldX: x, worldY: y } = frame;
         const placeholder = document.createElement("div");
         const ctx = this.createContext(node, x, y, placeholder);
         const element = renderer.createView(ctx) ?? placeholder;
@@ -155,12 +174,14 @@ export class DomNodeLayer {
         element.dataset.nodeType = node.nodeType;
         element.style.position = "absolute";
         element.style.pointerEvents = "none";
+        if (renderer.interactive)
+            element.style.pointerEvents = "auto";
         element.style.boxSizing = "border-box";
         element.style.transformOrigin = "0 0";
         element.style.left = `${x}px`;
         element.style.top = `${y}px`;
-        element.style.width = `${node.width}px`;
-        element.style.height = `${node.height}px`;
+        element.style.width = `${frame.width}px`;
+        element.style.height = `${frame.height}px`;
         const view = {
             element,
             renderer,
@@ -169,6 +190,13 @@ export class DomNodeLayer {
             culled: false,
         };
         this.views.set(node.id, view);
+        this.syncPointerEvents(view);
+        if (renderer.interactiveDescendants && typeof MutationObserver !== "undefined") {
+            view.interactiveObserver = new MutationObserver(() => {
+                this.syncPointerEvents(view);
+            });
+            view.interactiveObserver.observe(element, { childList: true, subtree: true });
+        }
         this.applyZIndex(view, node);
         this.applyState(view, node);
         if (this.root)
@@ -183,6 +211,7 @@ export class DomNodeLayer {
         if (view.renderer.destroyView) {
             view.renderer.destroyView(this.createContext(node, 0, 0, view.element));
         }
+        view.interactiveObserver?.disconnect();
         view.element.remove();
         this.views.delete(nodeId);
     }
@@ -193,15 +222,18 @@ export class DomNodeLayer {
         if (!view || !node)
             return;
         const snapshot = view.snapshot;
-        const { x, y } = getWorldPosition(node.id, this.options.store.allNodesMap);
+        const frame = this.options.getPrimitiveFrame(node.id);
+        if (!frame)
+            return;
+        const { worldX: x, worldY: y } = frame;
         snapshot.x = x;
         snapshot.y = y;
-        snapshot.width = node.width;
-        snapshot.height = node.height;
+        snapshot.width = frame.width;
+        snapshot.height = frame.height;
         view.element.style.left = `${x}px`;
         view.element.style.top = `${y}px`;
-        view.element.style.width = `${node.width}px`;
-        view.element.style.height = `${node.height}px`;
+        view.element.style.width = `${frame.width}px`;
+        view.element.style.height = `${frame.height}px`;
         this.applyZIndex(view, node);
         this.applyState(view, node);
         view.renderer.updateView?.(this.createContext(node, x, y, view.element));
@@ -210,8 +242,8 @@ export class DomNodeLayer {
         return {
             x,
             y,
-            width: node.width,
-            height: node.height,
+            width: this.options.getPrimitiveFrame(node.id)?.width ?? node.width,
+            height: this.options.getPrimitiveFrame(node.id)?.height ?? node.height,
             zIndex: this.computeZIndex(node),
             selected: !!node.isSelected,
             locked: !!node.isLocked,
@@ -245,6 +277,19 @@ export class DomNodeLayer {
         const zIndex = this.computeZIndex(node);
         view.snapshot.zIndex = zIndex;
         view.element.style.zIndex = zIndex;
+    }
+    /**
+     * Keep the primitive surface transparent to the canvas. Only explicitly
+     * declared embedded controls may participate in native DOM interaction.
+     */
+    syncPointerEvents(view) {
+        const { element, renderer } = view;
+        element.style.pointerEvents = renderer.interactive ? "auto" : "none";
+        if (!renderer.interactiveDescendants)
+            return;
+        for (const control of element.querySelectorAll(renderer.interactiveDescendants)) {
+            control.style.pointerEvents = "auto";
+        }
     }
     applyState(view, node) {
         const snapshot = view.snapshot;
@@ -288,18 +333,20 @@ export class DomNodeLayer {
         return changed;
     }
     createContext(node, worldX, worldY, element) {
+        const frame = this.options.getPrimitiveFrame(node.id);
         return {
             node,
             element,
             worldX,
             worldY,
-            width: node.width,
-            height: node.height,
+            width: frame?.width ?? node.width,
+            height: frame?.height ?? node.height,
             isCollapsed: this.isNodeCollapsed(node),
             isSelected: !!node.isSelected,
             isLocked: !!node.isLocked,
             isDropTarget: !!node.isDropTarget,
             getNode: (id) => this.options.store.get(id),
+            stopGraphPropagation: (event) => event.stopPropagation(),
         };
     }
 }

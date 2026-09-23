@@ -8,6 +8,10 @@
 and renderer-neutral resolved geometry. See
 `changes-intrinsic-measurement-20260920.md`.
 
+**Latest architectural update:** 2026-09-23 — measurement-first primitive
+frames and top-left WebGL alignment diffs. See
+`changes-measurement-first-geometry-20260923.md`.
+
 **Scope:** `@graph-giraffe/core`, `@graph-giraffe/react`, and the Proctor v2 adapter
 
 **Related analysis:**
@@ -210,6 +214,14 @@ These rules govern all implementation work under this plan:
 11. **Measurement is not a second renderer.** Measurement templates are generated
     from descriptors and props and are used only to obtain intrinsic dimensions;
     they must not reuse visible primitive renderers.
+12. **Templates are dimension authorities.** Measurement templates consume the
+    primitive configuration shape and effective presentation state, never
+    already-resolved renderer dimensions. The core publishes a base scene frame,
+    a measured frame, and a cached translation/scale alignment diff; WebGL,
+    picking, handles, routing, DOM, and overlays consume that resolved frame.
+    The initial anchor is top-left. Growable container templates receive child
+    measurement inputs so core layout and measurement templates use the same
+    child-size/gap/padding rules.
 
 ## 5. Implementation phases
 
@@ -260,6 +272,11 @@ measurement provider is added. The provider is now implemented as a separate
 measurement-only template pipeline with input-key invalidation and
 `ResizeObserver` refresh; descriptors opt in through `measurementTemplate`, and
 visible `domRenderer` hooks are never invoked for measurement.
+
+The render boundary now blocks WebGL/DOM frame publication while required
+intrinsic measurements are unresolved and mounts `gg-loading-screen` during that
+phase. Measurement completion releases the gate; a two-second timeout falls back
+to declared dimensions so the editor cannot remain permanently blocked.
 
 ### Phase 2 — Generalize the primitive registry
 

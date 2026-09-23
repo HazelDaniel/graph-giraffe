@@ -1,4 +1,9 @@
-import type { NodeTypeDescriptor, NodeOverlayConfig } from "./node-type-registry.js";
+import type {
+  NodeTypeDescriptor,
+  NodeOverlayConfig,
+  PrimitiveMeasurementChild,
+  PrimitiveMeasurementTemplate,
+} from "./node-type-registry.js";
 import type { NodePropType } from "./types.js";
 import { NODE_LAYOUT, getSubgraphLinkLocal } from "./types.js";
 
@@ -29,12 +34,66 @@ function createDefaultProps(): NodePropType {
   };
 }
 
+/**
+ * Built-ins still own a measurement template even though their default
+ * geometry is known. This keeps the intrinsic-measurement contract active for
+ * DOM mode and gives adapters one consistent place to replace dimensions.
+ */
+function createBuiltinMeasurementTemplate(
+  fallback: { width: number; height: number },
+  getHeight?: (node: NodeDataForMeasurement) => number,
+  collapsedHeight?: number,
+  getContainerSize?: (children: readonly PrimitiveMeasurementChild[]) => {
+    width: number;
+    height: number;
+  }
+): PrimitiveMeasurementTemplate {
+  return ({ node, props, children, element, isCollapsed }) => {
+    const containerSize = getContainerSize?.(children);
+    const width = containerSize?.width ?? fallback.width;
+    const height = isCollapsed && collapsedHeight != null
+      ? collapsedHeight
+      : containerSize?.height ?? getHeight?.({ ...node, props }) ?? fallback.height;
+    element.style.boxSizing = "border-box";
+    element.style.width = `${width}px`;
+    element.style.height = `${Math.max(1, height)}px`;
+    return element;
+  };
+}
+
+function getVerticalContainerSize(
+  fallback: { width: number; height: number },
+  children: readonly PrimitiveMeasurementChild[]
+): { width: number; height: number } {
+  const paddingY = 50;
+  const paddingBottom = 40;
+  const gapY = 10;
+  const totalChildHeight = children.reduce((total, child) => total + child.height, 0);
+  const gaps = Math.max(0, children.length - 1) * gapY;
+  const maxChildWidth = children.reduce(
+    (maxWidth, child) => Math.max(maxWidth, child.width),
+    0
+  );
+
+  return {
+    width: Math.max(fallback.width, maxChildWidth),
+    height: Math.max(fallback.height, totalChildHeight + gaps + paddingY + paddingBottom),
+  };
+}
+
+type NodeDataForMeasurement = Parameters<NonNullable<NodeTypeDescriptor["calculateHeight"]>>[0];
+
 export const nodeDescriptor: NodeTypeDescriptor = {
   type: "node",
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 190, height: 150 },
   collapsedSize: { width: 190, height: NODE_LAYOUT.headerHeight },
+  measurementTemplate: createBuiltinMeasurementTemplate(
+    { width: 190, height: 150 },
+    (node) => nodeDescriptor.calculateHeight?.(node) ?? 150,
+    NODE_LAYOUT.headerHeight
+  ),
 
   handles: { always: true, sides: ["left", "right"], multiConnect: false },
   isConnectionCandidate: () => true,
@@ -75,6 +134,7 @@ export const hubDescriptor: NodeTypeDescriptor = {
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 240, height: 100 },
+  measurementTemplate: createBuiltinMeasurementTemplate({ width: 240, height: 100 }),
 
   handles: {
     always: true,
@@ -117,6 +177,12 @@ export const groupDescriptor: NodeTypeDescriptor = {
   category: "container",
   zTier: 0,
   defaultSize: { width: 220, height: 200 },
+  measurementTemplate: createBuiltinMeasurementTemplate(
+    { width: 220, height: 200 },
+    undefined,
+    undefined,
+    (children) => getVerticalContainerSize({ width: 220, height: 200 }, children)
+  ),
 
   handles: { always: false, sides: ["left", "right"], multiConnect: false },
   isConnectionCandidate: (mode) => mode === "group",
@@ -148,6 +214,12 @@ export const compositionDescriptor: NodeTypeDescriptor = {
   category: "container",
   zTier: 0.2,
   defaultSize: { width: 220, height: 200 },
+  measurementTemplate: createBuiltinMeasurementTemplate(
+    { width: 220, height: 200 },
+    undefined,
+    undefined,
+    (children) => getVerticalContainerSize({ width: 220, height: 200 }, children)
+  ),
 
   handles: { always: false, sides: ["left", "right"], multiConnect: false },
   isConnectionCandidate: (mode) => mode === "node",
@@ -178,6 +250,7 @@ export const compositionChildDescriptor: NodeTypeDescriptor = {
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 160, height: NODE_LAYOUT.headerHeight },
+  measurementTemplate: createBuiltinMeasurementTemplate({ width: 160, height: NODE_LAYOUT.headerHeight }),
 
   handles: { always: false, sides: [], multiConnect: false },
   isConnectionCandidate: () => false,
@@ -208,6 +281,11 @@ export const subgraphDescriptor: NodeTypeDescriptor = {
   zTier: -0.05,
   defaultSize: { width: 220, height: 160 },
   collapsedSize: { width: 190, height: NODE_LAYOUT.headerHeight },
+  measurementTemplate: createBuiltinMeasurementTemplate(
+    { width: 220, height: 160 },
+    undefined,
+    NODE_LAYOUT.headerHeight
+  ),
 
   handles: {
     always: true,
@@ -270,6 +348,7 @@ export const branchDescriptor: NodeTypeDescriptor = {
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 140, height: 120 },
+  measurementTemplate: createBuiltinMeasurementTemplate({ width: 140, height: 120 }),
 
   handles: {
     always: true,

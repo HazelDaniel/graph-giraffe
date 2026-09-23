@@ -1,10 +1,13 @@
 import type { GraphEventEmitter } from "./events.js";
 import type { NodeStore } from "./node-store.js";
 import type { NodeTypeRegistry } from "./node-type-registry.js";
+import type { PrimitiveFrame } from "./primitive-geometry.js";
 export interface DomNodeLayerOptions {
     store: NodeStore;
     registry: NodeTypeRegistry;
     events: GraphEventEmitter;
+    /** Resolved geometry shared with the WebGL/backend projection. */
+    getPrimitiveFrame: (nodeId: number) => PrimitiveFrame | undefined;
     /**
      * World-space anchor container. The layer nests its own root inside it so
      * every view inherits the container's camera transform (translate+scale),
@@ -68,6 +71,11 @@ export declare class DomNodeLayer {
     private isNodeCollapsed;
     private computeZIndex;
     private applyZIndex;
+    /**
+     * Keep the primitive surface transparent to the canvas. Only explicitly
+     * declared embedded controls may participate in native DOM interaction.
+     */
+    private syncPointerEvents;
     private applyState;
     /** Diff-based state sync; returns true when any slot changed. */
     private syncState;

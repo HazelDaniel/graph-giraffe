@@ -11,5 +11,8 @@ export interface HandleHit {
     handle: NodeHandleData;
     geometry: HandleScreenGeometry;
 }
-export declare function getHandleScreenGeometry(worldX: number, worldY: number, node: NodeData, handle: NodeHandleData, zoom: number, panX: number, panY: number): HandleScreenGeometry;
+export declare function getHandleScreenGeometry(worldX: number, worldY: number, node: NodeData, handle: NodeHandleData, zoom: number, panX: number, panY: number, dimensions?: {
+    width: number;
+    height: number;
+}): HandleScreenGeometry;
 export declare function isPointInsideHandle(screenX: number, screenY: number, geometry: HandleScreenGeometry): boolean;

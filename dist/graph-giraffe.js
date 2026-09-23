@@ -4777,12 +4777,31 @@ class Camera {
     __publicField(this, "panX", 0);
     __publicField(this, "panY", 0);
     __publicField(this, "zoom", 1);
+    __publicField(this, "_minZoom", 0.1);
+    __publicField(this, "_maxZoom", 5);
     __publicField(this, "_animating", false);
     __publicField(this, "_targetPanX", 0);
     __publicField(this, "_targetPanY", 0);
     __publicField(this, "_targetZoom", 1);
     __publicField(this, "_viewMatrix", new Matrix4());
     this.editor = editor;
+  }
+  get minZoom() {
+    return this._minZoom;
+  }
+  get maxZoom() {
+    return this._maxZoom;
+  }
+  setZoomRange(minZoom, maxZoom) {
+    if (!Number.isFinite(minZoom) || !Number.isFinite(maxZoom) || minZoom <= 0 || maxZoom < minZoom) {
+      throw new Error("Camera.setZoomRange: expected 0 < minZoom <= maxZoom");
+    }
+    this._minZoom = minZoom;
+    this._maxZoom = maxZoom;
+    this.zoom = this.clampZoom(this.zoom);
+  }
+  clampZoom(zoom) {
+    return Math.max(this._minZoom, Math.min(zoom, this._maxZoom));
   }
   /** Translate the viewport by (dx, dy) in screen pixels. */
   pan(dx, dy) {
@@ -4798,7 +4817,7 @@ class Camera {
     this._animating = false;
     const sensitivity = 1e-3;
     const factor = 1 - deltaY * sensitivity;
-    const newZoom = Math.max(0.1, Math.min(this.zoom * factor, 5));
+    const newZoom = this.clampZoom(this.zoom * factor);
     const scaleChange = newZoom / this.zoom;
     this.panX = mouseX - (mouseX - this.panX) * scaleChange;
     this.panY = mouseY - (mouseY - this.panY) * scaleChange;
@@ -4817,7 +4836,7 @@ class Camera {
     this._animating = false;
     this.panX = panX;
     this.panY = panY;
-    this.zoom = Math.max(0.1, Math.min(zoom, 5));
+    this.zoom = this.clampZoom(zoom);
     if (this.editor) {
       this.editor.cameraDirty = true;
     }
@@ -4851,7 +4870,7 @@ class Camera {
   animateTo(panX, panY, zoom) {
     this._targetPanX = panX;
     this._targetPanY = panY;
-    this._targetZoom = Math.max(0.1, Math.min(zoom, 5));
+    this._targetZoom = this.clampZoom(zoom);
     this._animating = true;
     if (this.editor) this.editor.cameraDirty = true;
   }
@@ -5037,29 +5056,31 @@ class EdgeStore {
     }
   }
 }
-function getHandleScreenGeometry(worldX, worldY, node, handle, zoom, panX, panY) {
+function getHandleScreenGeometry(worldX, worldY, node, handle, zoom, panX, panY, dimensions) {
   const originX = worldX * zoom + panX;
   const originY = worldY * zoom + panY;
   const radius = handle.style.size / 2;
-  let centerX = originX + node.width * zoom / 2;
-  let centerY = originY + node.height * zoom / 2;
+  const width = (dimensions == null ? void 0 : dimensions.width) ?? node.width;
+  const height = (dimensions == null ? void 0 : dimensions.height) ?? node.height;
+  let centerX = originX + width * zoom / 2;
+  let centerY = originY + height * zoom / 2;
   if (node.nodeType === "branch") {
     switch (handle.side) {
       case "top":
-        centerX = originX + node.width * zoom / 2;
+        centerX = originX + width * zoom / 2;
         centerY = originY + 8 * zoom - HANDLE_LAYOUT.offsetY;
         break;
       case "left":
-        centerX = originX + node.width * zoom * 0.2 - HANDLE_LAYOUT.offsetX;
-        centerY = originY + node.height * zoom * 0.55;
+        centerX = originX + width * zoom * 0.2 - HANDLE_LAYOUT.offsetX;
+        centerY = originY + height * zoom * 0.55;
         break;
       case "right":
-        centerX = originX + node.width * zoom * 0.8 + HANDLE_LAYOUT.offsetX;
-        centerY = originY + node.height * zoom * 0.55;
+        centerX = originX + width * zoom * 0.8 + HANDLE_LAYOUT.offsetX;
+        centerY = originY + height * zoom * 0.55;
         break;
       case "bottom":
         centerX = originX + node.width * zoom / 2;
-        centerY = originY + node.height * zoom + HANDLE_LAYOUT.offsetY;
+        centerY = originY + height * zoom + HANDLE_LAYOUT.offsetY;
         break;
     }
   } else {
@@ -5068,13 +5089,13 @@ function getHandleScreenGeometry(worldX, worldY, node, handle, zoom, panX, panY)
         centerX = originX - HANDLE_LAYOUT.offsetX;
         break;
       case "right":
-        centerX = originX + node.width * zoom + HANDLE_LAYOUT.offsetX;
+        centerX = originX + width * zoom + HANDLE_LAYOUT.offsetX;
         break;
       case "top":
         centerY = originY - HANDLE_LAYOUT.offsetY;
         break;
       case "bottom":
-        centerY = originY + node.height * zoom + HANDLE_LAYOUT.offsetY;
+        centerY = originY + height * zoom + HANDLE_LAYOUT.offsetY;
         break;
     }
   }
@@ -5095,7 +5116,7 @@ function isPointInsideHandle(screenX, screenY, geometry) {
   const halfSize = geometry.size / 2;
   return Math.abs(screenX - geometry.centerX) <= halfSize && Math.abs(screenY - geometry.centerY) <= halfSize;
 }
-function buildEdgeRouteGeometry(edge, store, camera) {
+function buildEdgeRouteGeometry(edge, store, camera, resolveDimensions) {
   const sourceNode = store.get(edge.sourceNodeId);
   const targetNode = store.get(edge.targetNodeId);
   if (!sourceNode || !targetNode) return null;
@@ -5106,8 +5127,8 @@ function buildEdgeRouteGeometry(edge, store, camera) {
     (handle) => handle.side === edge.targetHandleSide
   );
   if (!sourceHandle || !targetHandle) return null;
-  const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera);
-  const targetWorld = getHandleWorldPoint(targetNode.id, targetHandle, store, camera);
+  const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera, resolveDimensions);
+  const targetWorld = getHandleWorldPoint(targetNode.id, targetHandle, store, camera, resolveDimensions);
   const route = buildCubicRoute(
     sourceWorld,
     edge.sourceHandleSide,
@@ -5126,12 +5147,12 @@ function buildEdgeRouteGeometry(edge, store, camera) {
     arrowhead: edge.headType === "arrow" ? route.arrowhead : null
   };
 }
-function buildConnectionPreviewGeometry(sourceNodeId, sourceHandleSide, screenX, screenY, store, camera) {
+function buildConnectionPreviewGeometry(sourceNodeId, sourceHandleSide, screenX, screenY, store, camera, resolveDimensions) {
   const sourceNode = store.get(sourceNodeId);
   if (!sourceNode) return null;
   const sourceHandle = sourceNode.handles.find((handle) => handle.side === sourceHandleSide);
   if (!sourceHandle) return null;
-  const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera);
+  const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera, resolveDimensions);
   const targetWorld = camera.screenToWorld(screenX, screenY);
   const oppositeSide = getOppositeSide(sourceHandleSide);
   const route = buildOrthogonalRoute(sourceWorld, sourceHandleSide, targetWorld, oppositeSide);
@@ -5187,11 +5208,20 @@ function buildEdgeHeadGeometry(tip, previousPoint, tangentOverride) {
     tangent
   };
 }
-function getHandleWorldPoint(nodeId, handle, store, camera) {
+function getHandleWorldPoint(nodeId, handle, store, camera, resolveDimensions) {
   const node = store.get(nodeId);
   if (!node) return { x: 0, y: 0 };
   const { x, y } = getWorldPosition(node.id, store.allNodesMap);
-  const geometry = getHandleScreenGeometry(x, y, node, handle, camera.zoom, camera.panX, camera.panY);
+  const geometry = getHandleScreenGeometry(
+    x,
+    y,
+    node,
+    handle,
+    camera.zoom,
+    camera.panX,
+    camera.panY,
+    resolveDimensions == null ? void 0 : resolveDimensions(node.id)
+  );
   return camera.screenToWorld(geometry.centerX, geometry.centerY);
 }
 function getPolylineMidpoint(points) {
@@ -6952,8 +6982,65 @@ class IconBackgroundRenderer {
     this.indexCount = 0;
   }
 }
+function applyPrimitiveDiff(frame) {
+  return {
+    worldX: frame.baseWorldX + frame.diff.translateX,
+    worldY: frame.baseWorldY + frame.diff.translateY,
+    width: frame.baseWidth * frame.diff.scaleX,
+    height: frame.baseHeight * frame.diff.scaleY
+  };
+}
+function validDimension(value) {
+  return Number.isFinite(value) && value > 0;
+}
+class PrimitiveGeometry {
+  constructor() {
+    __publicField(this, "measurements", /* @__PURE__ */ new Map());
+  }
+  setIntrinsicMeasurement(id, measurement) {
+    if (!validDimension(measurement.width) || !validDimension(measurement.height)) {
+      throw new Error(`Invalid intrinsic measurement for primitive ${id}`);
+    }
+    this.measurements.set(id, {
+      width: measurement.width,
+      height: measurement.height,
+      revision: measurement.revision ?? 1
+    });
+  }
+  clearIntrinsicMeasurement(id) {
+    this.measurements.delete(id);
+  }
+  getIntrinsicMeasurement(id) {
+    return this.measurements.get(id);
+  }
+  resolve(node, worldX, worldY) {
+    const intrinsic = this.measurements.get(node.id);
+    const width = (intrinsic == null ? void 0 : intrinsic.width) ?? node.width;
+    const height = (intrinsic == null ? void 0 : intrinsic.height) ?? node.height;
+    return {
+      id: node.id,
+      baseWorldX: worldX,
+      baseWorldY: worldY,
+      baseWidth: node.width,
+      baseHeight: node.height,
+      worldX,
+      worldY,
+      width,
+      height,
+      revision: (intrinsic == null ? void 0 : intrinsic.revision) ?? 0,
+      diff: {
+        // Top-left anchoring preserves the scene-graph position while the
+        // scale correction expands/contracts the canonical quad.
+        translateX: 0,
+        translateY: 0,
+        scaleX: width / Math.max(node.width, 1),
+        scaleY: height / Math.max(node.height, 1)
+      }
+    };
+  }
+}
 class Renderer {
-  constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, getBgColor, getFontColor, getSelectedNodeIds, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry, renderMode = "webgl") {
+  constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, getBgColor, getFontColor, getSelectedNodeIds, getPrimitiveFrame, canRender, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry, renderMode = "webgl") {
     __publicField(this, "modelMatrix", new Matrix4());
     __publicField(this, "projMatrix", new Matrix4());
     __publicField(this, "textRenderer");
@@ -6963,6 +7050,12 @@ class Renderer {
     __publicField(this, "edgeVertexBuffer");
     __publicField(this, "edgeHeadBuffer");
     __publicField(this, "edgeHeadTextures");
+    __publicField(this, "resolveNodeDimensions", (nodeId) => {
+      const node = this.store.get(nodeId);
+      if (!node) return void 0;
+      const frame = this.frameFor(node);
+      return { width: frame.width, height: frame.height };
+    });
     __publicField(this, "edgeFrame", []);
     __publicField(this, "textureCache");
     __publicField(this, "isZooming", false);
@@ -6984,6 +7077,8 @@ class Renderer {
     this.getBgColor = getBgColor;
     this.getFontColor = getFontColor;
     this.getSelectedNodeIds = getSelectedNodeIds;
+    this.getPrimitiveFrame = getPrimitiveFrame;
+    this.canRender = canRender;
     this.onFrame = onFrame;
     this.msdfProgram = msdfProgram;
     this.iconBGProgram = iconBGProgram;
@@ -7023,6 +7118,30 @@ class Renderer {
       iconBGLocations
     );
   }
+  frameFor(node) {
+    const world = getWorldPosition(node.id, this.store.allNodesMap);
+    return this.getPrimitiveFrame(node.id) ?? {
+      id: node.id,
+      baseWorldX: world.x,
+      baseWorldY: world.y,
+      baseWidth: node.width,
+      baseHeight: node.height,
+      worldX: world.x,
+      worldY: world.y,
+      width: node.width,
+      height: node.height,
+      revision: 0,
+      diff: {
+        translateX: 0,
+        translateY: 0,
+        scaleX: 1,
+        scaleY: 1
+      }
+    };
+  }
+  quadFor(node) {
+    return applyPrimitiveDiff(this.frameFor(node));
+  }
   /** Call once after each canvas resize to update the orthographic projection. */
   resize(width, height, dpr = 1) {
     this.dpr = dpr;
@@ -7049,6 +7168,7 @@ class Renderer {
    * meaningful change and let an idle graph cost nothing.
    */
   renderFrame() {
+    if (!this.canRender()) return;
     this.drawBGFrame();
     this.drawFrame();
     this.onFrame();
@@ -7099,7 +7219,8 @@ class Renderer {
       preview.screenX,
       preview.screenY,
       this.store,
-      this.camera
+      this.camera,
+      this.resolveNodeDimensions
     );
     if (!route) return;
     this.labelCtx.save();
@@ -7166,8 +7287,9 @@ class Renderer {
       } else {
         if (node.nodeType !== "group") continue;
       }
-      const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
-      if (!this.isRectInViewport(x, y, node.width, node.height)) continue;
+      const frame = this.frameFor(node);
+      const { worldX: x, worldY: y, width, height } = frame;
+      if (!this.isRectInViewport(x, y, width, height)) continue;
       const screenPos = this.camera.worldToScreen(node.localX, node.localY);
       this.labelCtx.fillStyle = "#f8fafc";
       this.labelCtx.fillText(node.text, screenPos.x + 15, screenPos.y + 20);
@@ -7175,7 +7297,8 @@ class Renderer {
   }
   drawHandles(node) {
     if (!this.labelCtx || node.handles.length === 0) return;
-    const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
+    const frame = this.frameFor(node);
+    const { worldX: x, worldY: y } = frame;
     const zoom = this.camera.zoom;
     const { panX, panY } = this.camera;
     for (const handle of node.handles) {
@@ -7186,7 +7309,8 @@ class Renderer {
         handle,
         zoom,
         panX,
-        panY
+        panY,
+        { width: frame.width, height: frame.height }
       );
       drawHandle(this.labelCtx, handle, geometry.centerX, geometry.centerY);
     }
@@ -7215,19 +7339,26 @@ class Renderer {
       const edgeZ = (sourceZ + targetZ) / 2;
       const sPos = getWorldPosition(sourceNode.id, this.store.allNodesMap);
       const tPos = getWorldPosition(targetNode.id, this.store.allNodesMap);
+      const sourceFrame = this.frameFor(sourceNode);
+      const targetFrame = this.frameFor(targetNode);
       const minX = Math.min(sPos.x, tPos.x);
       const minY = Math.min(sPos.y, tPos.y);
       const maxX = Math.max(
-        sPos.x + sourceNode.width,
-        tPos.x + targetNode.width
+        sPos.x + sourceFrame.width,
+        tPos.x + targetFrame.width
       );
       const maxY = Math.max(
-        sPos.y + sourceNode.height,
-        tPos.y + targetNode.height
+        sPos.y + sourceFrame.height,
+        tPos.y + targetFrame.height
       );
       if (!this.isRectInViewport(minX, minY, maxX - minX, maxY - minY, 100))
         continue;
-      const geometry = buildEdgeRouteGeometry(edge, this.store, this.camera);
+      const geometry = buildEdgeRouteGeometry(
+        edge,
+        this.store,
+        this.camera,
+        this.resolveNodeDimensions
+      );
       if (!geometry || geometry.worldPoints.length < 2) continue;
       this.edgeFrame.push(geometry);
       if (edge.isSelected) continue;
@@ -7304,7 +7435,8 @@ class Renderer {
       const selectedGeometry = buildEdgeRouteGeometry(
         selectedEdge,
         this.store,
-        this.camera
+        this.camera,
+        this.resolveNodeDimensions
       );
       if (selectedGeometry) {
         this.drawSingleEdge(
@@ -7523,8 +7655,9 @@ class Renderer {
     );
     const selectedIds = this.getSelectedNodeIds();
     for (const node of this.store.visibleNodes()) {
-      const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
-      if (!this.isRectInViewport(x, y, node.width, node.height)) {
+      const frame = this.quadFor(node);
+      const { worldX: x, worldY: y, width, height } = frame;
+      if (!this.isRectInViewport(x, y, width, height)) {
         continue;
       }
       const z = this.store.getZForNode(node.id, selectedIds);
@@ -7576,6 +7709,8 @@ class Renderer {
   drawNode(node, worldX, worldY, z, picking) {
     var _a2, _b, _c, _d;
     const gl = this.gl;
+    const frame = this.quadFor(node);
+    const { width, height } = frame;
     if (picking) {
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
@@ -7587,7 +7722,7 @@ class Renderer {
         node.pickColor[2],
         1
       );
-      this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+      this.setModelMatrix(worldX, worldY, width, height, z);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
       return;
     }
@@ -7602,6 +7737,8 @@ class Renderer {
           node,
           worldX,
           worldY,
+          width,
+          height,
           z,
           renderer: this.getDrawAPI()
         };
@@ -7640,8 +7777,8 @@ class Renderer {
       this.setModelMatrix(
         worldX - 6,
         worldY - 6,
-        node.width + 12,
-        node.height + 12,
+        width + 12,
+        height + 12,
         z
       );
       gl.uniform1i(this.locations.u_UseTexture, 0);
@@ -7653,8 +7790,8 @@ class Renderer {
       this.setModelMatrix(
         worldX - 2,
         worldY - 2,
-        node.width + 4,
-        node.height + 4,
+        width + 4,
+        height + 4,
         z
       );
       gl.uniform1i(this.locations.u_UseTexture, 0);
@@ -7665,13 +7802,13 @@ class Renderer {
     }
     const bodyCache = this.textureCache.getTexture(node.textureIds.body);
     if (bodyCache) {
-      this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+      this.setModelMatrix(worldX, worldY, width, height, z);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, bodyCache.texture);
       gl.uniform1i(this.locations.u_UseTexture, 1);
       gl.uniform1i(this.locations.u_Use9Slice, 1);
       gl.uniform1i(this.locations.u_RenderMode, 0);
-      gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+      gl.uniform2f(this.locations.u_Dimensions, width, height);
       gl.uniform2f(
         this.locations.u_TextureSize,
         bodyCache.nativeWidth,
@@ -7682,26 +7819,26 @@ class Renderer {
       gl.uniform4f(this.locations.u_Color, 1, 1, 1, 1);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
-    let headHeight = node.height;
+    let headHeight = height;
     if (this.registry) {
       const desc = this.registry.get(node.nodeType);
-      headHeight = (desc == null ? void 0 : desc.category) === "leaf" ? NODE_LAYOUT.headerHeight : node.height;
+      headHeight = (desc == null ? void 0 : desc.category) === "leaf" ? NODE_LAYOUT.headerHeight : height;
     } else {
       if (node.nodeType === "node" || node.nodeType === "composition-child") {
         headHeight = NODE_LAYOUT.headerHeight;
       } else if (node.nodeType === "group" || node.nodeType === "composition") {
-        headHeight = node.height;
+        headHeight = height;
       }
     }
     const headCache = this.textureCache.getTexture(node.textureIds.head);
     if (headCache) {
-      this.setModelMatrix(worldX, worldY, node.width, headHeight, z);
+      this.setModelMatrix(worldX, worldY, width, headHeight, z);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, headCache.texture);
       gl.uniform1i(this.locations.u_UseTexture, 1);
       gl.uniform1i(this.locations.u_Use9Slice, 1);
       gl.uniform1i(this.locations.u_RenderMode, 0);
-      gl.uniform2f(this.locations.u_Dimensions, node.width, headHeight);
+      gl.uniform2f(this.locations.u_Dimensions, width, headHeight);
       gl.uniform2f(
         this.locations.u_TextureSize,
         headCache.nativeWidth,
@@ -7716,7 +7853,7 @@ class Renderer {
       const [r, g, b, _] = this.getFontColor();
       const isCollapsed = this.store.isNodeCollapsed(node);
       const headOnly = node.nodeType === "composition-child" || isCollapsed;
-      const titleY = (node.nodeType === "group" || node.nodeType === "composition") && !isCollapsed ? 20 : headOnly ? node.height / 2 : NODE_LAYOUT.headerHeight / 2;
+      const titleY = (node.nodeType === "group" || node.nodeType === "composition") && !isCollapsed ? 20 : headOnly ? height / 2 : NODE_LAYOUT.headerHeight / 2;
       if (node.nodeType === "node" || node.nodeType === "composition-child" || isCollapsed) {
         this.textRenderer.addText(
           node.text,
@@ -7732,7 +7869,7 @@ class Renderer {
         );
       }
       if (node.nodeType === "group") {
-        const lockX = node.width / 2;
+        const lockX = width / 2;
         const lockY = NODE_LAYOUT.lockBtnTopY;
         const isLocked = Boolean(node.isLocked);
         this.iconBackgroundRenderer.addQuad(
@@ -7766,8 +7903,8 @@ class Renderer {
         );
       }
       if (node.nodeType === "group" && !isCollapsed) {
-        const xPos = node.width / 2;
-        const yPos = node.height - NODE_LAYOUT.plusBtnPaddingBottom;
+        const xPos = width / 2;
+        const yPos = height - NODE_LAYOUT.plusBtnPaddingBottom;
         this.iconBackgroundRenderer.addQuad(
           worldX + xPos,
           worldY + yPos + 1.2,
@@ -7824,12 +7961,12 @@ class Renderer {
               gl.useProgram(this.program);
               for (let i = 0; i < Math.min(children.length, 5); i++) {
                 const child = children[i];
-                const childWidth = Math.min(child.width, node.width - 40);
+                const childWidth = Math.min(child.width, width - 40);
                 const childHeight = Math.max(
                   NODE_LAYOUT.headerHeight,
                   child.height
                 );
-                const x = worldX + (node.width - childWidth) / 2;
+                const x = worldX + (width - childWidth) / 2;
                 const y = worldY + yOffset;
                 const bodyCache2 = this.textureCache.getTexture(
                   child.textureIds.body
@@ -7931,7 +8068,7 @@ class Renderer {
           if (node.props) {
             let cursorY = worldY + NODE_LAYOUT.headerHeight + 16;
             const xLeft = worldX + NODE_LAYOUT.padding + 4;
-            const xRight = worldX + node.width - NODE_LAYOUT.padding - 4;
+            const xRight = worldX + width - NODE_LAYOUT.padding - 4;
             const boolU = node.props.booleans["ungrouped"];
             const textU = node.props.texts["ungrouped"];
             const enumU = node.props.enums["ungrouped"];
@@ -8168,6 +8305,7 @@ class Renderer {
   drawGenericRoundedRect(node, worldX, worldY, z, desc) {
     var _a2, _b, _c, _d;
     const gl = this.gl;
+    const { width, height } = this.frameFor(node);
     const config = desc.renderConfig;
     const radius = (config == null ? void 0 : config.radius) ?? 12;
     const borderWidth = (config == null ? void 0 : config.borderWidth) ?? 1.5;
@@ -8178,14 +8316,14 @@ class Renderer {
       this.setModelMatrix(
         worldX - 3,
         worldY - 3,
-        node.width + 6,
-        node.height + 6,
+        width + 6,
+        height + 6,
         z
       );
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
       gl.uniform1i(this.locations.u_RenderMode, 1);
-      gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
+      gl.uniform2f(this.locations.u_Dimensions, width + 6, height + 6);
       gl.uniform4f(
         this.locations.u_Color,
         node.isDropTarget ? 0.04 : 0.08,
@@ -8198,11 +8336,11 @@ class Renderer {
       gl.uniform1f(this.locations.u_Radius, isCollapsed ? 8 : radius);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
-    this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+    this.setModelMatrix(worldX, worldY, width, height, z);
     gl.uniform1i(this.locations.u_UseTexture, 0);
     gl.uniform1i(this.locations.u_Use9Slice, 0);
     gl.uniform1i(this.locations.u_RenderMode, 1);
-    gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+    gl.uniform2f(this.locations.u_Dimensions, width, height);
     gl.uniform4f(this.locations.u_Color, fillR, fillG, fillB, isCollapsed ? 0.9 : fillA);
     gl.uniform4f(this.locations.u_BorderColor, borderR, borderG, borderB, borderA);
     gl.uniform1f(this.locations.u_BorderWidth, isCollapsed ? borderWidth : borderWidth);
@@ -8213,11 +8351,11 @@ class Renderer {
       const slotPadding = 10;
       const iconSlotWidth = Math.max(
         48,
-        Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28)))
+        Math.min(Math.round(height * 0.62), Math.max(56, Math.round(width * 0.28)))
       );
-      const iconSlotHeight = Math.max(0, node.height - slotPadding * 2);
+      const iconSlotHeight = Math.max(0, height - slotPadding * 2);
       const iconCenterX = worldX + slotPadding + iconSlotWidth / 2;
-      const iconCenterY = worldY + node.height / 2;
+      const iconCenterY = worldY + height / 2;
       this.setModelMatrix(
         worldX + slotPadding,
         worldY + slotPadding,
@@ -8253,11 +8391,11 @@ class Renderer {
     if (overlayConfig) {
       let titleY;
       if (isCollapsed) {
-        titleY = node.height / 2;
+        titleY = height / 2;
       } else if (overlayConfig.titlePosition === "container-top") {
         titleY = 20;
       } else if (overlayConfig.titlePosition === "center") {
-        titleY = node.height / 2;
+        titleY = height / 2;
       } else {
         titleY = NODE_LAYOUT.headerHeight / 2;
       }
@@ -8265,10 +8403,10 @@ class Renderer {
       if (node.nodeType === "hub") {
         const iconSlotWidth = Math.max(
           48,
-          Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28)))
+          Math.min(Math.round(height * 0.62), Math.max(56, Math.round(width * 0.28)))
         );
         titleX = worldX + iconSlotWidth + NODE_LAYOUT.padding * 1.5;
-        titleY = node.height / 2;
+        titleY = height / 2;
       }
       if (overlayConfig.showTitle || isCollapsed) {
         this.textRenderer.addText(
@@ -8285,7 +8423,7 @@ class Renderer {
         );
       }
       if (overlayConfig.showLockIcon) {
-        const lockX = node.width / 2;
+        const lockX = width / 2;
         const lockY = NODE_LAYOUT.lockBtnTopY;
         const isLocked = Boolean(node.isLocked);
         this.iconBackgroundRenderer.addQuad(
@@ -8318,8 +8456,8 @@ class Renderer {
         );
       }
       if (overlayConfig.showAddIcon && !isCollapsed) {
-        const xPos = node.width / 2;
-        const yPos = node.height - NODE_LAYOUT.plusBtnPaddingBottom;
+        const xPos = width / 2;
+        const yPos = height - NODE_LAYOUT.plusBtnPaddingBottom;
         this.iconBackgroundRenderer.addQuad(
           worldX + xPos,
           worldY + yPos + 1.2,
@@ -8355,6 +8493,8 @@ class Renderer {
         node,
         worldX,
         worldY,
+        width,
+        height,
         z,
         isCollapsed,
         textRenderer: this.textRenderer,
@@ -8366,6 +8506,7 @@ class Renderer {
   }
   drawBranchNode(node, worldX, worldY, z, picking, desc) {
     const gl = this.gl;
+    const { width, height } = this.frameFor(node);
     const config = desc == null ? void 0 : desc.renderConfig;
     const radius = (config == null ? void 0 : config.radius) ?? 10;
     const borderWidth = (config == null ? void 0 : config.borderWidth) ?? 1.8;
@@ -8375,7 +8516,7 @@ class Renderer {
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
       gl.uniform1i(this.locations.u_RenderMode, 2);
-      gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+      gl.uniform2f(this.locations.u_Dimensions, width, height);
       gl.uniform4f(
         this.locations.u_Color,
         node.pickColor[0],
@@ -8386,7 +8527,7 @@ class Renderer {
       gl.uniform4f(this.locations.u_BorderColor, node.pickColor[0], node.pickColor[1], node.pickColor[2], 1);
       gl.uniform1f(this.locations.u_BorderWidth, 0);
       gl.uniform1f(this.locations.u_Radius, radius);
-      this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+      this.setModelMatrix(worldX, worldY, width, height, z);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
       gl.uniform1i(this.locations.u_RenderMode, 0);
       return;
@@ -8396,14 +8537,14 @@ class Renderer {
       this.setModelMatrix(
         worldX - 4,
         worldY - 4,
-        node.width + 8,
-        node.height + 8,
+        width + 8,
+        height + 8,
         z
       );
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
       gl.uniform1i(this.locations.u_RenderMode, 2);
-      gl.uniform2f(this.locations.u_Dimensions, node.width + 8, node.height + 8);
+      gl.uniform2f(this.locations.u_Dimensions, width + 8, height + 8);
       gl.uniform4f(
         this.locations.u_Color,
         node.isDropTarget ? 0.04 : 0.08,
@@ -8416,20 +8557,20 @@ class Renderer {
       gl.uniform1f(this.locations.u_Radius, radius);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
-    this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+    this.setModelMatrix(worldX, worldY, width, height, z);
     gl.uniform1i(this.locations.u_UseTexture, 0);
     gl.uniform1i(this.locations.u_Use9Slice, 0);
     gl.uniform1i(this.locations.u_RenderMode, 2);
-    gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+    gl.uniform2f(this.locations.u_Dimensions, width, height);
     gl.uniform4f(this.locations.u_Color, fillR, fillG, fillB, fillA);
     gl.uniform4f(this.locations.u_BorderColor, borderR, borderG, borderB, borderA);
     gl.uniform1f(this.locations.u_BorderWidth, borderWidth);
     gl.uniform1f(this.locations.u_Radius, radius);
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     gl.uniform1i(this.locations.u_RenderMode, 0);
-    const iconCenterX = worldX + node.width / 2;
-    const iconCenterY = worldY + node.height * 0.45;
-    const iconSize = Math.min(node.width, node.height) * 0.22;
+    const iconCenterX = worldX + width / 2;
+    const iconCenterY = worldY + height * 0.45;
+    const iconSize = Math.min(width, height) * 0.22;
     this.iconRenderer.addText(
       "",
       iconCenterX,
@@ -8442,10 +8583,10 @@ class Renderer {
       "center",
       "middle"
     );
-    const titleY = worldY + node.height * 0.68;
+    const titleY = worldY + height * 0.68;
     this.textRenderer.addText(
       node.text,
-      worldX + node.width / 2,
+      worldX + width / 2,
       titleY,
       12,
       r,
@@ -8458,20 +8599,21 @@ class Renderer {
   }
   drawSubgraphNode(node, worldX, worldY, z) {
     const gl = this.gl;
+    const { width, height } = this.frameFor(node);
     const [r, g, b, _] = this.getFontColor();
     const collapsed = Boolean(node.isCollapsed);
     if (node.isDropTarget || node.isSelected) {
       this.setModelMatrix(
         worldX - 3,
         worldY - 3,
-        node.width + 6,
-        node.height + 6,
+        width + 6,
+        height + 6,
         z
       );
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
       gl.uniform1i(this.locations.u_RenderMode, 1);
-      gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
+      gl.uniform2f(this.locations.u_Dimensions, width + 6, height + 6);
       gl.uniform4f(
         this.locations.u_Color,
         node.isDropTarget ? 0.04 : 0.08,
@@ -8484,18 +8626,18 @@ class Renderer {
       gl.uniform1f(this.locations.u_Radius, collapsed ? 8 : 12);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
-    this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+    this.setModelMatrix(worldX, worldY, width, height, z);
     gl.uniform1i(this.locations.u_UseTexture, 0);
     gl.uniform1i(this.locations.u_Use9Slice, 0);
     gl.uniform1i(this.locations.u_RenderMode, 1);
-    gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+    gl.uniform2f(this.locations.u_Dimensions, width, height);
     gl.uniform4f(this.locations.u_Color, 0.08, 0.09, 0.1, collapsed ? 0.9 : 0.22);
     gl.uniform4f(this.locations.u_BorderColor, 1, 1, 1, 0.9);
     gl.uniform1f(this.locations.u_BorderWidth, collapsed ? 1.5 : 2);
     gl.uniform1f(this.locations.u_Radius, collapsed ? 8 : 12);
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     gl.uniform1i(this.locations.u_RenderMode, 0);
-    const titleY = collapsed ? node.height / 2 : 20;
+    const titleY = collapsed ? height / 2 : 20;
     this.textRenderer.addText(
       node.text,
       worldX + NODE_LAYOUT.padding,
@@ -8511,6 +8653,7 @@ class Renderer {
   }
   drawHubNode(node, worldX, worldY, z, picking) {
     const gl = this.gl;
+    const { width, height } = this.frameFor(node);
     if (picking) {
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
@@ -8522,7 +8665,7 @@ class Renderer {
         node.pickColor[2],
         1
       );
-      this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+      this.setModelMatrix(worldX, worldY, width, height, z);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
       return;
     }
@@ -8530,25 +8673,25 @@ class Renderer {
     const slotPadding = 10;
     const iconSlotWidth = Math.max(
       48,
-      Math.min(Math.round(node.height * 0.62), Math.max(56, Math.round(node.width * 0.28)))
+      Math.min(Math.round(height * 0.62), Math.max(56, Math.round(width * 0.28)))
     );
-    const iconSlotHeight = Math.max(0, node.height - slotPadding * 2);
+    const iconSlotHeight = Math.max(0, height - slotPadding * 2);
     const iconCenterX = worldX + slotPadding + iconSlotWidth / 2;
-    const iconCenterY = worldY + node.height / 2;
+    const iconCenterY = worldY + height / 2;
     const labelX = worldX + iconSlotWidth + NODE_LAYOUT.padding * 1.5;
-    const titleY = node.height / 2;
+    const titleY = height / 2;
     if (node.isDropTarget || node.isSelected) {
       this.setModelMatrix(
         worldX - 3,
         worldY - 3,
-        node.width + 6,
-        node.height + 6,
+        width + 6,
+        height + 6,
         z
       );
       gl.uniform1i(this.locations.u_UseTexture, 0);
       gl.uniform1i(this.locations.u_Use9Slice, 0);
       gl.uniform1i(this.locations.u_RenderMode, 1);
-      gl.uniform2f(this.locations.u_Dimensions, node.width + 6, node.height + 6);
+      gl.uniform2f(this.locations.u_Dimensions, width + 6, height + 6);
       gl.uniform4f(
         this.locations.u_Color,
         node.isDropTarget ? 0.04 : 0.08,
@@ -8561,11 +8704,11 @@ class Renderer {
       gl.uniform1f(this.locations.u_Radius, 16);
       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
-    this.setModelMatrix(worldX, worldY, node.width, node.height, z);
+    this.setModelMatrix(worldX, worldY, width, height, z);
     gl.uniform1i(this.locations.u_UseTexture, 0);
     gl.uniform1i(this.locations.u_Use9Slice, 0);
     gl.uniform1i(this.locations.u_RenderMode, 1);
-    gl.uniform2f(this.locations.u_Dimensions, node.width, node.height);
+    gl.uniform2f(this.locations.u_Dimensions, width, height);
     gl.uniform4f(this.locations.u_Color, 0.08, 0.09, 0.1, 0.92);
     gl.uniform4f(this.locations.u_BorderColor, 1, 1, 1, 0.9);
     gl.uniform1f(this.locations.u_BorderWidth, 2);
@@ -9643,6 +9786,10 @@ class NodeTypeRegistry {
     var _a2;
     return (_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.domRenderer;
   }
+  getMeasurementTemplate(type) {
+    var _a2;
+    return (_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.measurementTemplate;
+  }
 }
 const Z_GROUP = 1e6;
 const Z_COMPOSITION = 2e6;
@@ -9660,6 +9807,20 @@ class DomNodeLayer {
       this.root.id = "gg-dom-nodes";
       this.root.style.cssText = "position:absolute; top:0; left:0; width:0; height:0; overflow:visible; pointer-events:none;";
       container.appendChild(this.root);
+      if (typeof this.root.addEventListener === "function") this.root.addEventListener("click", (event) => {
+        var _a2;
+        const target = event.target;
+        const host = (_a2 = target == null ? void 0 : target.closest) == null ? void 0 : _a2.call(target, "[data-node-id]");
+        if (!host || event.defaultPrevented) return;
+        const nodeId = Number(host.getAttribute("data-node-id"));
+        const node = this.options.store.get(nodeId);
+        if (!node) return;
+        this.options.events.dispatch("node:click", {
+          nodeId,
+          nodeType: node.nodeType,
+          event
+        });
+      });
     }
     this.unsubscribers.push(
       events.on("history:command", () => this.reconcile()),
@@ -9703,9 +9864,9 @@ class DomNodeLayer {
     for (const [id, view] of this.views) {
       const node = store.get(id);
       if (!node) continue;
-      const { x, y } = getWorldPosition(id, store.allNodesMap);
-      const width = node.width;
-      const height = node.height;
+      const frame = this.options.getPrimitiveFrame(id);
+      if (!frame) continue;
+      const { worldX: x, worldY: y, width, height } = frame;
       if (cull && !cull(x, y, width, height)) {
         if (!view.culled) {
           view.culled = true;
@@ -9767,7 +9928,9 @@ class DomNodeLayer {
     }
     const renderer = this.options.registry.getDomRenderer(node.nodeType);
     if (!renderer) return;
-    const { x, y } = getWorldPosition(node.id, this.options.store.allNodesMap);
+    const frame = this.options.getPrimitiveFrame(node.id);
+    if (!frame) return;
+    const { worldX: x, worldY: y } = frame;
     const placeholder = document.createElement("div");
     const ctx = this.createContext(node, x, y, placeholder);
     const element = renderer.createView(ctx) ?? placeholder;
@@ -9775,12 +9938,13 @@ class DomNodeLayer {
     element.dataset.nodeType = node.nodeType;
     element.style.position = "absolute";
     element.style.pointerEvents = "none";
+    if (renderer.interactive) element.style.pointerEvents = "auto";
     element.style.boxSizing = "border-box";
     element.style.transformOrigin = "0 0";
     element.style.left = `${x}px`;
     element.style.top = `${y}px`;
-    element.style.width = `${node.width}px`;
-    element.style.height = `${node.height}px`;
+    element.style.width = `${frame.width}px`;
+    element.style.height = `${frame.height}px`;
     const view = {
       element,
       renderer,
@@ -9789,18 +9953,27 @@ class DomNodeLayer {
       culled: false
     };
     this.views.set(node.id, view);
+    this.syncPointerEvents(view);
+    if (renderer.interactiveDescendants && typeof MutationObserver !== "undefined") {
+      view.interactiveObserver = new MutationObserver(() => {
+        this.syncPointerEvents(view);
+      });
+      view.interactiveObserver.observe(element, { childList: true, subtree: true });
+    }
     this.applyZIndex(view, node);
     this.applyState(view, node);
     if (this.root) this.root.appendChild(element);
     this.updateView(node.id);
   }
   destroyView(nodeId) {
+    var _a2;
     const view = this.views.get(nodeId);
     if (!view) return;
     const node = this.options.store.get(nodeId) ?? view.node;
     if (view.renderer.destroyView) {
       view.renderer.destroyView(this.createContext(node, 0, 0, view.element));
     }
+    (_a2 = view.interactiveObserver) == null ? void 0 : _a2.disconnect();
     view.element.remove();
     this.views.delete(nodeId);
   }
@@ -9811,25 +9984,28 @@ class DomNodeLayer {
     const node = this.options.store.get(nodeId);
     if (!view || !node) return;
     const snapshot = view.snapshot;
-    const { x, y } = getWorldPosition(node.id, this.options.store.allNodesMap);
+    const frame = this.options.getPrimitiveFrame(node.id);
+    if (!frame) return;
+    const { worldX: x, worldY: y } = frame;
     snapshot.x = x;
     snapshot.y = y;
-    snapshot.width = node.width;
-    snapshot.height = node.height;
+    snapshot.width = frame.width;
+    snapshot.height = frame.height;
     view.element.style.left = `${x}px`;
     view.element.style.top = `${y}px`;
-    view.element.style.width = `${node.width}px`;
-    view.element.style.height = `${node.height}px`;
+    view.element.style.width = `${frame.width}px`;
+    view.element.style.height = `${frame.height}px`;
     this.applyZIndex(view, node);
     this.applyState(view, node);
     (_b = (_a2 = view.renderer).updateView) == null ? void 0 : _b.call(_a2, this.createContext(node, x, y, view.element));
   }
   createSnapshot(node, x, y) {
+    var _a2, _b;
     return {
       x,
       y,
-      width: node.width,
-      height: node.height,
+      width: ((_a2 = this.options.getPrimitiveFrame(node.id)) == null ? void 0 : _a2.width) ?? node.width,
+      height: ((_b = this.options.getPrimitiveFrame(node.id)) == null ? void 0 : _b.height) ?? node.height,
       zIndex: this.computeZIndex(node),
       selected: !!node.isSelected,
       locked: !!node.isLocked,
@@ -9859,6 +10035,18 @@ class DomNodeLayer {
     const zIndex = this.computeZIndex(node);
     view.snapshot.zIndex = zIndex;
     view.element.style.zIndex = zIndex;
+  }
+  /**
+   * Keep the primitive surface transparent to the canvas. Only explicitly
+   * declared embedded controls may participate in native DOM interaction.
+   */
+  syncPointerEvents(view) {
+    const { element, renderer } = view;
+    element.style.pointerEvents = renderer.interactive ? "auto" : "none";
+    if (!renderer.interactiveDescendants) return;
+    for (const control of element.querySelectorAll(renderer.interactiveDescendants)) {
+      control.style.pointerEvents = "auto";
+    }
   }
   applyState(view, node) {
     const snapshot = view.snapshot;
@@ -9902,19 +10090,217 @@ class DomNodeLayer {
     return changed;
   }
   createContext(node, worldX, worldY, element) {
+    const frame = this.options.getPrimitiveFrame(node.id);
     return {
       node,
       element,
       worldX,
       worldY,
-      width: node.width,
-      height: node.height,
+      width: (frame == null ? void 0 : frame.width) ?? node.width,
+      height: (frame == null ? void 0 : frame.height) ?? node.height,
       isCollapsed: this.isNodeCollapsed(node),
       isSelected: !!node.isSelected,
       isLocked: !!node.isLocked,
       isDropTarget: !!node.isDropTarget,
-      getNode: (id) => this.options.store.get(id)
+      getNode: (id) => this.options.store.get(id),
+      stopGraphPropagation: (event) => event.stopPropagation()
     };
+  }
+}
+function measurementInputKey(node, isCollapsed, children = []) {
+  return JSON.stringify({
+    nodeType: node.nodeType,
+    text: node.text,
+    width: node.width,
+    height: node.height,
+    props: node.props,
+    isCollapsed,
+    children: children.map((child) => ({
+      id: child.node.id,
+      nodeType: child.node.nodeType,
+      props: child.props,
+      isCollapsed: child.isCollapsed,
+      width: child.width,
+      height: child.height
+    }))
+  });
+}
+function readDimension(element, axis) {
+  var _a2;
+  const rect = (_a2 = element.getBoundingClientRect) == null ? void 0 : _a2.call(element);
+  const rectValue = rect == null ? void 0 : rect[axis];
+  if (Number.isFinite(rectValue) && rectValue > 0) return rectValue;
+  const offsetValue = axis === "width" ? element.offsetWidth : element.offsetHeight;
+  return Number.isFinite(offsetValue) && offsetValue > 0 ? offsetValue : 0;
+}
+class PrimitiveMeasurementProvider {
+  constructor(registry, geometry, isCollapsed = (node) => Boolean(node.isCollapsed)) {
+    __publicField(this, "root", null);
+    __publicField(this, "entries", /* @__PURE__ */ new Map());
+    __publicField(this, "resizeObserver", null);
+    this.registry = registry;
+    this.geometry = geometry;
+    this.isCollapsed = isCollapsed;
+  }
+  setCollapseResolver(isCollapsed) {
+    this.isCollapsed = isCollapsed;
+  }
+  sync(nodes) {
+    const allNodes = [...nodes];
+    const nodesById = new Map(allNodes.map((node) => [node.id, node]));
+    const depths = /* @__PURE__ */ new Map();
+    let maxDepth = 0;
+    const depthOf = (node) => {
+      const cached = depths.get(node.id);
+      if (cached !== void 0) return cached;
+      const path = [];
+      const visiting = /* @__PURE__ */ new Set();
+      let current = node;
+      let baseDepth = -1;
+      while (current) {
+        const knownDepth = depths.get(current.id);
+        if (knownDepth !== void 0) {
+          baseDepth = knownDepth;
+          break;
+        }
+        if (visiting.has(current.id)) break;
+        visiting.add(current.id);
+        path.push(current);
+        current = current.parentId === null ? void 0 : nodesById.get(current.parentId);
+      }
+      for (let index = path.length - 1; index >= 0; index -= 1) {
+        baseDepth += 1;
+        depths.set(path[index].id, baseDepth);
+      }
+      return depths.get(node.id) ?? 0;
+    };
+    const nodesByDepth = /* @__PURE__ */ new Map();
+    for (const node of allNodes) {
+      const depth = depthOf(node);
+      maxDepth = Math.max(maxDepth, depth);
+      const bucket = nodesByDepth.get(depth) ?? [];
+      bucket.push(node);
+      nodesByDepth.set(depth, bucket);
+    }
+    const alive = /* @__PURE__ */ new Set();
+    for (let depth = maxDepth; depth >= 0; depth -= 1) {
+      for (const node of nodesByDepth.get(depth) ?? []) {
+        const template = this.registry.getMeasurementTemplate(node.nodeType);
+        if (!template || typeof document === "undefined") continue;
+        alive.add(node.id);
+        const existing = this.entries.get(node.id);
+        const isCollapsed = this.isCollapsed(node);
+        const children = this.getChildren(node, nodesById);
+        const inputKey = measurementInputKey(node, isCollapsed, children);
+        if (existing && existing.inputKey === inputKey) {
+          this.measure(existing);
+          continue;
+        }
+        if (existing) this.destroy(node.id);
+        this.mount(node, template, isCollapsed, children);
+      }
+    }
+    for (const id of [...this.entries.keys()]) {
+      if (!alive.has(id)) this.destroy(id);
+    }
+  }
+  refresh(nodeId) {
+    const entry = this.entries.get(nodeId);
+    if (entry) this.measure(entry);
+  }
+  isReady(nodes) {
+    for (const node of nodes) {
+      if (!this.registry.getMeasurementTemplate(node.nodeType)) continue;
+      const measurement = this.geometry.getIntrinsicMeasurement(node.id);
+      if (!measurement || measurement.width <= 0 || measurement.height <= 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+  dispose() {
+    var _a2, _b;
+    for (const id of [...this.entries.keys()]) this.destroy(id);
+    (_a2 = this.resizeObserver) == null ? void 0 : _a2.disconnect();
+    this.resizeObserver = null;
+    (_b = this.root) == null ? void 0 : _b.remove();
+    this.root = null;
+  }
+  ensureRoot() {
+    var _a2;
+    if (this.root) return this.root;
+    this.root = document.createElement("div");
+    this.root.dataset.ggPrimitiveMeasurement = "true";
+    this.root.style.cssText = "position:fixed; left:-100000px; top:-100000px; width:max-content; height:max-content; visibility:hidden; pointer-events:none; contain:layout style paint;";
+    (_a2 = document.body) == null ? void 0 : _a2.appendChild(this.root);
+    if (typeof ResizeObserver !== "undefined") {
+      this.resizeObserver = new ResizeObserver((entries) => {
+        for (const observation of entries) {
+          const match = [...this.entries.values()].find(
+            (entry) => entry.element === observation.target
+          );
+          if (match) this.measure(match);
+        }
+      });
+    }
+    return this.root;
+  }
+  mount(node, template, isCollapsed, children) {
+    var _a2;
+    const host = document.createElement("div");
+    host.style.cssText = "display:block; width:max-content; height:max-content;";
+    const element = template({
+      node,
+      props: node.props,
+      children,
+      element: host,
+      isCollapsed
+    });
+    element.dataset.ggPrimitiveMeasurementNode = String(node.id);
+    element.style.pointerEvents = "none";
+    this.ensureRoot().appendChild(element);
+    const entry = {
+      node,
+      element,
+      inputKey: measurementInputKey(node, isCollapsed, children),
+      revision: 0
+    };
+    this.entries.set(node.id, entry);
+    (_a2 = this.resizeObserver) == null ? void 0 : _a2.observe(element);
+    this.measure(entry);
+  }
+  getChildren(node, nodesById) {
+    return (node.childIds ?? []).map((childId) => nodesById.get(childId)).filter((child) => Boolean(child)).map((child) => {
+      const childCollapsed = this.isCollapsed(child);
+      const intrinsic = this.geometry.getIntrinsicMeasurement(child.id);
+      return {
+        node: child,
+        props: child.props,
+        isCollapsed: childCollapsed,
+        width: (intrinsic == null ? void 0 : intrinsic.width) ?? child.width,
+        height: (intrinsic == null ? void 0 : intrinsic.height) ?? child.height
+      };
+    });
+  }
+  measure(entry) {
+    const width = readDimension(entry.element, "width");
+    const height = readDimension(entry.element, "height");
+    if (width <= 0 || height <= 0) return;
+    entry.revision += 1;
+    this.geometry.setIntrinsicMeasurement(entry.node.id, {
+      width,
+      height,
+      revision: entry.revision
+    });
+  }
+  destroy(nodeId) {
+    var _a2;
+    const entry = this.entries.get(nodeId);
+    if (!entry) return;
+    (_a2 = this.resizeObserver) == null ? void 0 : _a2.unobserve(entry.element);
+    entry.element.remove();
+    this.entries.delete(nodeId);
+    this.geometry.clearIntrinsicMeasurement(nodeId);
   }
 }
 function createDefaultProps() {
@@ -9943,12 +10329,46 @@ function createDefaultProps() {
     }
   };
 }
+function createBuiltinMeasurementTemplate(fallback, getHeight, collapsedHeight, getContainerSize) {
+  return ({ node, props, children, element, isCollapsed }) => {
+    const containerSize = getContainerSize == null ? void 0 : getContainerSize(children);
+    const width = (containerSize == null ? void 0 : containerSize.width) ?? fallback.width;
+    const height = isCollapsed && collapsedHeight != null ? collapsedHeight : (containerSize == null ? void 0 : containerSize.height) ?? (getHeight == null ? void 0 : getHeight({ ...node, props })) ?? fallback.height;
+    element.style.boxSizing = "border-box";
+    element.style.width = `${width}px`;
+    element.style.height = `${Math.max(1, height)}px`;
+    return element;
+  };
+}
+function getVerticalContainerSize(fallback, children) {
+  const paddingY = 50;
+  const paddingBottom = 40;
+  const gapY = 10;
+  const totalChildHeight = children.reduce((total, child) => total + child.height, 0);
+  const gaps = Math.max(0, children.length - 1) * gapY;
+  const maxChildWidth = children.reduce(
+    (maxWidth, child) => Math.max(maxWidth, child.width),
+    0
+  );
+  return {
+    width: Math.max(fallback.width, maxChildWidth),
+    height: Math.max(fallback.height, totalChildHeight + gaps + paddingY + paddingBottom)
+  };
+}
 const nodeDescriptor = {
   type: "node",
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 190, height: 150 },
   collapsedSize: { width: 190, height: NODE_LAYOUT.headerHeight },
+  measurementTemplate: createBuiltinMeasurementTemplate(
+    { width: 190, height: 150 },
+    (node) => {
+      var _a2;
+      return ((_a2 = nodeDescriptor.calculateHeight) == null ? void 0 : _a2.call(nodeDescriptor, node)) ?? 150;
+    },
+    NODE_LAYOUT.headerHeight
+  ),
   handles: { always: true, sides: ["left", "right"], multiConnect: false },
   isConnectionCandidate: () => true,
   allowedParents: ["group", "subgraph"],
@@ -9983,6 +10403,7 @@ const hubDescriptor = {
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 240, height: 100 },
+  measurementTemplate: createBuiltinMeasurementTemplate({ width: 240, height: 100 }),
   handles: {
     always: true,
     sides: ["left", "right"],
@@ -10019,6 +10440,12 @@ const groupDescriptor = {
   category: "container",
   zTier: 0,
   defaultSize: { width: 220, height: 200 },
+  measurementTemplate: createBuiltinMeasurementTemplate(
+    { width: 220, height: 200 },
+    void 0,
+    void 0,
+    (children) => getVerticalContainerSize({ width: 220, height: 200 }, children)
+  ),
   handles: { always: false, sides: ["left", "right"], multiConnect: false },
   isConnectionCandidate: (mode) => mode === "group",
   allowedParents: ["subgraph"],
@@ -10045,6 +10472,12 @@ const compositionDescriptor = {
   category: "container",
   zTier: 0.2,
   defaultSize: { width: 220, height: 200 },
+  measurementTemplate: createBuiltinMeasurementTemplate(
+    { width: 220, height: 200 },
+    void 0,
+    void 0,
+    (children) => getVerticalContainerSize({ width: 220, height: 200 }, children)
+  ),
   handles: { always: false, sides: ["left", "right"], multiConnect: false },
   isConnectionCandidate: (mode) => mode === "node",
   allowedParents: ["group", "subgraph"],
@@ -10070,6 +10503,7 @@ const compositionChildDescriptor = {
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 160, height: NODE_LAYOUT.headerHeight },
+  measurementTemplate: createBuiltinMeasurementTemplate({ width: 160, height: NODE_LAYOUT.headerHeight }),
   handles: { always: false, sides: [], multiConnect: false },
   isConnectionCandidate: () => false,
   allowedParents: ["composition"],
@@ -10095,6 +10529,11 @@ const subgraphDescriptor = {
   zTier: -0.05,
   defaultSize: { width: 220, height: 160 },
   collapsedSize: { width: 190, height: NODE_LAYOUT.headerHeight },
+  measurementTemplate: createBuiltinMeasurementTemplate(
+    { width: 220, height: 160 },
+    void 0,
+    NODE_LAYOUT.headerHeight
+  ),
   handles: {
     always: true,
     sides: ["left", "right"],
@@ -10165,6 +10604,7 @@ const branchDescriptor = {
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 140, height: 120 },
+  measurementTemplate: createBuiltinMeasurementTemplate({ width: 140, height: 120 }),
   handles: {
     always: true,
     sides: ["top", "left", "right"],
@@ -10984,6 +11424,14 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "scalingOverlayContainer");
     __publicField(this, "fixedOverlayContainer");
     __publicField(this, "domNodeLayer", null);
+    __publicField(this, "primitiveGeometry", new PrimitiveGeometry());
+    __publicField(this, "primitiveMeasurements", new PrimitiveMeasurementProvider(
+      this.typeRegistry,
+      this.primitiveGeometry
+    ));
+    __publicField(this, "primitiveRenderReady", true);
+    __publicField(this, "measurementLoadingScreen", null);
+    __publicField(this, "measurementGatePromise", null);
     __publicField(this, "resizeObserver");
     __publicField(this, "activeTouches", /* @__PURE__ */ new Map());
     __publicField(this, "gestureMode", false);
@@ -11033,6 +11481,7 @@ const _NodeEditor = class _NodeEditor {
       }
     }
     this.camera = new Camera(this);
+    this.camera.setZoomRange(options.minZoom ?? 0.1, options.maxZoom ?? 5);
     this.store = new NodeStore(
       gl,
       this.connectionMode,
@@ -11040,6 +11489,9 @@ const _NodeEditor = class _NodeEditor {
       this.typeRegistry
     );
     this.edgeStore = new EdgeStore();
+    this.primitiveMeasurements.setCollapseResolver(
+      (node) => this.store.isNodeCollapsed(node)
+    );
     this.history = new HistoryStack();
     this.pickFBO = new PickFBO(gl, canvas.width, canvas.height);
   }
@@ -11068,8 +11520,21 @@ const _NodeEditor = class _NodeEditor {
     await this._instance.init();
     return this._instance;
   }
+  /**
+   * Release the singleton slot for framework adapters that own the editor's
+   * host DOM. The adapter must remove its container after calling this method.
+   * A future full dispose lifecycle can extend this without exposing internals.
+   */
+  static release() {
+    this._instance = null;
+  }
   async init() {
     var _a2;
+    this.events.on("history:command", () => this.syncPrimitiveMeasurements());
+    this.events.on("controlled:apply", () => this.syncPrimitiveMeasurements());
+    this.events.on("node:reparent", () => this.syncPrimitiveMeasurements());
+    this.events.on("subgraph:collapseToggle", () => this.syncPrimitiveMeasurements());
+    this.events.on("node:propChange", () => this.syncPrimitiveMeasurements());
     const canvas = document.getElementById(this.canvasId);
     const gl = canvas.getContext("webgl2");
     const program = createProgram(gl, this.vsSource, this.fsSource);
@@ -11112,11 +11577,18 @@ const _NodeEditor = class _NodeEditor {
     const fixedContainer = document.getElementById("gg-overlays-fixed");
     if (scalingContainer) this.scalingOverlayContainer = scalingContainer;
     if (fixedContainer) this.fixedOverlayContainer = fixedContainer;
+    this.syncPrimitiveMeasurements();
     if (this.renderMode === "dom") {
       this.domNodeLayer = new DomNodeLayer({
         store: this.store,
         registry: this.typeRegistry,
         events: this.events,
+        getPrimitiveFrame: (nodeId) => {
+          const node = this.store.get(nodeId);
+          if (!node) return void 0;
+          const world = getWorldPosition(nodeId, this.store.allNodesMap, this.typeRegistry);
+          return this.primitiveGeometry.resolve(node, world.x, world.y);
+        },
         container: this.scalingOverlayContainer
       });
       this.domNodeLayer.syncAll();
@@ -11139,6 +11611,8 @@ const _NodeEditor = class _NodeEditor {
       () => this.bgColor,
       () => this.fontColor,
       () => this.selectedNodeIds,
+      (nodeId) => this.getPrimitiveFrame(nodeId),
+      () => this.primitiveRenderReady,
       () => {
         var _a3;
         this.updateSelectionToolbarPosition();
@@ -11238,6 +11712,51 @@ const _NodeEditor = class _NodeEditor {
     this.syncToolbarState();
     this.refreshMinimap();
   }
+  syncPrimitiveMeasurements() {
+    if (!this.store) return;
+    this.primitiveMeasurements.sync(this.store.allNodesMap.values());
+    this.primitiveRenderReady = this.primitiveMeasurements.isReady(
+      this.store.allNodesMap.values()
+    );
+    if (!this.primitiveRenderReady) this.beginMeasurementGate();
+  }
+  beginMeasurementGate() {
+    if (this.measurementGatePromise) return;
+    const loading = this.ensureMeasurementLoadingScreen();
+    let resolveGate;
+    const gate = new Promise((resolve) => {
+      resolveGate = resolve;
+    });
+    this.measurementGatePromise = gate;
+    loading.promise = gate;
+    const startedAt = performance.now();
+    const poll = () => {
+      this.syncPrimitiveMeasurements();
+      const timedOut = performance.now() - startedAt >= 2e3;
+      if (this.primitiveRenderReady || timedOut) {
+        this.primitiveRenderReady = true;
+        this.measurementGatePromise = null;
+        resolveGate();
+        this.requestRender();
+        return;
+      }
+      requestAnimationFrame(poll);
+    };
+    requestAnimationFrame(poll);
+  }
+  ensureMeasurementLoadingScreen() {
+    if (this.measurementLoadingScreen) return this.measurementLoadingScreen;
+    const loading = document.createElement("gg-loading-screen");
+    document.body.appendChild(loading);
+    this.measurementLoadingScreen = loading;
+    return loading;
+  }
+  getPrimitiveFrame(nodeId) {
+    const node = this.store.get(nodeId);
+    if (!node) return void 0;
+    const world = getWorldPosition(nodeId, this.store.allNodesMap, this.typeRegistry);
+    return this.primitiveGeometry.resolve(node, world.x, world.y);
+  }
   setupPropGroupListener() {
     this.controls.nodePropGroup.addEventListener(
       "gg-prop-change",
@@ -11307,7 +11826,9 @@ const _NodeEditor = class _NodeEditor {
       handleStyle: config.handleStyle ?? DEFAULT_HANDLE_STYLE,
       assetsPath: config.assetsPath ?? "assets",
       minimap: config.minimap ?? true,
-      renderMode: config.renderMode ?? "webgl"
+      renderMode: config.renderMode ?? "webgl",
+      minZoom: config.minZoom ?? 0.1,
+      maxZoom: config.maxZoom ?? 5
     };
   }
   distance(p1, p2) {
@@ -11343,6 +11864,157 @@ const _NodeEditor = class _NodeEditor {
   setConnectionMode(connectionMode) {
     this.connectionMode = connectionMode;
     this.store.setConnectionMode(connectionMode);
+  }
+  /** Configure the runtime zoom range used by wheel, pinch, restore, and animation. */
+  setZoomRange(minZoom, maxZoom) {
+    this.camera.setZoomRange(minZoom, maxZoom);
+    this.cameraDirty = true;
+    this.requestRender();
+  }
+  getZoomRange() {
+    return { minZoom: this.camera.minZoom, maxZoom: this.camera.maxZoom };
+  }
+  /** Return a detached copy of the current graph projection. */
+  getNodes() {
+    return [...this.store.allNodesMap.values()].map((node) => ({
+      ...node,
+      textureIds: { ...node.textureIds },
+      childIds: [...node.childIds],
+      handles: node.handles.map((handle) => ({ ...handle, style: { ...handle.style } })),
+      props: cloneNodeProps(node.props),
+      subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : void 0
+    }));
+  }
+  /** Return a detached copy of the current edge projection. */
+  getEdges() {
+    return this.edgeStore.allEdges().map((edge) => ({ ...edge }));
+  }
+  /** Return one detached, renderer-neutral view of the complete graph. */
+  getGraph() {
+    return { nodes: this.getNodes(), edges: this.getEdges() };
+  }
+  /**
+   * Apply a host-owned graph projection without creating history entries.
+   * Adapters use this to implement controlled React/Vue/Svelte integrations.
+   */
+  applyControlledGraph(nodes, edges) {
+    var _a2, _b, _c;
+    const nodeIds = /* @__PURE__ */ new Set();
+    for (const input of nodes) {
+      if (nodeIds.has(input.id)) throw new Error(`Duplicate controlled node id: ${input.id}`);
+      if (!this.typeRegistry.has(input.nodeType)) throw new Error(`Unknown controlled node type: ${input.nodeType}`);
+      nodeIds.add(input.id);
+    }
+    for (const input of nodes) {
+      if (input.parentId != null && !nodeIds.has(input.parentId)) {
+        throw new Error(`Controlled node ${input.id} references missing parent ${input.parentId}`);
+      }
+      const parentType = input.parentId == null ? null : ((_a2 = nodes.find((node) => node.id === input.parentId)) == null ? void 0 : _a2.nodeType) ?? null;
+      if (!this.typeRegistry.canReparentTo(input.nodeType, parentType)) {
+        throw new Error(`Invalid controlled parent ${input.parentId ?? "root"} for node ${input.id}`);
+      }
+    }
+    for (const input of nodes) {
+      const seen = /* @__PURE__ */ new Set();
+      let parentId = input.parentId ?? null;
+      while (parentId !== null) {
+        if (seen.has(parentId) || parentId === input.id) {
+          throw new Error(`Controlled graph contains a parent cycle at node ${input.id}`);
+        }
+        seen.add(parentId);
+        parentId = ((_b = nodes.find((node) => node.id === parentId)) == null ? void 0 : _b.parentId) ?? null;
+      }
+    }
+    const edgeIds = /* @__PURE__ */ new Set();
+    for (const edge of edges) {
+      if (edgeIds.has(edge.id)) throw new Error(`Duplicate controlled edge id: ${edge.id}`);
+      if (!nodeIds.has(edge.sourceNodeId) || !nodeIds.has(edge.targetNodeId)) {
+        throw new Error(`Controlled edge ${edge.id} references a missing node`);
+      }
+      if (edge.sourceNodeId === edge.targetNodeId) {
+        throw new Error(`Controlled edge ${edge.id} cannot connect a node to itself`);
+      }
+      const source = nodes.find((node) => node.id === edge.sourceNodeId);
+      const target = nodes.find((node) => node.id === edge.targetNodeId);
+      if (!this.typeRegistry.isValidConnectionSide(source.nodeType, edge.sourceHandleSide, "source") || !this.typeRegistry.isValidConnectionSide(target.nodeType, edge.targetHandleSide, "target")) {
+        throw new Error(`Controlled edge ${edge.id} uses an invalid handle side`);
+      }
+      edgeIds.add(edge.id);
+    }
+    this.store.clear();
+    this.edgeStore.clear();
+    for (const input of nodes) {
+      const node = this.store.add(
+        input.position.x,
+        input.position.y,
+        input.label ?? input.nodeType,
+        this.theme,
+        input.nodeType,
+        input.id
+      );
+      node.width = input.width ?? node.width;
+      node.height = input.height ?? node.height;
+      node.props = cloneNodeProps(input.props ?? node.props);
+      node.isLocked = input.isLocked ?? false;
+      node.isCollapsed = input.isCollapsed ?? false;
+      if (input.textureIds) node.textureIds = { ...input.textureIds };
+    }
+    for (const input of nodes) {
+      if (input.parentId != null && !this.store.setParent(input.id, input.parentId)) {
+        throw new Error(`Invalid controlled parent ${input.parentId} for node ${input.id}`);
+      }
+    }
+    const controlledById = new Map(nodes.map((input) => [input.id, input]));
+    const parentFrame = (nodeId) => {
+      const node = controlledById.get(nodeId);
+      if ((node == null ? void 0 : node.parentId) == null) return { x: 0, y: 0 };
+      const parent = controlledById.get(node.parentId);
+      if (!parent) return { x: 0, y: 0 };
+      const descriptor = this.typeRegistry.get(parent.nodeType);
+      if ((descriptor == null ? void 0 : descriptor.contributesToChildWorldPosition) === false) {
+        return parentFrame(parent.id);
+      }
+      return { x: parent.position.x, y: parent.position.y };
+    };
+    for (const input of nodes) {
+      const node = this.store.get(input.id);
+      if (!node) continue;
+      const frame = parentFrame(input.id);
+      node.localX = input.position.x - frame.x;
+      node.localY = input.position.y - frame.y;
+      this.store.syncNodePresentation(node.id);
+      if (!this.store.isNodeCollapsed(node)) {
+        if (input.width !== void 0) node.width = input.width;
+        if (input.height !== void 0) node.height = input.height;
+      }
+    }
+    for (const input of edges) {
+      const source = this.store.get(input.sourceNodeId);
+      const target = this.store.get(input.targetNodeId);
+      const edge = this.edgeStore.add({
+        idOverride: input.id,
+        sourceNodeId: input.sourceNodeId,
+        sourceHandleSide: input.sourceHandleSide,
+        targetNodeId: input.targetNodeId,
+        targetHandleSide: input.targetHandleSide,
+        sourceCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(source.nodeType),
+        targetCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(target.nodeType),
+        edgeType: input.edgeType,
+        headType: input.headType,
+        headSkinId: input.headSkinId,
+        label: input.label
+      });
+      if (edge) {
+        this.syncHandleStates(edge.sourceNodeId);
+        this.syncHandleStates(edge.targetNodeId);
+      }
+    }
+    this.clearSelectionState();
+    this.history.clear();
+    (_c = this.domNodeLayer) == null ? void 0 : _c.syncAll();
+    this.markMinimapDirty();
+    this.events.dispatch("controlled:apply", { nodeIds: [...nodeIds], edgeIds: [...edgeIds] });
+    this.requestRender();
   }
   /**
    * Serialize the full graph state into a portable JSON-compatible snapshot.
@@ -11480,6 +12152,17 @@ const _NodeEditor = class _NodeEditor {
       zoom: this.camera.zoom
     };
   }
+  /** Set the viewport immediately, respecting the configured zoom range. */
+  setViewport(panX, panY, zoom) {
+    this.camera.setState(panX, panY, zoom);
+    this.cameraDirty = true;
+    this.requestRender();
+  }
+  /** Resolve a node's world-space position through the scene graph. */
+  getNodeWorldPosition(id) {
+    if (!this.store.get(id)) return void 0;
+    return getWorldPosition(id, this.store.allNodesMap, this.typeRegistry);
+  }
   /**
    * Imperatively animate (lerp) the camera so the given world coordinate lands
    * at a screen position — by default the center of the canvas. Optionally
@@ -11522,6 +12205,59 @@ const _NodeEditor = class _NodeEditor {
       );
     }
     return this.createNodeWithHistory(nodeType, worldX, worldY, parentId, label);
+  }
+  /**
+   * Create an edge through the public command path.
+   *
+   * Adapters must use this instead of reaching into EdgeStore. Connection
+   * validation, before-hooks, composition semantics, handle state, history,
+   * and the public connect event all remain owned by the editor.
+   */
+  async addEdge(params) {
+    const sourceNode = this.store.get(params.sourceNodeId);
+    const targetNode = this.store.get(params.targetNodeId);
+    if (!sourceNode || !targetNode) return null;
+    if (!this.isValidConnection(
+      params.sourceNodeId,
+      params.sourceHandleSide,
+      params.targetNodeId,
+      params.targetHandleSide
+    )) return null;
+    const allowed = await this.events.dispatchBefore("before:connect", {
+      sourceId: params.sourceNodeId,
+      sourceType: sourceNode.nodeType,
+      targetId: params.targetNodeId,
+      targetType: targetNode.nodeType,
+      sourceHandleSide: params.sourceHandleSide,
+      targetHandleSide: params.targetHandleSide
+    });
+    if (!allowed) return null;
+    const edge = this.edgeStore.add({
+      ...params,
+      sourceCanHaveMultipleConnections: params.sourceCanHaveMultipleConnections ?? this.typeRegistry.allowsMultiConnect(sourceNode.nodeType),
+      targetCanHaveMultipleConnections: params.targetCanHaveMultipleConnections ?? this.typeRegistry.allowsMultiConnect(targetNode.nodeType)
+    });
+    if (!edge) return null;
+    this.syncHandleStates(edge.sourceNodeId);
+    this.syncHandleStates(edge.targetNodeId);
+    this.applyCompositionReferenceForEdge(edge);
+    this.pushCommand(new ConnectCommand({ edgeSnapshot: { ...edge } }));
+    this.events.dispatch("connect", {
+      sourceId: edge.sourceNodeId,
+      sourceType: sourceNode.nodeType,
+      targetId: edge.targetNodeId,
+      targetType: targetNode.nodeType,
+      edgeId: edge.id
+    });
+    return edge;
+  }
+  /** Remove a node tree through the public command path. */
+  async removeNode(nodeId) {
+    await this.deleteNodeTreeWithHistory(nodeId);
+  }
+  /** Remove an edge through the public command path. */
+  removeEdge(edgeId) {
+    return this.deleteEdgeWithHistory(edgeId);
   }
   /**
    * Synchronize overlay container transforms with current camera pan and zoom.
@@ -11614,8 +12350,10 @@ const _NodeEditor = class _NodeEditor {
   handleResize(canvas) {
     const rect = canvas.getBoundingClientRect();
     this.dpr = typeof window !== "undefined" ? Math.max(1, window.devicePixelRatio || 1) : 1;
-    const physicalWidth = Math.round(rect.width * this.dpr);
-    const physicalHeight = Math.round(rect.height * this.dpr);
+    const cssWidth = Math.max(1, rect.width);
+    const cssHeight = Math.max(1, rect.height);
+    const physicalWidth = Math.max(1, Math.round(cssWidth * this.dpr));
+    const physicalHeight = Math.max(1, Math.round(cssHeight * this.dpr));
     canvas.width = physicalWidth;
     canvas.height = physicalHeight;
     this.renderer.resize(physicalWidth, physicalHeight, this.dpr);
@@ -12488,7 +13226,7 @@ const _NodeEditor = class _NodeEditor {
   }
   deleteEdgeWithHistory(edgeId) {
     const edge = this.edgeStore.get(edgeId);
-    if (!edge) return;
+    if (!edge) return null;
     this.activeLabelEdit = null;
     const selectionBefore = this.captureSelectionSnapshot();
     const snapshot = { ...edge };
@@ -12503,6 +13241,7 @@ const _NodeEditor = class _NodeEditor {
         selectionBefore
       })
     );
+    return edge;
   }
   async deleteCurrentSelectionWithHistory() {
     let nodeIds = [...this.selectedNodeIds];
@@ -12815,6 +13554,7 @@ const _NodeEditor = class _NodeEditor {
       if (!isCandidateNodeType(node.nodeType, this.connectionMode, this.typeRegistry)) continue;
       if (node.handles.length === 0) continue;
       const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
+      const frame = this.getPrimitiveFrame(node.id);
       for (const handle of node.handles) {
         const geometry = getHandleScreenGeometry(
           x,
@@ -12823,7 +13563,8 @@ const _NodeEditor = class _NodeEditor {
           handle,
           this.camera.zoom,
           this.camera.panX,
-          this.camera.panY
+          this.camera.panY,
+          frame ? { width: frame.width, height: frame.height } : void 0
         );
         if (isPointInsideHandle(screenX, screenY, geometry)) {
           return {
@@ -13370,7 +14111,9 @@ const _NodeEditor = class _NodeEditor {
             sourceId: source.sourceNodeId,
             sourceType: sourceNode.nodeType,
             targetId: target.nodeId,
-            targetType: targetNode.nodeType
+            targetType: targetNode.nodeType,
+            sourceHandleSide: source.sourceHandleSide,
+            targetHandleSide: target.handle.side
           });
           if (!allowed) {
             this.activeConnectionDrag = null;
@@ -13867,7 +14610,11 @@ const _NodeEditor = class _NodeEditor {
       const geometry = buildEdgeRouteGeometry(
         edges[i],
         this.store,
-        this.camera
+        this.camera,
+        (nodeId) => {
+          const frame = this.getPrimitiveFrame(nodeId);
+          return frame ? { width: frame.width, height: frame.height } : void 0;
+        }
       );
       if (!geometry) continue;
       const sourceNode = this.store.get(edges[i].sourceNodeId);
@@ -14770,6 +15517,7 @@ export {
   NODE_SIZE,
   NodeEditor,
   NodeTypeRegistry,
+  PrimitiveMeasurementProvider,
   SelectionToolbar,
   SHELL as Shell,
   TextureRegistry,

@@ -83,6 +83,8 @@ export interface DomNodeViewContext {
    * clone's original label). Undefined when the layer has no store access.
    */
   getNode?: (id: number) => NodeData | undefined;
+  /** Mark an embedded control as handled by the skin rather than the graph. */
+  stopGraphPropagation?: (event: Event) => void;
 }
 
 /**
@@ -97,6 +99,14 @@ export interface DomNodeViewContext {
  */
 export interface DomNodeRenderer {
   createView(ctx: DomNodeViewContext): HTMLElement;
+  /** Opt into DOM-authoritative pointer interaction for this node type. */
+  interactive?: boolean;
+  /**
+   * CSS selector for controls inside a presentational DOM view that should
+   * receive native pointer events. The primitive surface remains transparent
+   * to preserve WebGL picking and dragging.
+   */
+  interactiveDescendants?: string;
   updateView?(ctx: DomNodeViewContext): void;
   destroyView?(ctx: DomNodeViewContext): void;
 }
@@ -104,7 +114,21 @@ export interface DomNodeRenderer {
 /** Context for a measurement-only shadow template. */
 export interface PrimitiveMeasurementTemplateContext {
   node: NodeData;
+  /** Configuration shape shared by every renderer of this primitive. */
+  props: NodePropType | undefined;
+  /** Child inputs supplied for growable container measurement templates. */
+  children: readonly PrimitiveMeasurementChild[];
   element: HTMLElement;
+  /** Effective presented state, including derived collapse from containment. */
+  isCollapsed: boolean;
+}
+
+export interface PrimitiveMeasurementChild {
+  node: NodeData;
+  props: NodePropType | undefined;
+  isCollapsed: boolean;
+  width: number;
+  height: number;
 }
 
 /**

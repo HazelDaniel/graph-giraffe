@@ -12,6 +12,8 @@ export class Camera {
   panX: number = 0;
   panY: number = 0;
   zoom: number = 1;
+  private _minZoom = 0.1;
+  private _maxZoom = 5;
 
   private _animating = false;
   private _targetPanX: number = 0;
@@ -21,6 +23,22 @@ export class Camera {
   private _viewMatrix: Matrix4 = new Matrix4();
 
   constructor(private readonly editor?: NodeEditor) {}
+
+  get minZoom(): number { return this._minZoom; }
+  get maxZoom(): number { return this._maxZoom; }
+
+  setZoomRange(minZoom: number, maxZoom: number): void {
+    if (!Number.isFinite(minZoom) || !Number.isFinite(maxZoom) || minZoom <= 0 || maxZoom < minZoom) {
+      throw new Error("Camera.setZoomRange: expected 0 < minZoom <= maxZoom");
+    }
+    this._minZoom = minZoom;
+    this._maxZoom = maxZoom;
+    this.zoom = this.clampZoom(this.zoom);
+  }
+
+  private clampZoom(zoom: number): number {
+    return Math.max(this._minZoom, Math.min(zoom, this._maxZoom));
+  }
 
   /** Translate the viewport by (dx, dy) in screen pixels. */
   pan(dx: number, dy: number): void {
@@ -37,7 +55,7 @@ export class Camera {
     this._animating = false;
     const sensitivity = 0.001;
     const factor = 1.0 - deltaY * sensitivity;
-    const newZoom = Math.max(0.1, Math.min(this.zoom * factor, 5.0));
+    const newZoom = this.clampZoom(this.zoom * factor);
     const scaleChange = newZoom / this.zoom;
     // Adjust pan so the point under the cursor remains stationary
     this.panX = mouseX - (mouseX - this.panX) * scaleChange;
@@ -59,7 +77,7 @@ export class Camera {
     this._animating = false;
     this.panX = panX;
     this.panY = panY;
-    this.zoom = Math.max(0.1, Math.min(zoom, 5.0));
+    this.zoom = this.clampZoom(zoom);
     if (this.editor) {
       this.editor.cameraDirty = true;
     }
@@ -96,7 +114,7 @@ export class Camera {
   animateTo(panX: number, panY: number, zoom: number): void {
     this._targetPanX = panX;
     this._targetPanY = panY;
-    this._targetZoom = Math.max(0.1, Math.min(zoom, 5.0));
+    this._targetZoom = this.clampZoom(zoom);
     this._animating = true;
     if (this.editor) this.editor.cameraDirty = true;
   }

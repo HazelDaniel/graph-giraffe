@@ -13,6 +13,10 @@ describe("PrimitiveGeometry", () => {
     const geometry = new PrimitiveGeometry();
 
     expect(geometry.resolve(node, 12, 20)).toMatchObject({
+      baseWorldX: 12,
+      baseWorldY: 20,
+      baseWidth: 190,
+      baseHeight: 150,
       worldX: 12,
       worldY: 20,
       width: 190,
@@ -31,8 +35,8 @@ describe("PrimitiveGeometry", () => {
       height: 96,
       revision: 3,
       diff: {
-        translateX: 12,
-        translateY: 20,
+        translateX: 0,
+        translateY: 0,
         scaleX: 240 / 190,
         scaleY: 96 / 150,
       },

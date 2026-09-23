@@ -1,29 +1,31 @@
 import { HANDLE_LAYOUT } from './types.js';
-export function getHandleScreenGeometry(worldX, worldY, node, handle, zoom, panX, panY) {
+export function getHandleScreenGeometry(worldX, worldY, node, handle, zoom, panX, panY, dimensions) {
     const originX = worldX * zoom + panX;
     const originY = worldY * zoom + panY;
     const radius = handle.style.size / 2;
-    let centerX = originX + (node.width * zoom) / 2;
-    let centerY = originY + (node.height * zoom) / 2;
+    const width = dimensions?.width ?? node.width;
+    const height = dimensions?.height ?? node.height;
+    let centerX = originX + (width * zoom) / 2;
+    let centerY = originY + (height * zoom) / 2;
     if (node.nodeType === "branch") {
         switch (handle.side) {
             case "top":
-                centerX = originX + (node.width * zoom) / 2;
+                centerX = originX + (width * zoom) / 2;
                 centerY = originY + 8 * zoom - HANDLE_LAYOUT.offsetY;
                 break;
             case "left":
                 // Anchored on left sloped edge (~20% from left, ~55% down)
-                centerX = originX + (node.width * zoom) * 0.20 - HANDLE_LAYOUT.offsetX;
-                centerY = originY + (node.height * zoom) * 0.55;
+                centerX = originX + (width * zoom) * 0.20 - HANDLE_LAYOUT.offsetX;
+                centerY = originY + (height * zoom) * 0.55;
                 break;
             case "right":
                 // Anchored on right sloped edge (~80% from left, ~55% down)
-                centerX = originX + (node.width * zoom) * 0.80 + HANDLE_LAYOUT.offsetX;
-                centerY = originY + (node.height * zoom) * 0.55;
+                centerX = originX + (width * zoom) * 0.80 + HANDLE_LAYOUT.offsetX;
+                centerY = originY + (height * zoom) * 0.55;
                 break;
             case "bottom":
                 centerX = originX + (node.width * zoom) / 2;
-                centerY = originY + node.height * zoom + HANDLE_LAYOUT.offsetY;
+                centerY = originY + height * zoom + HANDLE_LAYOUT.offsetY;
                 break;
         }
     }
@@ -33,13 +35,13 @@ export function getHandleScreenGeometry(worldX, worldY, node, handle, zoom, panX
                 centerX = originX - HANDLE_LAYOUT.offsetX;
                 break;
             case "right":
-                centerX = originX + node.width * zoom + HANDLE_LAYOUT.offsetX;
+                centerX = originX + width * zoom + HANDLE_LAYOUT.offsetX;
                 break;
             case "top":
                 centerY = originY - HANDLE_LAYOUT.offsetY;
                 break;
             case "bottom":
-                centerY = originY + node.height * zoom + HANDLE_LAYOUT.offsetY;
+                centerY = originY + height * zoom + HANDLE_LAYOUT.offsetY;
                 break;
         }
     }

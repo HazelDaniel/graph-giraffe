@@ -28,7 +28,10 @@ import { getIconBGLocations, getMSDFShaderLocations } from "./shader.js";
 import { MsdfAtlas, MsdfTextRenderer } from "./msdf-text.js";
 import { IconBackgroundRenderer } from "./icon-background-renderer.js";
 import { dumbGlyphHeight, dumbGlyphWidth } from "./globals.js";
-import type { PrimitiveFrame } from "./primitive-geometry.js";
+import {
+  applyPrimitiveDiff,
+  type PrimitiveFrame,
+} from "./primitive-geometry.js";
 import type {
   NodeTypeRegistry,
   NodeTypeDescriptor,
@@ -67,6 +70,7 @@ export class Renderer {
     private getFontColor: () => [number, number, number, number],
     private getSelectedNodeIds: () => Set<number>,
     private getPrimitiveFrame: (nodeId: number) => PrimitiveFrame | undefined,
+    private canRender: () => boolean,
     private onFrame: () => void,
     private msdfProgram: WebGLProgram,
     private iconBGProgram: WebGLProgram,
@@ -122,20 +126,29 @@ export class Renderer {
   private edgeHeadTextures: EdgeHeadTextureLibrary;
 
   private frameFor(node: NodeData): PrimitiveFrame {
+    const world = getWorldPosition(node.id, this.store.allNodesMap);
     return this.getPrimitiveFrame(node.id) ?? {
       id: node.id,
-      worldX: getWorldPosition(node.id, this.store.allNodesMap).x,
-      worldY: getWorldPosition(node.id, this.store.allNodesMap).y,
+      baseWorldX: world.x,
+      baseWorldY: world.y,
+      baseWidth: node.width,
+      baseHeight: node.height,
+      worldX: world.x,
+      worldY: world.y,
       width: node.width,
       height: node.height,
       revision: 0,
       diff: {
-        translateX: node.localX,
-        translateY: node.localY,
+        translateX: 0,
+        translateY: 0,
         scaleX: 1,
         scaleY: 1,
       },
     };
+  }
+
+  private quadFor(node: NodeData) {
+    return applyPrimitiveDiff(this.frameFor(node));
   }
 
   private resolveNodeDimensions = (nodeId: number): { width: number; height: number } | undefined => {
@@ -180,6 +193,7 @@ export class Renderer {
    * meaningful change and let an idle graph cost nothing.
    */
   renderFrame(): void {
+    if (!this.canRender()) return;
     this.drawBGFrame();
     this.drawFrame();
     this.onFrame();
@@ -747,7 +761,7 @@ export class Renderer {
     const selectedIds = this.getSelectedNodeIds();
 
     for (const node of this.store.visibleNodes()) {
-      const frame = this.frameFor(node);
+      const frame = this.quadFor(node);
       const { worldX: x, worldY: y, width, height } = frame;
 
       // Viewport culling
@@ -820,7 +834,7 @@ export class Renderer {
     picking: boolean
   ): void {
     const gl = this.gl;
-    const frame = this.frameFor(node);
+    const frame = this.quadFor(node);
     const { width, height } = frame;
 
     if (picking) {

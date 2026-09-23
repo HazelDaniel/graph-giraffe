@@ -30,6 +30,8 @@ export interface NodeDrawContext {
     node: NodeData;
     worldX: number;
     worldY: number;
+    width: number;
+    height: number;
     z: number;
     renderer: RendererDrawAPI;
 }
@@ -37,6 +39,8 @@ export interface NodeOverlayContext {
     node: NodeData;
     worldX: number;
     worldY: number;
+    width: number;
+    height: number;
     z: number;
     isCollapsed: boolean;
     textRenderer: MsdfTextRenderer;
@@ -60,6 +64,8 @@ export interface DomNodeViewContext {
      * clone's original label). Undefined when the layer has no store access.
      */
     getNode?: (id: number) => NodeData | undefined;
+    /** Mark an embedded control as handled by the skin rather than the graph. */
+    stopGraphPropagation?: (event: Event) => void;
 }
 /**
  * Declarative DOM rendering hook for a node type.
@@ -73,9 +79,42 @@ export interface DomNodeViewContext {
  */
 export interface DomNodeRenderer {
     createView(ctx: DomNodeViewContext): HTMLElement;
+    /** Opt into DOM-authoritative pointer interaction for this node type. */
+    interactive?: boolean;
+    /**
+     * CSS selector for controls inside a presentational DOM view that should
+     * receive native pointer events. The primitive surface remains transparent
+     * to preserve WebGL picking and dragging.
+     */
+    interactiveDescendants?: string;
     updateView?(ctx: DomNodeViewContext): void;
     destroyView?(ctx: DomNodeViewContext): void;
 }
+/** Context for a measurement-only shadow template. */
+export interface PrimitiveMeasurementTemplateContext {
+    node: NodeData;
+    /** Configuration shape shared by every renderer of this primitive. */
+    props: NodePropType | undefined;
+    /** Child inputs supplied for growable container measurement templates. */
+    children: readonly PrimitiveMeasurementChild[];
+    element: HTMLElement;
+    /** Effective presented state, including derived collapse from containment. */
+    isCollapsed: boolean;
+}
+export interface PrimitiveMeasurementChild {
+    node: NodeData;
+    props: NodePropType | undefined;
+    isCollapsed: boolean;
+    width: number;
+    height: number;
+}
+/**
+ * Creates an off-screen measurement template for a primitive.
+ *
+ * This is deliberately separate from `DomNodeRenderer`: the template is never
+ * mounted as visible UI and must not invoke the visible primitive renderer.
+ */
+export type PrimitiveMeasurementTemplate = (ctx: PrimitiveMeasurementTemplateContext) => HTMLElement;
 export interface NodeOverlayConfig {
     titlePosition: "header" | "container-top" | "center";
     showTitle: boolean;
@@ -120,6 +159,8 @@ export interface NodeTypeDescriptor {
     overlayConfig?: NodeOverlayConfig;
     /** DOM rendering hook — required when `renderMode` is `"dom"`. */
     domRenderer?: DomNodeRenderer;
+    /** Measurement-only shadow template for intrinsic primitive dimensions. */
+    measurementTemplate?: PrimitiveMeasurementTemplate;
     layoutChildren?: (container: NodeData, children: NodeData[], allNodes: Map<number, NodeData>) => void;
     contributesToChildWorldPosition?: boolean;
     toolbarActions?: string[];
@@ -169,4 +210,5 @@ export declare class NodeTypeRegistry {
     /** Whether a type's visual body is rendered as a DOM element (renderMode "dom"). */
     isDomRendered(type: string): boolean;
     getDomRenderer(type: string): DomNodeRenderer | undefined;
+    getMeasurementTemplate(type: string): PrimitiveMeasurementTemplate | undefined;
 }

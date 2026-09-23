@@ -15,12 +15,35 @@ export interface PrimitiveDiff {
 
 export interface PrimitiveFrame {
   id: number;
+  /** Canonical scene-graph frame used as the WebGL quad baseline. */
+  baseWorldX: number;
+  baseWorldY: number;
+  baseWidth: number;
+  baseHeight: number;
+  /** Resolved frame after intrinsic measurement is applied. */
   worldX: number;
   worldY: number;
   width: number;
   height: number;
   revision: number;
   diff: PrimitiveDiff;
+}
+
+export interface ResolvedPrimitiveQuad {
+  worldX: number;
+  worldY: number;
+  width: number;
+  height: number;
+}
+
+/** Apply the cached alignment diff to the canonical WebGL quad. */
+export function applyPrimitiveDiff(frame: PrimitiveFrame): ResolvedPrimitiveQuad {
+  return {
+    worldX: frame.baseWorldX + frame.diff.translateX,
+    worldY: frame.baseWorldY + frame.diff.translateY,
+    width: frame.baseWidth * frame.diff.scaleX,
+    height: frame.baseHeight * frame.diff.scaleY,
+  };
 }
 
 function validDimension(value: number): boolean {
@@ -67,14 +90,20 @@ export class PrimitiveGeometry {
 
     return {
       id: node.id,
+      baseWorldX: worldX,
+      baseWorldY: worldY,
+      baseWidth: node.width,
+      baseHeight: node.height,
       worldX,
       worldY,
       width,
       height,
       revision: intrinsic?.revision ?? 0,
       diff: {
-        translateX: worldX,
-        translateY: worldY,
+        // Top-left anchoring preserves the scene-graph position while the
+        // scale correction expands/contracts the canonical quad.
+        translateX: 0,
+        translateY: 0,
         scaleX: width / Math.max(node.width, 1),
         scaleY: height / Math.max(node.height, 1),
       },

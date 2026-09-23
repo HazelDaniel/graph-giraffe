@@ -18,6 +18,8 @@ import { getParentFrameWorldPosition, getWorldPosition, } from "./scene-graph.js
 import { TextureRegistry } from "./texture-registry.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
 import { DomNodeLayer } from "./dom-node-layer.js";
+import { PrimitiveGeometry } from "./primitive-geometry.js";
+import { PrimitiveMeasurementProvider } from "./primitive-measurement.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import { computeCameraStateFromWorldPoint, } from "../components/minimap.js";
 import { attachCommentLayer, } from "./overlay-primitives.js";
@@ -112,6 +114,11 @@ export class NodeEditor {
     scalingOverlayContainer;
     fixedOverlayContainer;
     domNodeLayer = null;
+    primitiveGeometry = new PrimitiveGeometry();
+    primitiveMeasurements = new PrimitiveMeasurementProvider(this.typeRegistry, this.primitiveGeometry);
+    primitiveRenderReady = true;
+    measurementLoadingScreen = null;
+    measurementGatePromise = null;
     resizeObserver;
     activeTouches = new Map();
     gestureMode = false;
@@ -128,6 +135,14 @@ export class NodeEditor {
         this._instance = new NodeEditor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, IconBGVsSource, IconBGFsSource, options, nodeTextureUploadList);
         await this._instance.init();
         return this._instance;
+    }
+    /**
+     * Release the singleton slot for framework adapters that own the editor's
+     * host DOM. The adapter must remove its container after calling this method.
+     * A future full dispose lifecycle can extend this without exposing internals.
+     */
+    static release() {
+        this._instance = null;
     }
     msdfAtlas;
     iconAtlas;
@@ -169,12 +184,27 @@ export class NodeEditor {
         }
         // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
         this.camera = new Camera(this);
+        this.camera.setZoomRange(options.minZoom ?? 0.1, options.maxZoom ?? 5);
         this.store = new NodeStore(gl, this.connectionMode, options.handleStyle ?? DEFAULT_HANDLE_STYLE, this.typeRegistry);
         this.edgeStore = new EdgeStore();
+        this.primitiveMeasurements.setCollapseResolver((node) => this.store.isNodeCollapsed(node));
         this.history = new HistoryStack();
         this.pickFBO = new PickFBO(gl, canvas.width, canvas.height);
     }
     async init() {
+        this.events.on("history:command", () => this.syncPrimitiveMeasurements());
+        this.events.on("controlled:apply", () => this.syncPrimitiveMeasurements());
+        // Geometry-affecting semantic events must invalidate the measurement
+        // cache at the mutation boundary. `history:command` and
+        // `controlled:apply` cover most paths, but reparenting and collapse are
+        // also observable independently by adapters. Keeping these events here
+        // prevents a DOM skin from reflecting a new collapsed state while the
+        // WebGL/picking frame still uses the previous intrinsic dimensions.
+        this.events.on("node:reparent", () => this.syncPrimitiveMeasurements());
+        this.events.on("subgraph:collapseToggle", () => this.syncPrimitiveMeasurements());
+        // A refresh only reads the old template. Props can change the template's
+        // dimensions, so rebuild it from the new configuration shape.
+        this.events.on("node:propChange", () => this.syncPrimitiveMeasurements());
         const canvas = document.getElementById(this.canvasId);
         const gl = canvas.getContext("webgl2");
         const program = createProgram(gl, this.vsSource, this.fsSource);
@@ -207,6 +237,7 @@ export class NodeEditor {
             this.scalingOverlayContainer = scalingContainer;
         if (fixedContainer)
             this.fixedOverlayContainer = fixedContainer;
+        this.syncPrimitiveMeasurements();
         // The DOM layer only exists in dom mode. In webgl mode ALL primitives are
         // drawn on the WebGL context and no DOM node views are ever created, so the
         // two pipelines can never coexist on a page.
@@ -215,11 +246,18 @@ export class NodeEditor {
                 store: this.store,
                 registry: this.typeRegistry,
                 events: this.events,
+                getPrimitiveFrame: (nodeId) => {
+                    const node = this.store.get(nodeId);
+                    if (!node)
+                        return undefined;
+                    const world = getWorldPosition(nodeId, this.store.allNodesMap, this.typeRegistry);
+                    return this.primitiveGeometry.resolve(node, world.x, world.y);
+                },
                 container: this.scalingOverlayContainer,
             });
             this.domNodeLayer.syncAll();
         }
-        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, () => this.selectedNodeIds, () => {
+        this.renderer = new Renderer(gl, canvas, backgroundCanvas, program, locations, geometry, bgGeometry, this.store, this.edgeStore, this.camera, bgProgram, bgLocations, labelCanvas, () => this.activeConnectionDrag, () => this.bgColor, () => this.fontColor, () => this.selectedNodeIds, (nodeId) => this.getPrimitiveFrame(nodeId), () => this.primitiveRenderReady, () => {
             this.updateSelectionToolbarPosition();
             this.domNodeLayer?.syncFrame();
             this.updateOverlays();
@@ -301,6 +339,54 @@ export class NodeEditor {
         this.syncToolbarState();
         this.refreshMinimap();
     }
+    syncPrimitiveMeasurements() {
+        if (!this.store)
+            return;
+        this.primitiveMeasurements.sync(this.store.allNodesMap.values());
+        this.primitiveRenderReady = this.primitiveMeasurements.isReady(this.store.allNodesMap.values());
+        if (!this.primitiveRenderReady)
+            this.beginMeasurementGate();
+    }
+    beginMeasurementGate() {
+        if (this.measurementGatePromise)
+            return;
+        const loading = this.ensureMeasurementLoadingScreen();
+        let resolveGate;
+        const gate = new Promise((resolve) => {
+            resolveGate = resolve;
+        });
+        this.measurementGatePromise = gate;
+        loading.promise = gate;
+        const startedAt = performance.now();
+        const poll = () => {
+            this.syncPrimitiveMeasurements();
+            const timedOut = performance.now() - startedAt >= 2000;
+            if (this.primitiveRenderReady || timedOut) {
+                this.primitiveRenderReady = true;
+                this.measurementGatePromise = null;
+                resolveGate();
+                this.requestRender();
+                return;
+            }
+            requestAnimationFrame(poll);
+        };
+        requestAnimationFrame(poll);
+    }
+    ensureMeasurementLoadingScreen() {
+        if (this.measurementLoadingScreen)
+            return this.measurementLoadingScreen;
+        const loading = document.createElement("gg-loading-screen");
+        document.body.appendChild(loading);
+        this.measurementLoadingScreen = loading;
+        return loading;
+    }
+    getPrimitiveFrame(nodeId) {
+        const node = this.store.get(nodeId);
+        if (!node)
+            return undefined;
+        const world = getWorldPosition(nodeId, this.store.allNodesMap, this.typeRegistry);
+        return this.primitiveGeometry.resolve(node, world.x, world.y);
+    }
     setupPropGroupListener() {
         this.controls.nodePropGroup.addEventListener("gg-prop-change", (e) => {
             const customEvent = e;
@@ -369,6 +455,8 @@ export class NodeEditor {
             assetsPath: config.assetsPath ?? "assets",
             minimap: config.minimap ?? true,
             renderMode: config.renderMode ?? "webgl",
+            minZoom: config.minZoom ?? 0.1,
+            maxZoom: config.maxZoom ?? 5,
         };
     }
     distance(p1, p2) {
@@ -404,6 +492,167 @@ export class NodeEditor {
     setConnectionMode(connectionMode) {
         this.connectionMode = connectionMode;
         this.store.setConnectionMode(connectionMode);
+    }
+    /** Configure the runtime zoom range used by wheel, pinch, restore, and animation. */
+    setZoomRange(minZoom, maxZoom) {
+        this.camera.setZoomRange(minZoom, maxZoom);
+        this.cameraDirty = true;
+        this.requestRender();
+    }
+    getZoomRange() {
+        return { minZoom: this.camera.minZoom, maxZoom: this.camera.maxZoom };
+    }
+    /** Return a detached copy of the current graph projection. */
+    getNodes() {
+        return [...this.store.allNodesMap.values()].map((node) => ({
+            ...node,
+            textureIds: { ...node.textureIds },
+            childIds: [...node.childIds],
+            handles: node.handles.map((handle) => ({ ...handle, style: { ...handle.style } })),
+            props: cloneNodeProps(node.props),
+            subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : undefined,
+        }));
+    }
+    /** Return a detached copy of the current edge projection. */
+    getEdges() {
+        return this.edgeStore.allEdges().map((edge) => ({ ...edge }));
+    }
+    /** Return one detached, renderer-neutral view of the complete graph. */
+    getGraph() {
+        return { nodes: this.getNodes(), edges: this.getEdges() };
+    }
+    /**
+     * Apply a host-owned graph projection without creating history entries.
+     * Adapters use this to implement controlled React/Vue/Svelte integrations.
+     */
+    applyControlledGraph(nodes, edges) {
+        const nodeIds = new Set();
+        for (const input of nodes) {
+            if (nodeIds.has(input.id))
+                throw new Error(`Duplicate controlled node id: ${input.id}`);
+            if (!this.typeRegistry.has(input.nodeType))
+                throw new Error(`Unknown controlled node type: ${input.nodeType}`);
+            nodeIds.add(input.id);
+        }
+        for (const input of nodes) {
+            if (input.parentId != null && !nodeIds.has(input.parentId)) {
+                throw new Error(`Controlled node ${input.id} references missing parent ${input.parentId}`);
+            }
+            const parentType = input.parentId == null
+                ? null
+                : nodes.find((node) => node.id === input.parentId)?.nodeType ?? null;
+            if (!this.typeRegistry.canReparentTo(input.nodeType, parentType)) {
+                throw new Error(`Invalid controlled parent ${input.parentId ?? "root"} for node ${input.id}`);
+            }
+        }
+        for (const input of nodes) {
+            const seen = new Set();
+            let parentId = input.parentId ?? null;
+            while (parentId !== null) {
+                if (seen.has(parentId) || parentId === input.id) {
+                    throw new Error(`Controlled graph contains a parent cycle at node ${input.id}`);
+                }
+                seen.add(parentId);
+                parentId = nodes.find((node) => node.id === parentId)?.parentId ?? null;
+            }
+        }
+        const edgeIds = new Set();
+        for (const edge of edges) {
+            if (edgeIds.has(edge.id))
+                throw new Error(`Duplicate controlled edge id: ${edge.id}`);
+            if (!nodeIds.has(edge.sourceNodeId) || !nodeIds.has(edge.targetNodeId)) {
+                throw new Error(`Controlled edge ${edge.id} references a missing node`);
+            }
+            if (edge.sourceNodeId === edge.targetNodeId) {
+                throw new Error(`Controlled edge ${edge.id} cannot connect a node to itself`);
+            }
+            const source = nodes.find((node) => node.id === edge.sourceNodeId);
+            const target = nodes.find((node) => node.id === edge.targetNodeId);
+            if (!this.typeRegistry.isValidConnectionSide(source.nodeType, edge.sourceHandleSide, "source") ||
+                !this.typeRegistry.isValidConnectionSide(target.nodeType, edge.targetHandleSide, "target")) {
+                throw new Error(`Controlled edge ${edge.id} uses an invalid handle side`);
+            }
+            edgeIds.add(edge.id);
+        }
+        this.store.clear();
+        this.edgeStore.clear();
+        for (const input of nodes) {
+            const node = this.store.add(input.position.x, input.position.y, input.label ?? input.nodeType, this.theme, input.nodeType, input.id);
+            node.width = input.width ?? node.width;
+            node.height = input.height ?? node.height;
+            node.props = cloneNodeProps(input.props ?? node.props);
+            node.isLocked = input.isLocked ?? false;
+            node.isCollapsed = input.isCollapsed ?? false;
+            if (input.textureIds)
+                node.textureIds = { ...input.textureIds };
+        }
+        for (const input of nodes) {
+            if (input.parentId != null && !this.store.setParent(input.id, input.parentId)) {
+                throw new Error(`Invalid controlled parent ${input.parentId} for node ${input.id}`);
+            }
+        }
+        const controlledById = new Map(nodes.map((input) => [input.id, input]));
+        const parentFrame = (nodeId) => {
+            const node = controlledById.get(nodeId);
+            if (node?.parentId == null)
+                return { x: 0, y: 0 };
+            const parent = controlledById.get(node.parentId);
+            if (!parent)
+                return { x: 0, y: 0 };
+            const descriptor = this.typeRegistry.get(parent.nodeType);
+            if (descriptor?.contributesToChildWorldPosition === false) {
+                return parentFrame(parent.id);
+            }
+            return { x: parent.position.x, y: parent.position.y };
+        };
+        for (const input of nodes) {
+            const node = this.store.get(input.id);
+            if (!node)
+                continue;
+            const frame = parentFrame(input.id);
+            node.localX = input.position.x - frame.x;
+            node.localY = input.position.y - frame.y;
+            this.store.syncNodePresentation(node.id);
+            // Controlled bounds are authoritative. Presentation sync is still
+            // needed for derived texture/collapse metadata, but must not replace
+            // dimensions supplied by the external layout owner. An effectively
+            // collapsed primitive is the exception: its collapsed descriptor size
+            // is the geometry contract for rendering and GPU picking, even when the
+            // controlled projection still carries its expanded dimensions.
+            if (!this.store.isNodeCollapsed(node)) {
+                if (input.width !== undefined)
+                    node.width = input.width;
+                if (input.height !== undefined)
+                    node.height = input.height;
+            }
+        }
+        for (const input of edges) {
+            const source = this.store.get(input.sourceNodeId);
+            const target = this.store.get(input.targetNodeId);
+            const edge = this.edgeStore.add({
+                idOverride: input.id,
+                sourceNodeId: input.sourceNodeId,
+                sourceHandleSide: input.sourceHandleSide,
+                targetNodeId: input.targetNodeId,
+                targetHandleSide: input.targetHandleSide,
+                sourceCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(source.nodeType),
+                targetCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(target.nodeType),
+                edgeType: input.edgeType,
+                headType: input.headType,
+                headSkinId: input.headSkinId,
+                label: input.label,
+            });
+            if (edge) {
+                this.syncHandleStates(edge.sourceNodeId);
+                this.syncHandleStates(edge.targetNodeId);
+            }
+        }
+        this.clearSelectionState();
+        this.history.clear();
+        this.domNodeLayer?.syncAll();
+        this.markMinimapDirty();
+        this.events.dispatch("controlled:apply", { nodeIds: [...nodeIds], edgeIds: [...edgeIds] });
+        this.requestRender();
     }
     /**
      * Serialize the full graph state into a portable JSON-compatible snapshot.
@@ -541,6 +790,18 @@ export class NodeEditor {
             zoom: this.camera.zoom,
         };
     }
+    /** Set the viewport immediately, respecting the configured zoom range. */
+    setViewport(panX, panY, zoom) {
+        this.camera.setState(panX, panY, zoom);
+        this.cameraDirty = true;
+        this.requestRender();
+    }
+    /** Resolve a node's world-space position through the scene graph. */
+    getNodeWorldPosition(id) {
+        if (!this.store.get(id))
+            return undefined;
+        return getWorldPosition(id, this.store.allNodesMap, this.typeRegistry);
+    }
     /**
      * Imperatively animate (lerp) the camera so the given world coordinate lands
      * at a screen position — by default the center of the canvas. Optionally
@@ -583,6 +844,58 @@ export class NodeEditor {
             throw new Error(`NodeEditor.addNode: unknown node type "${nodeType}" — register it first via typeRegistry.register()`);
         }
         return this.createNodeWithHistory(nodeType, worldX, worldY, parentId, label);
+    }
+    /**
+     * Create an edge through the public command path.
+     *
+     * Adapters must use this instead of reaching into EdgeStore. Connection
+     * validation, before-hooks, composition semantics, handle state, history,
+     * and the public connect event all remain owned by the editor.
+     */
+    async addEdge(params) {
+        const sourceNode = this.store.get(params.sourceNodeId);
+        const targetNode = this.store.get(params.targetNodeId);
+        if (!sourceNode || !targetNode)
+            return null;
+        if (!this.isValidConnection(params.sourceNodeId, params.sourceHandleSide, params.targetNodeId, params.targetHandleSide))
+            return null;
+        const allowed = await this.events.dispatchBefore("before:connect", {
+            sourceId: params.sourceNodeId,
+            sourceType: sourceNode.nodeType,
+            targetId: params.targetNodeId,
+            targetType: targetNode.nodeType,
+            sourceHandleSide: params.sourceHandleSide,
+            targetHandleSide: params.targetHandleSide,
+        });
+        if (!allowed)
+            return null;
+        const edge = this.edgeStore.add({
+            ...params,
+            sourceCanHaveMultipleConnections: params.sourceCanHaveMultipleConnections ?? this.typeRegistry.allowsMultiConnect(sourceNode.nodeType),
+            targetCanHaveMultipleConnections: params.targetCanHaveMultipleConnections ?? this.typeRegistry.allowsMultiConnect(targetNode.nodeType),
+        });
+        if (!edge)
+            return null;
+        this.syncHandleStates(edge.sourceNodeId);
+        this.syncHandleStates(edge.targetNodeId);
+        this.applyCompositionReferenceForEdge(edge);
+        this.pushCommand(new ConnectCommand({ edgeSnapshot: { ...edge } }));
+        this.events.dispatch("connect", {
+            sourceId: edge.sourceNodeId,
+            sourceType: sourceNode.nodeType,
+            targetId: edge.targetNodeId,
+            targetType: targetNode.nodeType,
+            edgeId: edge.id,
+        });
+        return edge;
+    }
+    /** Remove a node tree through the public command path. */
+    async removeNode(nodeId) {
+        await this.deleteNodeTreeWithHistory(nodeId);
+    }
+    /** Remove an edge through the public command path. */
+    removeEdge(edgeId) {
+        return this.deleteEdgeWithHistory(edgeId);
     }
     /**
      * Synchronize overlay container transforms with current camera pan and zoom.
@@ -701,8 +1014,13 @@ export class NodeEditor {
     handleResize(canvas) {
         const rect = canvas.getBoundingClientRect();
         this.dpr = typeof window !== "undefined" ? Math.max(1, window.devicePixelRatio || 1) : 1;
-        const physicalWidth = Math.round(rect.width * this.dpr);
-        const physicalHeight = Math.round(rect.height * this.dpr);
+        // ResizeObserver can report a transient zero-sized canvas while a
+        // framework is mounting or before its parent layout has settled. Keep the
+        // projection matrix non-degenerate until the next resize notification.
+        const cssWidth = Math.max(1, rect.width);
+        const cssHeight = Math.max(1, rect.height);
+        const physicalWidth = Math.max(1, Math.round(cssWidth * this.dpr));
+        const physicalHeight = Math.max(1, Math.round(cssHeight * this.dpr));
         canvas.width = physicalWidth;
         canvas.height = physicalHeight;
         this.renderer.resize(physicalWidth, physicalHeight, this.dpr);
@@ -1622,7 +1940,7 @@ export class NodeEditor {
     deleteEdgeWithHistory(edgeId) {
         const edge = this.edgeStore.get(edgeId);
         if (!edge)
-            return;
+            return null;
         this.activeLabelEdit = null;
         const selectionBefore = this.captureSelectionSnapshot();
         const snapshot = { ...edge };
@@ -1635,6 +1953,7 @@ export class NodeEditor {
             edgeSnapshot: snapshot,
             selectionBefore,
         }));
+        return edge;
     }
     async deleteCurrentSelectionWithHistory() {
         let nodeIds = [...this.selectedNodeIds];
@@ -1925,8 +2244,9 @@ export class NodeEditor {
             if (node.handles.length === 0)
                 continue;
             const { x, y } = getWorldPosition(node.id, this.store.allNodesMap);
+            const frame = this.getPrimitiveFrame(node.id);
             for (const handle of node.handles) {
-                const geometry = getHandleScreenGeometry(x, y, node, handle, this.camera.zoom, this.camera.panX, this.camera.panY);
+                const geometry = getHandleScreenGeometry(x, y, node, handle, this.camera.zoom, this.camera.panX, this.camera.panY, frame ? { width: frame.width, height: frame.height } : undefined);
                 if (isPointInsideHandle(screenX, screenY, geometry)) {
                     return {
                         nodeId: node.id,
@@ -2517,6 +2837,8 @@ export class NodeEditor {
                         sourceType: sourceNode.nodeType,
                         targetId: target.nodeId,
                         targetType: targetNode.nodeType,
+                        sourceHandleSide: source.sourceHandleSide,
+                        targetHandleSide: target.handle.side,
                     });
                     if (!allowed) {
                         this.activeConnectionDrag = null;
@@ -3000,7 +3322,10 @@ export class NodeEditor {
     hitTestEdge(screenX, screenY) {
         const edges = this.edgeStore.allEdges().filter((edge) => edge.visible);
         for (let i = edges.length - 1; i >= 0; i--) {
-            const geometry = buildEdgeRouteGeometry(edges[i], this.store, this.camera);
+            const geometry = buildEdgeRouteGeometry(edges[i], this.store, this.camera, (nodeId) => {
+                const frame = this.getPrimitiveFrame(nodeId);
+                return frame ? { width: frame.width, height: frame.height } : undefined;
+            });
             if (!geometry)
                 continue;
             const sourceNode = this.store.get(edges[i].sourceNodeId);

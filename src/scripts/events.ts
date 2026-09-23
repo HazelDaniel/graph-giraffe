@@ -7,6 +7,8 @@ export interface GraphBeforeEvents {
     sourceType: NodeType;
     targetId: number;
     targetType: NodeType;
+    sourceHandleSide: import("./types").HandleSide;
+    targetHandleSide: import("./types").HandleSide;
   };
   "before:nodeCreate": {
     nodeType: NodeType;
@@ -102,6 +104,10 @@ export interface GraphEvents {
   };
   "comment:modeChange": {
     enabled: boolean;
+  };
+  "controlled:apply": {
+    nodeIds: number[];
+    edgeIds: number[];
   };
 }
 
