@@ -266,7 +266,6 @@ export class NodeEditor {
     (nodeId) => this.handlePrimitiveMeasurementChange(nodeId)
   );
   private primitiveRenderReady = true;
-  private controlledGraphActive = false;
 
   private resizeObserver!: ResizeObserver;
 
@@ -870,7 +869,6 @@ export class NodeEditor {
       edgeIds.add(edge.id);
     }
 
-    this.controlledGraphActive = true;
     this.store.clear();
     this.edgeStore.clear();
     for (const input of nodes) {
@@ -3164,9 +3162,7 @@ export class NodeEditor {
     while (currentId !== null) {
       const current = this.store.get(currentId);
       if (!current || !isContainerNodeType(current.nodeType)) return;
-      this.store.updateContainerBounds(currentId, this.theme, {
-        positionChildren: !this.controlledGraphActive,
-      });
+      this.store.updateContainerBounds(currentId, this.theme);
       if (current.nodeType === "composition") {
         this.refreshCompositionReferenceNodes(current.id);
       }
@@ -3185,9 +3181,7 @@ export class NodeEditor {
         if (!current || !isContainerNodeType(current.nodeType)) break;
 
         visited.add(currentId);
-        this.store.updateContainerBounds(currentId, this.theme, {
-          positionChildren: !this.controlledGraphActive,
-        });
+        this.store.updateContainerBounds(currentId, this.theme);
         if (current.nodeType === "composition") {
           this.refreshCompositionReferenceNodes(current.id);
         }

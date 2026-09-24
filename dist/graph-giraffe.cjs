@@ -11510,7 +11510,6 @@ const _NodeEditor = class _NodeEditor {
       (nodeId) => this.handlePrimitiveMeasurementChange(nodeId)
     ));
     __publicField(this, "primitiveRenderReady", true);
-    __publicField(this, "controlledGraphActive", false);
     __publicField(this, "resizeObserver");
     __publicField(this, "activeTouches", /* @__PURE__ */ new Map());
     __publicField(this, "gestureMode", false);
@@ -12018,7 +12017,6 @@ const _NodeEditor = class _NodeEditor {
       }
       edgeIds.add(edge.id);
     }
-    this.controlledGraphActive = true;
     this.store.clear();
     this.edgeStore.clear();
     for (const input of nodes) {
@@ -13805,9 +13803,7 @@ const _NodeEditor = class _NodeEditor {
     while (currentId !== null) {
       const current = this.store.get(currentId);
       if (!current || !isContainerNodeType(current.nodeType)) return;
-      this.store.updateContainerBounds(currentId, this.theme, {
-        positionChildren: !this.controlledGraphActive
-      });
+      this.store.updateContainerBounds(currentId, this.theme);
       if (current.nodeType === "composition") {
         this.refreshCompositionReferenceNodes(current.id);
       }
@@ -13823,9 +13819,7 @@ const _NodeEditor = class _NodeEditor {
         const current = this.store.get(currentId);
         if (!current || !isContainerNodeType(current.nodeType)) break;
         visited.add(currentId);
-        this.store.updateContainerBounds(currentId, this.theme, {
-          positionChildren: !this.controlledGraphActive
-        });
+        this.store.updateContainerBounds(currentId, this.theme);
         if (current.nodeType === "composition") {
           this.refreshCompositionReferenceNodes(current.id);
         }

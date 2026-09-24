@@ -72,7 +72,6 @@ export declare class NodeEditor {
     private primitiveGeometry;
     private primitiveMeasurements;
     private primitiveRenderReady;
-    private controlledGraphActive;
     private resizeObserver;
     private activeTouches;
     private gestureMode;
