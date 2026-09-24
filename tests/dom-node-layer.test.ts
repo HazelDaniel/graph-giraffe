@@ -52,7 +52,7 @@ beforeAll(() => {
   });
 });
 
-function buildHarness(domType = "dom-test") {
+function buildHarness(domType = "dom-test", useContainer = false) {
   const registry = new NodeTypeRegistry();
   const events = new GraphEventEmitter();
 
@@ -63,6 +63,9 @@ function buildHarness(domType = "dom-test") {
   const domDescriptor = {
     ...nodeDescriptor,
     type: domType,
+    category: useContainer ? "container" as const : nodeDescriptor.category,
+    allowedParents: useContainer ? null : nodeDescriptor.allowedParents,
+    zTier: useContainer ? 0 : nodeDescriptor.zTier,
     renderMode: "dom" as const,
     defaultTextureIds: { body: "", head: "" },
     domRenderer: {
@@ -185,6 +188,28 @@ describe("DomNodeLayer", () => {
     node.isSelected = false;
     h.layer.syncFrame();
     expect(view.attributes["data-selected"]).toBeUndefined();
+  });
+
+  it("keeps a selected container below its children in the DOM layer", () => {
+    const h = buildHarness("dom-group", true);
+    const parent = h.store.add(0, 0, "parent", "dark", "dom-group");
+    const child = h.store.add(0, 40, "child", "dark", "dom-group");
+    expect(h.store.setParent(child.id, parent.id)).toBe(true);
+    parent.isSelected = true;
+
+    h.layer.syncAll();
+
+    const parentView = h.createdViews.find(
+      (view) => view.dataset.nodeId === String(parent.id)
+    );
+    const childView = h.createdViews.find(
+      (view) => view.dataset.nodeId === String(child.id)
+    );
+    expect(parentView).toBeDefined();
+    expect(childView).toBeDefined();
+    expect(Number(parentView!.style.zIndex)).toBeLessThan(
+      Number(childView!.style.zIndex)
+    );
   });
 
   it("syncFrame updates geometry when a node moves and calls updateView", () => {

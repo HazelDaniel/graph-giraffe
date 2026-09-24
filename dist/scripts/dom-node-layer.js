@@ -1,8 +1,8 @@
-// z-index buckets mirror the WebGL z-tier stacking (groups behind leaves).
-const Z_GROUP = 1_000_000;
-const Z_COMPOSITION = 2_000_000;
-const Z_LEAF = 3_000_000;
-const Z_SELECTED_BOOST = 100_000_000;
+// CSS z-index is integral, while the core scene graph uses fractional z
+// tiers and creation-order steps. Keep enough precision to preserve both,
+// while offsetting the scene so subgraph tiers remain above the DOM root.
+const Z_CSS_OFFSET = 1_000_000;
+const Z_CSS_SCALE = 1_000_000;
 /**
  * Owns the DOM views for every node whose type is rendered with
  * `renderMode: "dom"`. The layer is purely presentational and follows the
@@ -16,6 +16,7 @@ export class DomNodeLayer {
     views = new Map();
     root = null;
     unsubscribers = [];
+    selectedNodeIds = new Set();
     constructor(options) {
         this.options = options;
         const { container, events } = options;
@@ -64,6 +65,7 @@ export class DomNodeLayer {
      */
     reconcile() {
         const { store, registry } = this.options;
+        this.syncSelectedNodeIds();
         const alive = new Set();
         for (const node of store.allNodesMap.values()) {
             if (!registry.isDomRendered(node.nodeType))
@@ -87,6 +89,7 @@ export class DomNodeLayer {
         if (this.views.size === 0)
             return;
         const { store, cull } = this.options;
+        this.syncSelectedNodeIds();
         for (const [id, view] of this.views) {
             const node = store.get(id);
             if (!node)
@@ -260,18 +263,15 @@ export class DomNodeLayer {
         return this.options.store.isNodeCollapsed(node);
     }
     computeZIndex(node) {
-        const zTier = this.options.registry.getZTier(node.nodeType);
-        let base;
-        if (zTier < 0.1)
-            base = Z_GROUP;
-        else if (zTier < 0.3)
-            base = Z_COMPOSITION;
-        else
-            base = Z_LEAF;
-        base += node.id;
-        if (node.isSelected)
-            base += Z_SELECTED_BOOST;
-        return String(base);
+        const sceneZ = this.options.store.getZForNode(node.id, this.selectedNodeIds);
+        return String(Math.round(Z_CSS_OFFSET + sceneZ * Z_CSS_SCALE));
+    }
+    syncSelectedNodeIds() {
+        this.selectedNodeIds.clear();
+        for (const node of this.options.store.allNodesMap.values()) {
+            if (node.isSelected)
+                this.selectedNodeIds.add(node.id);
+        }
     }
     applyZIndex(view, node) {
         const zIndex = this.computeZIndex(node);

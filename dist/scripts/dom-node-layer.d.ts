@@ -37,6 +37,7 @@ export declare class DomNodeLayer {
     private views;
     private root;
     private unsubscribers;
+    private selectedNodeIds;
     constructor(options: DomNodeLayerOptions);
     /**
      * Attach a viewport-culling predicate (late-bound because the renderer is
@@ -70,6 +71,7 @@ export declare class DomNodeLayer {
      */
     private isNodeCollapsed;
     private computeZIndex;
+    private syncSelectedNodeIds;
     private applyZIndex;
     /**
      * Keep the primitive surface transparent to the canvas. Only explicitly

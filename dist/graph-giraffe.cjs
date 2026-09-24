@@ -9844,15 +9844,14 @@ class NodeTypeRegistry {
     return (_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.measurementTemplate;
   }
 }
-const Z_GROUP = 1e6;
-const Z_COMPOSITION = 2e6;
-const Z_LEAF = 3e6;
-const Z_SELECTED_BOOST = 1e8;
+const Z_CSS_OFFSET = 1e6;
+const Z_CSS_SCALE = 1e6;
 class DomNodeLayer {
   constructor(options) {
     __publicField(this, "views", /* @__PURE__ */ new Map());
     __publicField(this, "root", null);
     __publicField(this, "unsubscribers", []);
+    __publicField(this, "selectedNodeIds", /* @__PURE__ */ new Set());
     this.options = options;
     const { container, events } = options;
     if (container) {
@@ -9894,6 +9893,7 @@ class DomNodeLayer {
    */
   reconcile() {
     const { store, registry } = this.options;
+    this.syncSelectedNodeIds();
     const alive = /* @__PURE__ */ new Set();
     for (const node of store.allNodesMap.values()) {
       if (!registry.isDomRendered(node.nodeType)) continue;
@@ -9914,6 +9914,7 @@ class DomNodeLayer {
     var _a2, _b;
     if (this.views.size === 0) return;
     const { store, cull } = this.options;
+    this.syncSelectedNodeIds();
     for (const [id, view] of this.views) {
       const node = store.get(id);
       if (!node) continue;
@@ -10075,14 +10076,14 @@ class DomNodeLayer {
     return this.options.store.isNodeCollapsed(node);
   }
   computeZIndex(node) {
-    const zTier = this.options.registry.getZTier(node.nodeType);
-    let base;
-    if (zTier < 0.1) base = Z_GROUP;
-    else if (zTier < 0.3) base = Z_COMPOSITION;
-    else base = Z_LEAF;
-    base += node.id;
-    if (node.isSelected) base += Z_SELECTED_BOOST;
-    return String(base);
+    const sceneZ = this.options.store.getZForNode(node.id, this.selectedNodeIds);
+    return String(Math.round(Z_CSS_OFFSET + sceneZ * Z_CSS_SCALE));
+  }
+  syncSelectedNodeIds() {
+    this.selectedNodeIds.clear();
+    for (const node of this.options.store.allNodesMap.values()) {
+      if (node.isSelected) this.selectedNodeIds.add(node.id);
+    }
   }
   applyZIndex(view, node) {
     const zIndex = this.computeZIndex(node);

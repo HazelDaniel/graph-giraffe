@@ -57,11 +57,11 @@ interface ViewSnapshot {
   dropTarget: boolean;
 }
 
-// z-index buckets mirror the WebGL z-tier stacking (groups behind leaves).
-const Z_GROUP = 1_000_000;
-const Z_COMPOSITION = 2_000_000;
-const Z_LEAF = 3_000_000;
-const Z_SELECTED_BOOST = 100_000_000;
+// CSS z-index is integral, while the core scene graph uses fractional z
+// tiers and creation-order steps. Keep enough precision to preserve both,
+// while offsetting the scene so subgraph tiers remain above the DOM root.
+const Z_CSS_OFFSET = 1_000_000;
+const Z_CSS_SCALE = 1_000_000;
 
 /**
  * Owns the DOM views for every node whose type is rendered with
@@ -75,6 +75,7 @@ export class DomNodeLayer {
   private views = new Map<number, DomNodeView>();
   private root: HTMLElement | null = null;
   private unsubscribers: Array<() => void> = [];
+  private selectedNodeIds = new Set<number>();
 
   constructor(private options: DomNodeLayerOptions) {
     const { container, events } = options;
@@ -127,6 +128,7 @@ export class DomNodeLayer {
    */
   reconcile(): void {
     const { store, registry } = this.options;
+    this.syncSelectedNodeIds();
     const alive = new Set<number>();
 
     for (const node of store.allNodesMap.values()) {
@@ -149,6 +151,7 @@ export class DomNodeLayer {
   syncFrame(): void {
     if (this.views.size === 0) return;
     const { store, cull } = this.options;
+    this.syncSelectedNodeIds();
 
     for (const [id, view] of this.views) {
       const node = store.get(id);
@@ -336,15 +339,15 @@ export class DomNodeLayer {
   }
 
   private computeZIndex(node: NodeData): string {
-    const zTier = this.options.registry.getZTier(node.nodeType);
-    let base: number;
-    if (zTier < 0.1) base = Z_GROUP;
-    else if (zTier < 0.3) base = Z_COMPOSITION;
-    else base = Z_LEAF;
-    base += node.id;
+    const sceneZ = this.options.store.getZForNode(node.id, this.selectedNodeIds);
+    return String(Math.round(Z_CSS_OFFSET + sceneZ * Z_CSS_SCALE));
+  }
 
-    if (node.isSelected) base += Z_SELECTED_BOOST;
-    return String(base);
+  private syncSelectedNodeIds(): void {
+    this.selectedNodeIds.clear();
+    for (const node of this.options.store.allNodesMap.values()) {
+      if (node.isSelected) this.selectedNodeIds.add(node.id);
+    }
   }
 
   private applyZIndex(view: DomNodeView, node: NodeData): void {
