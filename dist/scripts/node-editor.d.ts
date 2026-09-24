@@ -72,6 +72,7 @@ export declare class NodeEditor {
     private primitiveGeometry;
     private primitiveMeasurements;
     private primitiveRenderReady;
+    private controlledGraphActive;
     private measurementLoadingScreen;
     private measurementGatePromise;
     private resizeObserver;
