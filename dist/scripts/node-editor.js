@@ -118,8 +118,6 @@ export class NodeEditor {
     primitiveMeasurements = new PrimitiveMeasurementProvider(this.typeRegistry, this.primitiveGeometry, (node) => Boolean(node.isCollapsed), (nodeId) => this.handlePrimitiveMeasurementChange(nodeId));
     primitiveRenderReady = true;
     controlledGraphActive = false;
-    measurementLoadingScreen = null;
-    measurementGatePromise = null;
     resizeObserver;
     activeTouches = new Map();
     gestureMode = false;
@@ -156,9 +154,6 @@ export class NodeEditor {
         this.domNodeLayer?.dispose();
         this.domNodeLayer = null;
         this.primitiveMeasurements.dispose();
-        this.measurementLoadingScreen?.remove();
-        this.measurementLoadingScreen = null;
-        this.measurementGatePromise = null;
     }
     msdfAtlas;
     iconAtlas;
@@ -365,9 +360,7 @@ export class NodeEditor {
         if (!this.store)
             return;
         this.primitiveMeasurements.sync(this.store.allNodesMap.values());
-        this.primitiveRenderReady = this.primitiveMeasurements.isReady(this.store.allNodesMap.values());
-        if (!this.primitiveRenderReady)
-            this.beginMeasurementGate();
+        this.primitiveRenderReady = true;
     }
     handlePrimitiveMeasurementChange(nodeId) {
         if (!this.store)
@@ -381,43 +374,10 @@ export class NodeEditor {
         if (node && isContainerNodeType(node.nodeType, this.typeRegistry)) {
             this.refreshContainerChain(node.id);
         }
-        this.primitiveRenderReady = this.primitiveMeasurements.isReady(this.store.allNodesMap.values());
+        this.primitiveRenderReady = true;
         this.events.dispatch("geometry:change", { nodeIds: [...affected] });
         if (this.renderer)
             this.requestRender();
-    }
-    beginMeasurementGate() {
-        if (this.measurementGatePromise)
-            return;
-        const loading = this.ensureMeasurementLoadingScreen();
-        let resolveGate;
-        const gate = new Promise((resolve) => {
-            resolveGate = resolve;
-        });
-        this.measurementGatePromise = gate;
-        loading.promise = gate;
-        const startedAt = performance.now();
-        const poll = () => {
-            this.syncPrimitiveMeasurements();
-            const timedOut = performance.now() - startedAt >= 2000;
-            if (this.primitiveRenderReady || timedOut) {
-                this.primitiveRenderReady = true;
-                this.measurementGatePromise = null;
-                resolveGate();
-                this.requestRender();
-                return;
-            }
-            requestAnimationFrame(poll);
-        };
-        requestAnimationFrame(poll);
-    }
-    ensureMeasurementLoadingScreen() {
-        if (this.measurementLoadingScreen)
-            return this.measurementLoadingScreen;
-        const loading = document.createElement("gg-loading-screen");
-        document.body.appendChild(loading);
-        this.measurementLoadingScreen = loading;
-        return loading;
     }
     getPrimitiveFrame(nodeId) {
         const node = this.store.get(nodeId);

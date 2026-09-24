@@ -95,7 +95,6 @@ import { DomNodeLayer } from "./dom-node-layer.js";
 import { PrimitiveGeometry } from "./primitive-geometry.js";
 import { PrimitiveMeasurementProvider } from "./primitive-measurement.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
-import { LoadingScreen } from "../components/loading-screen.js";
 import {
   GGMinimap,
   computeCameraStateFromWorldPoint,
@@ -268,8 +267,6 @@ export class NodeEditor {
   );
   private primitiveRenderReady = true;
   private controlledGraphActive = false;
-  private measurementLoadingScreen: LoadingScreen | null = null;
-  private measurementGatePromise: Promise<void> | null = null;
 
   private resizeObserver!: ResizeObserver;
 
@@ -337,9 +334,6 @@ export class NodeEditor {
     this.domNodeLayer?.dispose();
     this.domNodeLayer = null;
     this.primitiveMeasurements.dispose();
-    this.measurementLoadingScreen?.remove();
-    this.measurementLoadingScreen = null;
-    this.measurementGatePromise = null;
   }
 
   private msdfAtlas!: MsdfAtlas;
@@ -631,10 +625,7 @@ export class NodeEditor {
   private syncPrimitiveMeasurements(): void {
     if (!this.store) return;
     this.primitiveMeasurements.sync(this.store.allNodesMap.values());
-    this.primitiveRenderReady = this.primitiveMeasurements.isReady(
-      this.store.allNodesMap.values()
-    );
-    if (!this.primitiveRenderReady) this.beginMeasurementGate();
+    this.primitiveRenderReady = true;
   }
 
   private handlePrimitiveMeasurementChange(nodeId: number): void {
@@ -648,46 +639,9 @@ export class NodeEditor {
     if (node && isContainerNodeType(node.nodeType, this.typeRegistry)) {
       this.refreshContainerChain(node.id);
     }
-    this.primitiveRenderReady = this.primitiveMeasurements.isReady(
-      this.store.allNodesMap.values()
-    );
+    this.primitiveRenderReady = true;
     this.events.dispatch("geometry:change", { nodeIds: [...affected] });
     if (this.renderer) this.requestRender();
-  }
-
-  private beginMeasurementGate(): void {
-    if (this.measurementGatePromise) return;
-
-    const loading = this.ensureMeasurementLoadingScreen();
-    let resolveGate!: () => void;
-    const gate = new Promise<void>((resolve) => {
-      resolveGate = resolve;
-    });
-    this.measurementGatePromise = gate;
-    loading.promise = gate;
-
-    const startedAt = performance.now();
-    const poll = (): void => {
-      this.syncPrimitiveMeasurements();
-      const timedOut = performance.now() - startedAt >= 2000;
-      if (this.primitiveRenderReady || timedOut) {
-        this.primitiveRenderReady = true;
-        this.measurementGatePromise = null;
-        resolveGate();
-        this.requestRender();
-        return;
-      }
-      requestAnimationFrame(poll);
-    };
-    requestAnimationFrame(poll);
-  }
-
-  private ensureMeasurementLoadingScreen(): LoadingScreen {
-    if (this.measurementLoadingScreen) return this.measurementLoadingScreen;
-    const loading = document.createElement("gg-loading-screen") as LoadingScreen;
-    document.body.appendChild(loading);
-    this.measurementLoadingScreen = loading;
-    return loading;
   }
 
   private getPrimitiveFrame(nodeId: number) {

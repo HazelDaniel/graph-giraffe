@@ -11509,8 +11509,6 @@ const _NodeEditor = class _NodeEditor {
     ));
     __publicField(this, "primitiveRenderReady", true);
     __publicField(this, "controlledGraphActive", false);
-    __publicField(this, "measurementLoadingScreen", null);
-    __publicField(this, "measurementGatePromise", null);
     __publicField(this, "resizeObserver");
     __publicField(this, "activeTouches", /* @__PURE__ */ new Map());
     __publicField(this, "gestureMode", false);
@@ -11617,15 +11615,12 @@ const _NodeEditor = class _NodeEditor {
    * host container.
    */
   dispose() {
-    var _a2, _b, _c, _d;
+    var _a2, _b, _c;
     (_a2 = this.renderer) == null ? void 0 : _a2.stopLoop();
     (_b = this.resizeObserver) == null ? void 0 : _b.disconnect();
     (_c = this.domNodeLayer) == null ? void 0 : _c.dispose();
     this.domNodeLayer = null;
     this.primitiveMeasurements.dispose();
-    (_d = this.measurementLoadingScreen) == null ? void 0 : _d.remove();
-    this.measurementLoadingScreen = null;
-    this.measurementGatePromise = null;
   }
   async init() {
     var _a2;
@@ -11814,10 +11809,7 @@ const _NodeEditor = class _NodeEditor {
   syncPrimitiveMeasurements() {
     if (!this.store) return;
     this.primitiveMeasurements.sync(this.store.allNodesMap.values());
-    this.primitiveRenderReady = this.primitiveMeasurements.isReady(
-      this.store.allNodesMap.values()
-    );
-    if (!this.primitiveRenderReady) this.beginMeasurementGate();
+    this.primitiveRenderReady = true;
   }
   handlePrimitiveMeasurementChange(nodeId) {
     if (!this.store) return;
@@ -11830,42 +11822,9 @@ const _NodeEditor = class _NodeEditor {
     if (node && isContainerNodeType(node.nodeType, this.typeRegistry)) {
       this.refreshContainerChain(node.id);
     }
-    this.primitiveRenderReady = this.primitiveMeasurements.isReady(
-      this.store.allNodesMap.values()
-    );
+    this.primitiveRenderReady = true;
     this.events.dispatch("geometry:change", { nodeIds: [...affected] });
     if (this.renderer) this.requestRender();
-  }
-  beginMeasurementGate() {
-    if (this.measurementGatePromise) return;
-    const loading = this.ensureMeasurementLoadingScreen();
-    let resolveGate;
-    const gate = new Promise((resolve) => {
-      resolveGate = resolve;
-    });
-    this.measurementGatePromise = gate;
-    loading.promise = gate;
-    const startedAt = performance.now();
-    const poll = () => {
-      this.syncPrimitiveMeasurements();
-      const timedOut = performance.now() - startedAt >= 2e3;
-      if (this.primitiveRenderReady || timedOut) {
-        this.primitiveRenderReady = true;
-        this.measurementGatePromise = null;
-        resolveGate();
-        this.requestRender();
-        return;
-      }
-      requestAnimationFrame(poll);
-    };
-    requestAnimationFrame(poll);
-  }
-  ensureMeasurementLoadingScreen() {
-    if (this.measurementLoadingScreen) return this.measurementLoadingScreen;
-    const loading = document.createElement("gg-loading-screen");
-    document.body.appendChild(loading);
-    this.measurementLoadingScreen = loading;
-    return loading;
   }
   getPrimitiveFrame(nodeId) {
     const node = this.store.get(nodeId);

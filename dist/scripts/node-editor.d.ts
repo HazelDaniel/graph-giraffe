@@ -73,8 +73,6 @@ export declare class NodeEditor {
     private primitiveMeasurements;
     private primitiveRenderReady;
     private controlledGraphActive;
-    private measurementLoadingScreen;
-    private measurementGatePromise;
     private resizeObserver;
     private activeTouches;
     private gestureMode;
@@ -104,8 +102,6 @@ export declare class NodeEditor {
     private init;
     private syncPrimitiveMeasurements;
     private handlePrimitiveMeasurementChange;
-    private beginMeasurementGate;
-    private ensureMeasurementLoadingScreen;
     private getPrimitiveFrame;
     private setupPropGroupListener;
     private syncPropertiesPanelForSelection;
