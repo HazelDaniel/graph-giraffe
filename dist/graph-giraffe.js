@@ -11822,12 +11822,18 @@ const _NodeEditor = class _NodeEditor {
   handlePrimitiveMeasurementChange(nodeId) {
     if (!this.store) return;
     const node = this.store.get(nodeId);
+    const affected = /* @__PURE__ */ new Set([nodeId]);
     if ((node == null ? void 0 : node.parentId) !== null && (node == null ? void 0 : node.parentId) !== void 0) {
       this.refreshContainerChain(node.parentId);
+      affected.add(node.parentId);
+    }
+    if (node && isContainerNodeType(node.nodeType, this.typeRegistry)) {
+      this.refreshContainerChain(node.id);
     }
     this.primitiveRenderReady = this.primitiveMeasurements.isReady(
       this.store.allNodesMap.values()
     );
+    this.events.dispatch("geometry:change", { nodeIds: [...affected] });
     if (this.renderer) this.requestRender();
   }
   beginMeasurementGate() {

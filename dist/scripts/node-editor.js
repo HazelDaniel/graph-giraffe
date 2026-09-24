@@ -373,12 +373,16 @@ export class NodeEditor {
         if (!this.store)
             return;
         const node = this.store.get(nodeId);
+        const affected = new Set([nodeId]);
         if (node?.parentId !== null && node?.parentId !== undefined) {
-            // Re-run the existing container chain so groups, subgraphs, and any
-            // enclosing subgraphs consume the new child dimensions in order.
             this.refreshContainerChain(node.parentId);
+            affected.add(node.parentId);
+        }
+        if (node && isContainerNodeType(node.nodeType, this.typeRegistry)) {
+            this.refreshContainerChain(node.id);
         }
         this.primitiveRenderReady = this.primitiveMeasurements.isReady(this.store.allNodesMap.values());
+        this.events.dispatch("geometry:change", { nodeIds: [...affected] });
         if (this.renderer)
             this.requestRender();
     }

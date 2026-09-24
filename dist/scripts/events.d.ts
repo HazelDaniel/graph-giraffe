@@ -28,6 +28,9 @@ export interface GraphBeforeEvents {
     };
 }
 export interface GraphEvents {
+    "geometry:change": {
+        nodeIds: number[];
+    };
     "history:command": {
         command: Command;
         action: "do" | "undo" | "redo";
