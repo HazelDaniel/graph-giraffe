@@ -155,6 +155,10 @@ export type PrimitiveMeasurementCleanup = (
   ctx: PrimitiveMeasurementTemplateContext
 ) => void;
 
+export interface PrimitiveLayoutOptions {
+  positionChildren?: boolean;
+}
+
 // ─── Overlay Config ──────────────────────────────────────
 
 export interface NodeOverlayConfig {
@@ -213,7 +217,9 @@ export interface NodeTypeDescriptor {
   layoutChildren?: (
     container: NodeData,
     children: NodeData[],
-    allNodes: Map<number, NodeData>
+    allNodes: Map<number, NodeData>,
+    resolvedBounds?: ReadonlyMap<number, { width: number; height: number }>,
+    options?: PrimitiveLayoutOptions
   ) => void;
   contributesToChildWorldPosition?: boolean;
 

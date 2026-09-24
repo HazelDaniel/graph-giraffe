@@ -126,6 +126,9 @@ export type PrimitiveMeasurementTemplate = (ctx: PrimitiveMeasurementTemplateCon
  * root mounted into the supplied off-screen element.
  */
 export type PrimitiveMeasurementCleanup = (ctx: PrimitiveMeasurementTemplateContext) => void;
+export interface PrimitiveLayoutOptions {
+    positionChildren?: boolean;
+}
 export interface NodeOverlayConfig {
     titlePosition: "header" | "container-top" | "center";
     showTitle: boolean;
@@ -177,7 +180,10 @@ export interface NodeTypeDescriptor {
     measurementTemplate?: PrimitiveMeasurementTemplate;
     /** Optional cleanup for resources owned by `measurementTemplate`. */
     measurementCleanup?: PrimitiveMeasurementCleanup;
-    layoutChildren?: (container: NodeData, children: NodeData[], allNodes: Map<number, NodeData>) => void;
+    layoutChildren?: (container: NodeData, children: NodeData[], allNodes: Map<number, NodeData>, resolvedBounds?: ReadonlyMap<number, {
+        width: number;
+        height: number;
+    }>, options?: PrimitiveLayoutOptions) => void;
     contributesToChildWorldPosition?: boolean;
     toolbarActions?: string[];
     collapsedToolbarActions?: string[];

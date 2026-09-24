@@ -6015,7 +6015,8 @@ class NodeStore {
     return true;
   }
   /** Re-calculates bounds of a container node based on its children. */
-  updateContainerBounds(containerId, theme) {
+  updateContainerBounds(containerId, theme, options = {}) {
+    var _a2, _b, _c, _d;
     const container = this.groups.get(containerId);
     if (!container || !isContainerNodeType(container.nodeType)) return;
     if (container.nodeType === "subgraph") {
@@ -6023,7 +6024,8 @@ class NodeStore {
       return;
     }
     const defaultSize = getDefaultNodeSize(container.nodeType, false, this.registry);
-    if (container.childIds.length === 0) {
+    const children = container.childIds.map((id) => this.get(id)).filter((node) => Boolean(node));
+    if (children.length === 0) {
       container.width = defaultSize.width;
       container.height = defaultSize.height;
       return;
@@ -6032,12 +6034,25 @@ class NodeStore {
     const paddingY = 50;
     const paddingBottom = 40;
     const gapY = 10;
+    const childBounds = /* @__PURE__ */ new Map();
     let totalChildHeight = 0;
     let maxChildWidth = 0;
-    const children = container.childIds.map((id) => this.get(id)).filter((node) => Boolean(node));
     for (const child of children) {
-      maxChildWidth = Math.max(maxChildWidth, child.width);
-      totalChildHeight += child.height;
+      const bounds = ((_a2 = this.resolvedBounds) == null ? void 0 : _a2.call(this, child.id)) ?? {
+        width: child.width,
+        height: child.height
+      };
+      childBounds.set(child.id, bounds);
+      maxChildWidth = Math.max(maxChildWidth, bounds.width);
+      totalChildHeight += bounds.height;
+    }
+    const layoutChildren = (_c = (_b = this.registry) == null ? void 0 : _b.get(container.nodeType)) == null ? void 0 : _c.layoutChildren;
+    if (layoutChildren) {
+      const resolvedContainer = (_d = this.resolvedBounds) == null ? void 0 : _d.call(this, container.id);
+      container.width = (resolvedContainer == null ? void 0 : resolvedContainer.width) ?? Math.max(container.width, defaultSize.width);
+      container.height = (resolvedContainer == null ? void 0 : resolvedContainer.height) ?? Math.max(container.height, defaultSize.height);
+      layoutChildren(container, children, this.allNodesMap, childBounds, options);
+      return;
     }
     totalChildHeight += Math.max(0, children.length - 1) * gapY;
     container.width = Math.max(defaultSize.width, maxChildWidth + paddingX * 2);
@@ -6046,10 +6061,15 @@ class NodeStore {
       totalChildHeight + paddingY + paddingBottom
     );
     let currentY = paddingY;
+    if (options.positionChildren === false) return;
     for (const child of children) {
-      child.localX = (container.width - child.width) / 2;
+      const bounds = childBounds.get(child.id) ?? {
+        width: child.width,
+        height: child.height
+      };
+      child.localX = (container.width - bounds.width) / 2;
       child.localY = currentY;
-      currentY += child.height + gapY;
+      currentY += bounds.height + gapY;
     }
   }
   /** Compatibility wrapper for the previous group-specific API. */

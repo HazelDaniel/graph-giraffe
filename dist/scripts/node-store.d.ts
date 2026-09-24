@@ -1,5 +1,5 @@
 import { ConnectionMode, HandleStyle, NodeHandleData, NodeData, ThemeName, NodeType } from './types.js';
-import type { NodeTypeRegistry } from './node-type-registry.js';
+import type { NodeTypeRegistry, PrimitiveLayoutOptions } from './node-type-registry.js';
 /**
  * Owns the canonical node list.
  * Groups, compositions, and leaf nodes are stored in separate z-order buckets
@@ -146,7 +146,7 @@ export declare class NodeStore {
     visibleNodes(): NodeData[];
     isEffectivelyVisible(nodeId: number): boolean;
     /** Re-calculates bounds of a container node based on its children. */
-    updateContainerBounds(containerId: number, theme: ThemeName): void;
+    updateContainerBounds(containerId: number, theme: ThemeName, options?: PrimitiveLayoutOptions): void;
     /** Compatibility wrapper for the previous group-specific API. */
     updateGroupBounds(groupId: number, theme: ThemeName): void;
     /** Ensure a node is stored in the correct map based on its nodeType. */

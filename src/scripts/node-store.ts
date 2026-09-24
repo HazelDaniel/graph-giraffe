@@ -24,7 +24,7 @@ import {
   reparent,
 } from './scene-graph.js';
 import { AccessibilityTree } from './accessibility.js';
-import type { NodeTypeRegistry } from './node-type-registry.js';
+import type { NodeTypeRegistry, PrimitiveLayoutOptions } from './node-type-registry.js';
 
 /**
  * Owns the canonical node list.
@@ -763,7 +763,11 @@ export class NodeStore {
   }
 
   /** Re-calculates bounds of a container node based on its children. */
-  updateContainerBounds(containerId: number, theme: ThemeName): void {
+  updateContainerBounds(
+    containerId: number,
+    theme: ThemeName,
+    options: PrimitiveLayoutOptions = {}
+  ): void {
     const container = this.groups.get(containerId);
     if (!container || !isContainerNodeType(container.nodeType)) return;
 
@@ -773,7 +777,11 @@ export class NodeStore {
     }
 
     const defaultSize = getDefaultNodeSize(container.nodeType, false, this.registry);
-    if (container.childIds.length === 0) {
+    const children = container.childIds
+      .map((id) => this.get(id))
+      .filter((node): node is NodeData => Boolean(node));
+
+    if (children.length === 0) {
       container.width = defaultSize.width;
       container.height = defaultSize.height;
       return;
@@ -784,17 +792,29 @@ export class NodeStore {
     const paddingBottom = 40;
     const gapY = 10;
 
+    const childBounds = new Map<number, { width: number; height: number }>();
     let totalChildHeight = 0;
     let maxChildWidth = 0;
 
-    const children = container.childIds
-      .map((id) => this.get(id))
-      .filter((node): node is NodeData => Boolean(node));
-
     for (const child of children) {
-      maxChildWidth = Math.max(maxChildWidth, child.width);
-      totalChildHeight += child.height;
+      const bounds = this.resolvedBounds?.(child.id) ?? {
+        width: child.width,
+        height: child.height,
+      };
+      childBounds.set(child.id, bounds);
+      maxChildWidth = Math.max(maxChildWidth, bounds.width);
+      totalChildHeight += bounds.height;
     }
+
+    const layoutChildren = this.registry?.get(container.nodeType)?.layoutChildren;
+    if (layoutChildren) {
+      const resolvedContainer = this.resolvedBounds?.(container.id);
+      container.width = resolvedContainer?.width ?? Math.max(container.width, defaultSize.width);
+      container.height = resolvedContainer?.height ?? Math.max(container.height, defaultSize.height);
+      layoutChildren(container, children, this.allNodesMap, childBounds, options);
+      return;
+    }
+
     totalChildHeight += Math.max(0, children.length - 1) * gapY;
 
     container.width = Math.max(defaultSize.width, maxChildWidth + paddingX * 2);
@@ -804,10 +824,16 @@ export class NodeStore {
     );
 
     let currentY = paddingY;
+    if (options.positionChildren === false) return;
+
     for (const child of children) {
-      child.localX = (container.width - child.width) / 2;
+      const bounds = childBounds.get(child.id) ?? {
+        width: child.width,
+        height: child.height,
+      };
+      child.localX = (container.width - bounds.width) / 2;
       child.localY = currentY;
-      currentY += child.height + gapY;
+      currentY += bounds.height + gapY;
     }
 
   }
