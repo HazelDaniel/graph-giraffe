@@ -51,10 +51,12 @@ const STYLE_TEMPLATE = `
 `;
 
 export class LoadingScreen extends HTMLElement {
+  private static readonly revealDelayMs = 200;
   private done: boolean = true;
   static readonly observedAttributes = ["hidden"] as const;
   private activePromiseIndex: number = -1;
   private promises: Array<Promise<any> | null> = [];
+  private revealTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     super();
@@ -65,9 +67,13 @@ export class LoadingScreen extends HTMLElement {
     this.activePromiseIndex++;
     this.stop();
     this.done = false;
-    this.toggleHidden(false);
     this.promises.push(newPromise);
     const activeIndex = this.activePromiseIndex;
+    this.revealTimer = setTimeout(() => {
+      if (this.done || activeIndex !== this.activePromiseIndex) return;
+      this.revealTimer = null;
+      this.toggleHidden(false);
+    }, LoadingScreen.revealDelayMs);
     newPromise
     .finally(() => {
       if (activeIndex < this.activePromiseIndex) return;
@@ -119,6 +125,10 @@ export class LoadingScreen extends HTMLElement {
 
   stop(): void {
     if (this.done) return;
+    if (this.revealTimer !== null) {
+      clearTimeout(this.revealTimer);
+      this.revealTimer = null;
+    }
     this.done = true;
     this.toggleHidden(true);
   }

@@ -1,8 +1,10 @@
 export declare class LoadingScreen extends HTMLElement {
+    private static readonly revealDelayMs;
     private done;
     static readonly observedAttributes: readonly ["hidden"];
     private activePromiseIndex;
     private promises;
+    private revealTimer;
     constructor();
     set promise(newPromise: Promise<any>);
     connectedCallback(): void;

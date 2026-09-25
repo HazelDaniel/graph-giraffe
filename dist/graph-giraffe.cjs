@@ -797,21 +797,26 @@ const STYLE_TEMPLATE$3 = `
     }
   }
 `;
-class LoadingScreen extends HTMLElement {
+const _LoadingScreen = class _LoadingScreen extends HTMLElement {
   constructor() {
     super();
     __publicField(this, "done", true);
     __publicField(this, "activePromiseIndex", -1);
     __publicField(this, "promises", []);
+    __publicField(this, "revealTimer", null);
     this.attachShadow({ mode: "open" });
   }
   set promise(newPromise) {
     this.activePromiseIndex++;
     this.stop();
     this.done = false;
-    this.toggleHidden(false);
     this.promises.push(newPromise);
     const activeIndex = this.activePromiseIndex;
+    this.revealTimer = setTimeout(() => {
+      if (this.done || activeIndex !== this.activePromiseIndex) return;
+      this.revealTimer = null;
+      this.toggleHidden(false);
+    }, _LoadingScreen.revealDelayMs);
     newPromise.finally(() => {
       if (activeIndex < this.activePromiseIndex) return;
       this.stop();
@@ -858,6 +863,10 @@ class LoadingScreen extends HTMLElement {
   }
   stop() {
     if (this.done) return;
+    if (this.revealTimer !== null) {
+      clearTimeout(this.revealTimer);
+      this.revealTimer = null;
+    }
     this.done = true;
     this.toggleHidden(true);
   }
@@ -877,8 +886,10 @@ class LoadingScreen extends HTMLElement {
         break;
     }
   }
-}
-__publicField(LoadingScreen, "observedAttributes", ["hidden"]);
+};
+__publicField(_LoadingScreen, "revealDelayMs", 200);
+__publicField(_LoadingScreen, "observedAttributes", ["hidden"]);
+let LoadingScreen = _LoadingScreen;
 if (!customElements.get("gg-loading-screen"))
   customElements.define("gg-loading-screen", LoadingScreen);
 const NODE_LAYOUT = {
