@@ -126,16 +126,19 @@ export class DomNodeLayer {
    * Reconcile the view map against the store: create missing views, destroy
    * orphaned ones, and refresh geometry + state of everything else.
    */
-  reconcile(): void {
+  reconcile(affectedIds?: Iterable<number>): void {
     const { store, registry } = this.options;
     this.syncSelectedNodeIds();
     const alive = new Set<number>();
+    const affected = affectedIds ? new Set(affectedIds) : null;
 
     for (const node of store.allNodesMap.values()) {
       if (!registry.isDomRendered(node.nodeType)) continue;
       if (!store.isEffectivelyVisible(node.id)) continue;
       alive.add(node.id);
-      this.ensureView(node);
+      if (!affected || affected.has(node.id) || !this.views.has(node.id)) {
+        this.ensureView(node);
+      }
     }
 
     for (const id of [...this.views.keys()]) {

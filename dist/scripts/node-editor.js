@@ -572,6 +572,11 @@ export class NodeEditor {
             }
             edgeIds.add(edge.id);
         }
+        const currentNodes = new Map(this.store.allNodesMap);
+        if (currentNodes.size > 0) {
+            this.applyControlledGraphIncrementally(nodes, edges);
+            return;
+        }
         this.store.clear();
         this.edgeStore.clear();
         for (const input of nodes) {
@@ -650,6 +655,210 @@ export class NodeEditor {
         this.domNodeLayer?.syncAll();
         this.markMinimapDirty();
         this.events.dispatch("controlled:apply", { nodeIds: [...nodeIds], edgeIds: [...edgeIds] });
+        this.requestRender();
+    }
+    /** Apply a compatible controlled projection without replacing the graph. */
+    applyControlledGraphIncrementally(nodes, edges) {
+        const incomingNodes = new Map(nodes.map((node) => [node.id, node]));
+        const affectedNodeIds = new Set();
+        const affectedEdgeIds = new Set();
+        const selectedBefore = new Set(this.selectedNodeIds);
+        // Remove incident edges first. A controlled projection may remove a
+        // parent while retaining some of its former children; the controlled-only
+        // store operation promotes those children until their desired parents are
+        // applied below.
+        for (const current of [...this.store.allNodesMap.values()]) {
+            if (incomingNodes.has(current.id))
+                continue;
+            for (const edge of this.edgeStore.removeEdgesForNode(current.id)) {
+                affectedEdgeIds.add(edge.id);
+                affectedNodeIds.add(edge.sourceNodeId);
+                affectedNodeIds.add(edge.targetNodeId);
+            }
+            affectedNodeIds.add(current.id);
+            for (const promotedId of this.store.removeControlledNode(current.id)) {
+                affectedNodeIds.add(promotedId);
+            }
+        }
+        // Add new records first. Parent links and authoritative world positions
+        // are applied in separate passes so input order cannot affect geometry.
+        for (const input of nodes) {
+            if (this.store.get(input.id))
+                continue;
+            const node = this.store.add(input.position.x, input.position.y, input.label ?? input.nodeType, this.theme, input.nodeType, input.id);
+            node.width = input.width ?? node.width;
+            node.height = input.height ?? node.height;
+            node.props = cloneNodeProps(input.props ?? node.props);
+            node.isLocked = input.isLocked ?? false;
+            node.isCollapsed = input.isCollapsed ?? false;
+            if (input.textureIds)
+                node.textureIds = { ...input.textureIds };
+            affectedNodeIds.add(node.id);
+        }
+        for (const input of nodes) {
+            const node = this.store.get(input.id);
+            if (!node || node.nodeType === input.nodeType)
+                continue;
+            this.store.replaceControlledNodeType(input.id, input.nodeType, this.theme);
+            affectedNodeIds.add(input.id);
+        }
+        // Apply parent relationships before converting incoming world coordinates
+        // to local coordinates. This is the same world/local contract used by the
+        // full controlled path, but without discarding stable node records.
+        for (const input of nodes) {
+            const node = this.store.get(input.id);
+            if (!node)
+                continue;
+            const parentId = input.parentId ?? null;
+            if (node.parentId !== parentId) {
+                if (!this.store.setParent(input.id, parentId)) {
+                    throw new Error(`Invalid controlled parent ${parentId ?? "root"} for node ${input.id}`);
+                }
+                affectedNodeIds.add(input.id);
+            }
+        }
+        // Restore controlled sibling order without sorting the graph. The input
+        // sequence is already the adapter's declarative order.
+        const childrenByParent = new Map();
+        for (const input of nodes) {
+            if (input.parentId == null)
+                continue;
+            const children = childrenByParent.get(input.parentId) ?? [];
+            children.push(input.id);
+            childrenByParent.set(input.parentId, children);
+        }
+        for (const [parentId, childIds] of childrenByParent) {
+            const parent = this.store.get(parentId);
+            if (parent)
+                parent.childIds = childIds;
+        }
+        const controlledById = new Map(nodes.map((input) => [input.id, input]));
+        const parentFrame = (nodeId) => {
+            const node = controlledById.get(nodeId);
+            if (node?.parentId == null)
+                return { x: 0, y: 0 };
+            const parent = controlledById.get(node.parentId);
+            if (!parent)
+                return { x: 0, y: 0 };
+            const descriptor = this.typeRegistry.get(parent.nodeType);
+            if (descriptor?.contributesToChildWorldPosition === false) {
+                return parentFrame(parent.id);
+            }
+            return { x: parent.position.x, y: parent.position.y };
+        };
+        for (const input of nodes) {
+            const node = this.store.get(input.id);
+            if (!node)
+                continue;
+            const previous = {
+                x: this.getNodeWorldPosition(node.id)?.x,
+                y: this.getNodeWorldPosition(node.id)?.y,
+                width: node.width,
+                height: node.height,
+                text: node.text,
+                locked: Boolean(node.isLocked),
+                collapsed: Boolean(node.isCollapsed),
+                props: JSON.stringify(node.props),
+            };
+            node.text = input.label ?? input.nodeType;
+            node.props = cloneNodeProps(input.props ?? node.props);
+            node.isLocked = input.isLocked ?? false;
+            node.isCollapsed = input.isCollapsed ?? false;
+            if (input.textureIds)
+                node.textureIds = { ...input.textureIds };
+            this.store.syncNodePresentation(node.id);
+            if (!this.store.isNodeCollapsed(node)) {
+                if (input.width !== undefined)
+                    node.width = input.width;
+                if (input.height !== undefined)
+                    node.height = input.height;
+            }
+            const frame = parentFrame(input.id);
+            node.localX = input.position.x - frame.x;
+            node.localY = input.position.y - frame.y;
+            if (previous.x !== input.position.x || previous.y !== input.position.y ||
+                previous.width !== node.width || previous.height !== node.height ||
+                previous.text !== node.text || previous.locked !== Boolean(node.isLocked) ||
+                previous.collapsed !== Boolean(node.isCollapsed) ||
+                previous.props !== JSON.stringify(node.props)) {
+                affectedNodeIds.add(node.id);
+            }
+        }
+        // A changed ancestor changes every descendant's world frame. Marking the
+        // subtree keeps DOM updates targeted while preserving the transform
+        // invariant for WebGL picking and overlay geometry.
+        const markSubtree = (nodeId) => {
+            const node = this.store.get(nodeId);
+            if (!node)
+                return;
+            for (const childId of node.childIds) {
+                if (affectedNodeIds.has(childId))
+                    continue;
+                affectedNodeIds.add(childId);
+                markSubtree(childId);
+            }
+        };
+        for (const nodeId of [...affectedNodeIds])
+            markSubtree(nodeId);
+        const incomingEdges = new Map(edges.map((edge) => [edge.id, edge]));
+        for (const current of this.edgeStore.allEdges()) {
+            const input = incomingEdges.get(current.id);
+            const changed = !input ||
+                current.sourceNodeId !== input.sourceNodeId ||
+                current.targetNodeId !== input.targetNodeId ||
+                current.sourceHandleSide !== input.sourceHandleSide ||
+                current.targetHandleSide !== input.targetHandleSide ||
+                current.edgeType !== (input.edgeType ?? "cubic") ||
+                current.headType !== (input.headType ?? "arrow") ||
+                current.headSkinId !== (input.headSkinId ?? "arrow") ||
+                current.label !== (input.label ?? "");
+            if (!changed)
+                continue;
+            this.edgeStore.remove(current.id);
+            affectedEdgeIds.add(current.id);
+            affectedNodeIds.add(current.sourceNodeId);
+            affectedNodeIds.add(current.targetNodeId);
+        }
+        for (const input of edges) {
+            const current = this.edgeStore.get(input.id);
+            if (current)
+                continue;
+            const source = this.store.get(input.sourceNodeId);
+            const target = this.store.get(input.targetNodeId);
+            if (!source || !target)
+                continue;
+            const edge = this.edgeStore.add({
+                idOverride: input.id,
+                sourceNodeId: input.sourceNodeId,
+                sourceHandleSide: input.sourceHandleSide,
+                targetNodeId: input.targetNodeId,
+                targetHandleSide: input.targetHandleSide,
+                sourceCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(source.nodeType),
+                targetCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(target.nodeType),
+                edgeType: input.edgeType,
+                headType: input.headType,
+                headSkinId: input.headSkinId,
+                label: input.label,
+            });
+            if (edge) {
+                affectedEdgeIds.add(edge.id);
+                affectedNodeIds.add(edge.sourceNodeId);
+                affectedNodeIds.add(edge.targetNodeId);
+            }
+        }
+        for (const nodeId of affectedNodeIds)
+            this.syncHandleStates(nodeId);
+        for (const nodeId of selectedBefore)
+            affectedNodeIds.add(nodeId);
+        this.clearSelectionState();
+        this.history.clear();
+        this.syncPrimitiveMeasurements();
+        this.domNodeLayer?.reconcile(affectedNodeIds);
+        this.markMinimapDirty();
+        this.events.dispatch("controlled:apply", {
+            nodeIds: [...affectedNodeIds],
+            edgeIds: [...affectedEdgeIds],
+        });
         this.requestRender();
     }
     /**

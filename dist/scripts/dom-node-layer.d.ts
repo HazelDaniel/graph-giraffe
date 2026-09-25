@@ -49,7 +49,7 @@ export declare class DomNodeLayer {
      * Reconcile the view map against the store: create missing views, destroy
      * orphaned ones, and refresh geometry + state of everything else.
      */
-    reconcile(): void;
+    reconcile(affectedIds?: Iterable<number>): void;
     /**
      * Diff every mounted view against its last-known snapshot and only touch
      * the element when a slot changed. Call this from the renderer's per-frame

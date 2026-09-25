@@ -173,6 +173,32 @@ describe("DomNodeLayer", () => {
     expect(node.text).toBe("renamed");
   });
 
+  it("can reconcile only affected views without recreating stable DOM roots", () => {
+    const h = buildHarness();
+    const first = h.store.add(0, 0, "first", "dark", "dom-test");
+    const second = h.store.add(0, 40, "second", "dark", "dom-test");
+    h.layer.syncAll();
+
+    const firstView = h.createdViews.find(
+      (view) => view.dataset.nodeId === String(first.id)
+    );
+    const secondView = h.createdViews.find(
+      (view) => view.dataset.nodeId === String(second.id)
+    );
+    expect(firstView).toBeDefined();
+    expect(secondView).toBeDefined();
+
+    const updatesBefore = h.updateCalls.length;
+    first.textContent = "updated";
+    h.layer.reconcile([first.id]);
+
+    expect(h.createdViews).toHaveLength(2);
+    expect(h.destroyed).toHaveLength(0);
+    expect(h.createdViews.find((view) => view.dataset.nodeId === String(first.id))).toBe(firstView);
+    expect(h.createdViews.find((view) => view.dataset.nodeId === String(second.id))).toBe(secondView);
+    expect(h.updateCalls.slice(updatesBefore)).toEqual([first.id]);
+  });
+
   it("reflects selection state via syncFrame without events", () => {
     const h = buildHarness();
     const node = h.store.add(0, 0, "sel", "dark", "dom-test");

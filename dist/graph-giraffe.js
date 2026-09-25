@@ -5676,6 +5676,64 @@ class NodeStore {
     this.a11yTree.removeNode(id);
   }
   /**
+   * Remove one node for a controlled projection without cascading into its
+   * children. Controlled inputs describe the complete next tree, so surviving
+   * children will receive their authoritative parent/position during the same
+   * transaction.
+   */
+  removeControlledNode(id) {
+    const node = this.get(id);
+    if (!node) return [];
+    const promotedChildIds = [...node.childIds];
+    const allNodes = this.allNodesMap;
+    for (const childId of promotedChildIds) {
+      reparent(childId, node.parentId, allNodes, this.registry, id);
+      const child = allNodes.get(childId);
+      if (child) {
+        this.syncNodePresentation(childId);
+        this.syncToMap(child);
+      }
+    }
+    if (node.parentId !== null) {
+      const parent = this.get(node.parentId);
+      if (parent) {
+        parent.childIds = parent.childIds.filter((childId) => childId !== id);
+      }
+    }
+    this.groups.delete(id);
+    this.nodes.delete(id);
+    this._groupOrder.delete(id);
+    this._compositionOrder.delete(id);
+    this._leafOrder.delete(id);
+    this.a11yTree.removeNode(id);
+    return promotedChildIds;
+  }
+  /** Change a controlled node's primitive type without replacing the graph. */
+  replaceControlledNodeType(id, nodeType, theme) {
+    var _a2;
+    const node = this.get(id);
+    if (!node || node.nodeType === nodeType) return false;
+    const oldIsContainer = this.registry ? this.registry.isContainer(node.nodeType) : isContainerNodeType(node.nodeType);
+    if (oldIsContainer) this.groups.delete(id);
+    else this.nodes.delete(id);
+    this._groupOrder.delete(id);
+    this._compositionOrder.delete(id);
+    this._leafOrder.delete(id);
+    node.nodeType = nodeType;
+    node.handles = this.createHandleState(node.id, nodeType, node.handles);
+    node.textureIds = getDefaultTextureIds(nodeType);
+    this.syncToMap(node);
+    const desc = (_a2 = this.registry) == null ? void 0 : _a2.get(nodeType);
+    const zTier = (desc == null ? void 0 : desc.zTier) ?? 0.4;
+    if (zTier < 0.1) this._groupOrder.set(id, this._nextGroupOrder++);
+    else if (zTier < 0.3) this._compositionOrder.set(id, this._nextCompositionOrder++);
+    else this._leafOrder.set(id, this._nextLeafOrder++);
+    this.currentTheme = theme;
+    this.a11yTree.updateLabel(id, node.text, nodeType);
+    this.syncNodePresentation(id);
+    return true;
+  }
+  /**
    * Removes a container while preserving its children in their current visual
    * positions by promoting them to the removed container's parent.
    *
@@ -9900,15 +9958,18 @@ class DomNodeLayer {
    * Reconcile the view map against the store: create missing views, destroy
    * orphaned ones, and refresh geometry + state of everything else.
    */
-  reconcile() {
+  reconcile(affectedIds) {
     const { store, registry } = this.options;
     this.syncSelectedNodeIds();
     const alive = /* @__PURE__ */ new Set();
+    const affected = affectedIds ? new Set(affectedIds) : null;
     for (const node of store.allNodesMap.values()) {
       if (!registry.isDomRendered(node.nodeType)) continue;
       if (!store.isEffectivelyVisible(node.id)) continue;
       alive.add(node.id);
-      this.ensureView(node);
+      if (!affected || affected.has(node.id) || !this.views.has(node.id)) {
+        this.ensureView(node);
+      }
     }
     for (const id of [...this.views.keys()]) {
       if (!alive.has(id)) this.destroyView(id);
@@ -12027,6 +12088,11 @@ const _NodeEditor = class _NodeEditor {
       }
       edgeIds.add(edge.id);
     }
+    const currentNodes = new Map(this.store.allNodesMap);
+    if (currentNodes.size > 0) {
+      this.applyControlledGraphIncrementally(nodes, edges);
+      return;
+    }
     this.store.clear();
     this.edgeStore.clear();
     for (const input of nodes) {
@@ -12100,6 +12166,171 @@ const _NodeEditor = class _NodeEditor {
     (_c = this.domNodeLayer) == null ? void 0 : _c.syncAll();
     this.markMinimapDirty();
     this.events.dispatch("controlled:apply", { nodeIds: [...nodeIds], edgeIds: [...edgeIds] });
+    this.requestRender();
+  }
+  /** Apply a compatible controlled projection without replacing the graph. */
+  applyControlledGraphIncrementally(nodes, edges) {
+    var _a2, _b, _c;
+    const incomingNodes = new Map(nodes.map((node) => [node.id, node]));
+    const affectedNodeIds = /* @__PURE__ */ new Set();
+    const affectedEdgeIds = /* @__PURE__ */ new Set();
+    const selectedBefore = new Set(this.selectedNodeIds);
+    for (const current of [...this.store.allNodesMap.values()]) {
+      if (incomingNodes.has(current.id)) continue;
+      for (const edge of this.edgeStore.removeEdgesForNode(current.id)) {
+        affectedEdgeIds.add(edge.id);
+        affectedNodeIds.add(edge.sourceNodeId);
+        affectedNodeIds.add(edge.targetNodeId);
+      }
+      affectedNodeIds.add(current.id);
+      for (const promotedId of this.store.removeControlledNode(current.id)) {
+        affectedNodeIds.add(promotedId);
+      }
+    }
+    for (const input of nodes) {
+      if (this.store.get(input.id)) continue;
+      const node = this.store.add(
+        input.position.x,
+        input.position.y,
+        input.label ?? input.nodeType,
+        this.theme,
+        input.nodeType,
+        input.id
+      );
+      node.width = input.width ?? node.width;
+      node.height = input.height ?? node.height;
+      node.props = cloneNodeProps(input.props ?? node.props);
+      node.isLocked = input.isLocked ?? false;
+      node.isCollapsed = input.isCollapsed ?? false;
+      if (input.textureIds) node.textureIds = { ...input.textureIds };
+      affectedNodeIds.add(node.id);
+    }
+    for (const input of nodes) {
+      const node = this.store.get(input.id);
+      if (!node || node.nodeType === input.nodeType) continue;
+      this.store.replaceControlledNodeType(input.id, input.nodeType, this.theme);
+      affectedNodeIds.add(input.id);
+    }
+    for (const input of nodes) {
+      const node = this.store.get(input.id);
+      if (!node) continue;
+      const parentId = input.parentId ?? null;
+      if (node.parentId !== parentId) {
+        if (!this.store.setParent(input.id, parentId)) {
+          throw new Error(`Invalid controlled parent ${parentId ?? "root"} for node ${input.id}`);
+        }
+        affectedNodeIds.add(input.id);
+      }
+    }
+    const childrenByParent = /* @__PURE__ */ new Map();
+    for (const input of nodes) {
+      if (input.parentId == null) continue;
+      const children = childrenByParent.get(input.parentId) ?? [];
+      children.push(input.id);
+      childrenByParent.set(input.parentId, children);
+    }
+    for (const [parentId, childIds] of childrenByParent) {
+      const parent = this.store.get(parentId);
+      if (parent) parent.childIds = childIds;
+    }
+    const controlledById = new Map(nodes.map((input) => [input.id, input]));
+    const parentFrame = (nodeId) => {
+      const node = controlledById.get(nodeId);
+      if ((node == null ? void 0 : node.parentId) == null) return { x: 0, y: 0 };
+      const parent = controlledById.get(node.parentId);
+      if (!parent) return { x: 0, y: 0 };
+      const descriptor = this.typeRegistry.get(parent.nodeType);
+      if ((descriptor == null ? void 0 : descriptor.contributesToChildWorldPosition) === false) {
+        return parentFrame(parent.id);
+      }
+      return { x: parent.position.x, y: parent.position.y };
+    };
+    for (const input of nodes) {
+      const node = this.store.get(input.id);
+      if (!node) continue;
+      const previous = {
+        x: (_a2 = this.getNodeWorldPosition(node.id)) == null ? void 0 : _a2.x,
+        y: (_b = this.getNodeWorldPosition(node.id)) == null ? void 0 : _b.y,
+        width: node.width,
+        height: node.height,
+        text: node.text,
+        locked: Boolean(node.isLocked),
+        collapsed: Boolean(node.isCollapsed),
+        props: JSON.stringify(node.props)
+      };
+      node.text = input.label ?? input.nodeType;
+      node.props = cloneNodeProps(input.props ?? node.props);
+      node.isLocked = input.isLocked ?? false;
+      node.isCollapsed = input.isCollapsed ?? false;
+      if (input.textureIds) node.textureIds = { ...input.textureIds };
+      this.store.syncNodePresentation(node.id);
+      if (!this.store.isNodeCollapsed(node)) {
+        if (input.width !== void 0) node.width = input.width;
+        if (input.height !== void 0) node.height = input.height;
+      }
+      const frame = parentFrame(input.id);
+      node.localX = input.position.x - frame.x;
+      node.localY = input.position.y - frame.y;
+      if (previous.x !== input.position.x || previous.y !== input.position.y || previous.width !== node.width || previous.height !== node.height || previous.text !== node.text || previous.locked !== Boolean(node.isLocked) || previous.collapsed !== Boolean(node.isCollapsed) || previous.props !== JSON.stringify(node.props)) {
+        affectedNodeIds.add(node.id);
+      }
+    }
+    const markSubtree = (nodeId) => {
+      const node = this.store.get(nodeId);
+      if (!node) return;
+      for (const childId of node.childIds) {
+        if (affectedNodeIds.has(childId)) continue;
+        affectedNodeIds.add(childId);
+        markSubtree(childId);
+      }
+    };
+    for (const nodeId of [...affectedNodeIds]) markSubtree(nodeId);
+    const incomingEdges = new Map(edges.map((edge) => [edge.id, edge]));
+    for (const current of this.edgeStore.allEdges()) {
+      const input = incomingEdges.get(current.id);
+      const changed = !input || current.sourceNodeId !== input.sourceNodeId || current.targetNodeId !== input.targetNodeId || current.sourceHandleSide !== input.sourceHandleSide || current.targetHandleSide !== input.targetHandleSide || current.edgeType !== (input.edgeType ?? "cubic") || current.headType !== (input.headType ?? "arrow") || current.headSkinId !== (input.headSkinId ?? "arrow") || current.label !== (input.label ?? "");
+      if (!changed) continue;
+      this.edgeStore.remove(current.id);
+      affectedEdgeIds.add(current.id);
+      affectedNodeIds.add(current.sourceNodeId);
+      affectedNodeIds.add(current.targetNodeId);
+    }
+    for (const input of edges) {
+      const current = this.edgeStore.get(input.id);
+      if (current) continue;
+      const source = this.store.get(input.sourceNodeId);
+      const target = this.store.get(input.targetNodeId);
+      if (!source || !target) continue;
+      const edge = this.edgeStore.add({
+        idOverride: input.id,
+        sourceNodeId: input.sourceNodeId,
+        sourceHandleSide: input.sourceHandleSide,
+        targetNodeId: input.targetNodeId,
+        targetHandleSide: input.targetHandleSide,
+        sourceCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(source.nodeType),
+        targetCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(target.nodeType),
+        edgeType: input.edgeType,
+        headType: input.headType,
+        headSkinId: input.headSkinId,
+        label: input.label
+      });
+      if (edge) {
+        affectedEdgeIds.add(edge.id);
+        affectedNodeIds.add(edge.sourceNodeId);
+        affectedNodeIds.add(edge.targetNodeId);
+      }
+    }
+    for (const nodeId of affectedNodeIds) this.syncHandleStates(nodeId);
+    for (const nodeId of selectedBefore) affectedNodeIds.add(nodeId);
+    this.clearSelectionState();
+    this.history.clear();
+    this.syncPrimitiveMeasurements();
+    (_c = this.domNodeLayer) == null ? void 0 : _c.reconcile(affectedNodeIds);
+    this.markMinimapDirty();
+    this.events.dispatch("controlled:apply", {
+      nodeIds: [...affectedNodeIds],
+      edgeIds: [...affectedEdgeIds]
+    });
     this.requestRender();
   }
   /**

@@ -137,6 +137,8 @@ export declare class NodeEditor {
      * Adapters use this to implement controlled React/Vue/Svelte integrations.
      */
     applyControlledGraph(nodes: ControlledNode[], edges: ControlledEdge[]): void;
+    /** Apply a compatible controlled projection without replacing the graph. */
+    private applyControlledGraphIncrementally;
     /**
      * Serialize the full graph state into a portable JSON-compatible snapshot.
      *

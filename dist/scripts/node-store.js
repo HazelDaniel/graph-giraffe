@@ -258,6 +258,72 @@ export class NodeStore {
         this.a11yTree.removeNode(id);
     }
     /**
+     * Remove one node for a controlled projection without cascading into its
+     * children. Controlled inputs describe the complete next tree, so surviving
+     * children will receive their authoritative parent/position during the same
+     * transaction.
+     */
+    removeControlledNode(id) {
+        const node = this.get(id);
+        if (!node)
+            return [];
+        const promotedChildIds = [...node.childIds];
+        const allNodes = this.allNodesMap;
+        for (const childId of promotedChildIds) {
+            reparent(childId, node.parentId, allNodes, this.registry, id);
+            const child = allNodes.get(childId);
+            if (child) {
+                this.syncNodePresentation(childId);
+                this.syncToMap(child);
+            }
+        }
+        if (node.parentId !== null) {
+            const parent = this.get(node.parentId);
+            if (parent) {
+                parent.childIds = parent.childIds.filter((childId) => childId !== id);
+            }
+        }
+        this.groups.delete(id);
+        this.nodes.delete(id);
+        this._groupOrder.delete(id);
+        this._compositionOrder.delete(id);
+        this._leafOrder.delete(id);
+        this.a11yTree.removeNode(id);
+        return promotedChildIds;
+    }
+    /** Change a controlled node's primitive type without replacing the graph. */
+    replaceControlledNodeType(id, nodeType, theme) {
+        const node = this.get(id);
+        if (!node || node.nodeType === nodeType)
+            return false;
+        const oldIsContainer = this.registry
+            ? this.registry.isContainer(node.nodeType)
+            : isContainerNodeType(node.nodeType);
+        if (oldIsContainer)
+            this.groups.delete(id);
+        else
+            this.nodes.delete(id);
+        this._groupOrder.delete(id);
+        this._compositionOrder.delete(id);
+        this._leafOrder.delete(id);
+        node.nodeType = nodeType;
+        node.handles = this.createHandleState(node.id, nodeType, node.handles);
+        node.textureIds = getDefaultTextureIds(nodeType);
+        this.syncToMap(node);
+        const desc = this.registry?.get(nodeType);
+        const zTier = desc?.zTier ?? 0.4;
+        if (zTier < 0.1)
+            this._groupOrder.set(id, this._nextGroupOrder++);
+        else if (zTier < 0.3)
+            this._compositionOrder.set(id, this._nextCompositionOrder++);
+        else
+            this._leafOrder.set(id, this._nextLeafOrder++);
+        this.currentTheme = theme;
+        this.a11yTree.updateLabel(id, node.text, nodeType);
+        this.syncNodePresentation(id);
+        return true;
+    }
+    /**
      * Removes a container while preserving its children in their current visual
      * positions by promoting them to the removed container's parent.
      *

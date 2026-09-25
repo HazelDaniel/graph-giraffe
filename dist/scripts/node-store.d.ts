@@ -85,6 +85,15 @@ export declare class NodeStore {
      */
     remove(id: number): void;
     /**
+     * Remove one node for a controlled projection without cascading into its
+     * children. Controlled inputs describe the complete next tree, so surviving
+     * children will receive their authoritative parent/position during the same
+     * transaction.
+     */
+    removeControlledNode(id: number): number[];
+    /** Change a controlled node's primitive type without replacing the graph. */
+    replaceControlledNodeType(id: number, nodeType: NodeType, theme: ThemeName): boolean;
+    /**
      * Removes a container while preserving its children in their current visual
      * positions by promoting them to the removed container's parent.
      *
