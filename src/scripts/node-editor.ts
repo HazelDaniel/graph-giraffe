@@ -813,6 +813,34 @@ export class NodeEditor {
     return this.edgeStore.allEdges().map((edge) => ({ ...edge }));
   }
 
+  /** Return one detached node projection without cloning the complete graph. */
+  getNode(id: number): NodeData | undefined {
+    const node = this.store.get(id);
+    if (!node) return undefined;
+    return {
+      ...node,
+      textureIds: { ...node.textureIds },
+      childIds: [...node.childIds],
+      handles: node.handles.map((handle) => ({ ...handle, style: { ...handle.style } })),
+      props: cloneNodeProps(node.props),
+      subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : undefined,
+    };
+  }
+
+  /** Return one detached edge projection without cloning the complete graph. */
+  getEdge(id: number): EdgeData | undefined {
+    const edge = this.edgeStore.get(id);
+    return edge ? { ...edge } : undefined;
+  }
+
+  getNodeCount(): number {
+    return this.store.groups.size + this.store.nodes.size;
+  }
+
+  getEdgeCount(): number {
+    return this.edgeStore.edges.size;
+  }
+
   /** Return one detached, renderer-neutral view of the complete graph. */
   getGraph(): GraphProjection {
     return { nodes: this.getNodes(), edges: this.getEdges() };

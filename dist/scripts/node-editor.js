@@ -515,6 +515,31 @@ export class NodeEditor {
     getEdges() {
         return this.edgeStore.allEdges().map((edge) => ({ ...edge }));
     }
+    /** Return one detached node projection without cloning the complete graph. */
+    getNode(id) {
+        const node = this.store.get(id);
+        if (!node)
+            return undefined;
+        return {
+            ...node,
+            textureIds: { ...node.textureIds },
+            childIds: [...node.childIds],
+            handles: node.handles.map((handle) => ({ ...handle, style: { ...handle.style } })),
+            props: cloneNodeProps(node.props),
+            subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : undefined,
+        };
+    }
+    /** Return one detached edge projection without cloning the complete graph. */
+    getEdge(id) {
+        const edge = this.edgeStore.get(id);
+        return edge ? { ...edge } : undefined;
+    }
+    getNodeCount() {
+        return this.store.groups.size + this.store.nodes.size;
+    }
+    getEdgeCount() {
+        return this.edgeStore.edges.size;
+    }
     /** Return one detached, renderer-neutral view of the complete graph. */
     getGraph() {
         return { nodes: this.getNodes(), edges: this.getEdges() };

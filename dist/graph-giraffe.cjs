@@ -12038,6 +12038,30 @@ const _NodeEditor = class _NodeEditor {
   getEdges() {
     return this.edgeStore.allEdges().map((edge) => ({ ...edge }));
   }
+  /** Return one detached node projection without cloning the complete graph. */
+  getNode(id) {
+    const node = this.store.get(id);
+    if (!node) return void 0;
+    return {
+      ...node,
+      textureIds: { ...node.textureIds },
+      childIds: [...node.childIds],
+      handles: node.handles.map((handle) => ({ ...handle, style: { ...handle.style } })),
+      props: cloneNodeProps(node.props),
+      subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : void 0
+    };
+  }
+  /** Return one detached edge projection without cloning the complete graph. */
+  getEdge(id) {
+    const edge = this.edgeStore.get(id);
+    return edge ? { ...edge } : void 0;
+  }
+  getNodeCount() {
+    return this.store.groups.size + this.store.nodes.size;
+  }
+  getEdgeCount() {
+    return this.edgeStore.edges.size;
+  }
   /** Return one detached, renderer-neutral view of the complete graph. */
   getGraph() {
     return { nodes: this.getNodes(), edges: this.getEdges() };

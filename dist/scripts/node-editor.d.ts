@@ -130,6 +130,12 @@ export declare class NodeEditor {
     getNodes(): NodeData[];
     /** Return a detached copy of the current edge projection. */
     getEdges(): EdgeData[];
+    /** Return one detached node projection without cloning the complete graph. */
+    getNode(id: number): NodeData | undefined;
+    /** Return one detached edge projection without cloning the complete graph. */
+    getEdge(id: number): EdgeData | undefined;
+    getNodeCount(): number;
+    getEdgeCount(): number;
     /** Return one detached, renderer-neutral view of the complete graph. */
     getGraph(): GraphProjection;
     /**
