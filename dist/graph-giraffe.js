@@ -11924,30 +11924,7 @@ const _NodeEditor = class _NodeEditor {
           const nodeId = Array.from(this.selectedNodeIds)[0];
           const node = this.store.get(nodeId);
           if (node && node.props) {
-            const beforeSnapshot = this.captureNodeSnapshot(node);
-            const selectionBefore = this.captureSelectionSnapshot();
-            const didChange = this.updatePropValue(node.props, label, value);
-            if (!didChange) return;
-            this.store.syncNodePresentation(node.id);
-            const afterSnapshot = this.captureNodeSnapshot(node);
-            const parentId = node.parentId;
-            if (parentId !== null) {
-              this.refreshContainerChain(parentId);
-            }
-            this.pushCommand(
-              new UpdatePropCommand({
-                beforeSnapshot,
-                afterSnapshot,
-                selectionBefore,
-                parentId
-              })
-            );
-            this.events.dispatch("node:propChange", {
-              nodeId: node.id,
-              nodeType: node.nodeType,
-              label,
-              value
-            });
+            this.applyPropEdit(node, label, value);
           }
         }
       }
@@ -11976,6 +11953,74 @@ const _NodeEditor = class _NodeEditor {
       }
     }
     return false;
+  }
+  resolveProps(node, proposedProps, reason) {
+    var _a2;
+    const resolver = (_a2 = this.typeRegistry.get(node.nodeType)) == null ? void 0 : _a2.resolveProps;
+    if (!resolver) return { status: "accept", props: proposedProps };
+    return resolver({
+      node,
+      previousProps: cloneNodeProps(node.props),
+      proposedProps,
+      allNodes: this.store.allNodesMap,
+      incidentEdges: this.edgeStore.allEdges().filter(
+        (edge) => edge.sourceNodeId === node.id || edge.targetNodeId === node.id
+      ),
+      reason
+    });
+  }
+  dispatchPropValidation(node, label, value, accepted, normalized, message, code) {
+    this.events.dispatch("node:propValidation", {
+      nodeId: node.id,
+      nodeType: node.nodeType,
+      label,
+      value,
+      accepted,
+      normalized,
+      message,
+      code
+    });
+  }
+  applyPropEdit(node, label, value) {
+    if (!node.props) return false;
+    const proposedProps = cloneNodeProps(node.props);
+    if (!proposedProps || !this.updatePropValue(proposedProps, label, value)) return false;
+    const result = this.resolveProps(node, proposedProps, "edit");
+    if (result.status === "reject") {
+      this.dispatchPropValidation(node, label, value, false, false, result.message, result.code);
+      return false;
+    }
+    const beforeSnapshot = this.captureNodeSnapshot(node);
+    const selectionBefore = this.captureSelectionSnapshot();
+    this.store.updateProps(node.id, cloneNodeProps(result.props));
+    this.syncPropertiesPanelForSelection();
+    const afterSnapshot = this.captureNodeSnapshot(node);
+    const parentId = node.parentId;
+    if (parentId !== null) this.refreshContainerChain(parentId);
+    this.pushCommand(new UpdatePropCommand({
+      beforeSnapshot,
+      afterSnapshot,
+      selectionBefore,
+      parentId
+    }));
+    this.events.dispatch("node:propChange", {
+      nodeId: node.id,
+      nodeType: node.nodeType,
+      label,
+      value
+    });
+    if (result.warning) {
+      this.dispatchPropValidation(
+        node,
+        label,
+        value,
+        true,
+        true,
+        result.warning.message,
+        result.warning.code
+      );
+    }
+    return true;
   }
   validateConfig(config) {
     return {
@@ -15068,8 +15113,32 @@ const _NodeEditor = class _NodeEditor {
       allNodes: this.store.allNodesMap
     });
     if (nextProps === void 0) return;
-    if (JSON.stringify(node.props) === JSON.stringify(nextProps)) return;
-    this.store.updateProps(nodeId, cloneNodeProps(nextProps));
+    const result = this.resolveProps(node, nextProps, "connection");
+    if (result.status === "reject") {
+      this.dispatchPropValidation(
+        node,
+        "__connection_state__",
+        action,
+        false,
+        false,
+        result.message,
+        result.code
+      );
+      return;
+    }
+    if (JSON.stringify(node.props) === JSON.stringify(result.props)) return;
+    this.store.updateProps(nodeId, cloneNodeProps(result.props));
+    if (result.warning) {
+      this.dispatchPropValidation(
+        node,
+        "__connection_state__",
+        action,
+        true,
+        true,
+        result.warning.message,
+        result.warning.code
+      );
+    }
     this.events.dispatch("node:propChange", {
       nodeId,
       nodeType: node.nodeType,

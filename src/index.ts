@@ -42,6 +42,9 @@ export type {
   PrimitiveLayoutOptions,
   ConnectionStateContext,
   ConnectionStateReducer,
+  PropResolutionReason,
+  PropResolutionContext,
+  PropResolutionResult,
 } from './scripts/node-type-registry.js';
 
 export { DomNodeLayer } from './scripts/dom-node-layer.js';

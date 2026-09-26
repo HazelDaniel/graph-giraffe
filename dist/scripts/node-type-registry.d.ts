@@ -137,6 +137,27 @@ export interface ConnectionStateContext {
     incidentEdges: readonly EdgeData[];
     allNodes: ReadonlyMap<number, NodeData>;
 }
+export type PropResolutionReason = "edit" | "connection" | "create" | "type-change" | "history";
+export interface PropResolutionContext {
+    node: NodeData;
+    previousProps: NodePropType | undefined;
+    proposedProps: NodePropType;
+    allNodes: ReadonlyMap<number, NodeData>;
+    incidentEdges: readonly EdgeData[];
+    reason: PropResolutionReason;
+}
+export type PropResolutionResult = {
+    status: "accept";
+    props: NodePropType;
+    warning?: {
+        message: string;
+        code?: string;
+    };
+} | {
+    status: "reject";
+    message: string;
+    code?: string;
+};
 export type ConnectionStateReducer = (context: ConnectionStateContext) => NodePropType | undefined;
 export interface NodeOverlayConfig {
     titlePosition: "header" | "container-top" | "center";
@@ -180,6 +201,8 @@ export interface NodeTypeDescriptor {
     calculateHeight?: (node: NodeData) => number;
     /** Derive persisted declarative props from an edge lifecycle transition. */
     connectionStateReducer?: ConnectionStateReducer;
+    /** Normalize or reject a complete proposed prop shape at the mutation boundary. */
+    resolveProps?: (context: PropResolutionContext) => PropResolutionResult;
     renderMode?: "textured" | "rounded-rect" | "rounded-triangle" | "flat" | "dom";
     renderConfig?: RoundedRectConfig | RoundedTriangleConfig | FlatConfig;
     rawDraw?: (ctx: NodeDrawContext) => boolean;

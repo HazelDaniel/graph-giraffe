@@ -105,6 +105,9 @@ export declare class NodeEditor {
     private setupPropGroupListener;
     private syncPropertiesPanelForSelection;
     private updatePropValue;
+    private resolveProps;
+    private dispatchPropValidation;
+    private applyPropEdit;
     private validateConfig;
     private distance;
     private midpoint;

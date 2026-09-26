@@ -818,9 +818,23 @@ export class WorldActionDriver {
     const node = this.store.get(nodeId);
     if (!node?.props) return false;
 
+    const proposedProps = cloneNodeProps(node.props);
+    if (!proposedProps || !this.setPropValue(proposedProps, label, value)) return false;
+    const resolver = this.store.getRegistry()?.get(node.nodeType)?.resolveProps;
+    const result = resolver?.({
+      node,
+      previousProps: cloneNodeProps(node.props),
+      proposedProps,
+      allNodes: this.store.allNodesMap,
+      incidentEdges: this.edgeStore.allEdges().filter(
+        (edge) => edge.sourceNodeId === node.id || edge.targetNodeId === node.id
+      ),
+      reason: "edit",
+    });
+    if (result?.status === "reject") return false;
+
     const beforeSnapshot = this.captureNodeSnapshot(node);
-    if (!this.setPropValue(node.props, label, value)) return false;
-    this.store.syncNodePresentation(nodeId);
+    this.store.updateProps(nodeId, cloneNodeProps(result?.props ?? proposedProps));
     const afterSnapshot = this.captureNodeSnapshot(node);
     const parentId = node.parentId;
     this.refreshContainerChain(parentId);
@@ -1429,7 +1443,19 @@ export class WorldActionDriver {
         incidentEdges,
         allNodes: this.store.allNodesMap,
       });
-      if (nextProps !== undefined) this.store.updateProps(nodeId, cloneNodeProps(nextProps));
+      if (nextProps !== undefined) {
+        const resolved = registry?.get(node.nodeType)?.resolveProps?.({
+          node,
+          previousProps: cloneNodeProps(node.props),
+          proposedProps: nextProps,
+          allNodes: this.store.allNodesMap,
+          incidentEdges,
+          reason: "connection",
+        });
+        if (resolved?.status !== "reject") {
+          this.store.updateProps(nodeId, cloneNodeProps(resolved?.props ?? nextProps));
+        }
+      }
     }
   }
 

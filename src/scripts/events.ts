@@ -43,6 +43,16 @@ export interface GraphEvents {
     label: string;
     value: string | boolean;
   };
+  "node:propValidation": {
+    nodeId: number;
+    nodeType: NodeType;
+    label: string;
+    value: string | boolean;
+    accepted: boolean;
+    normalized: boolean;
+    message: string;
+    code?: string;
+  };
   "node:labelChange": {
     nodeId: number;
     nodeType: NodeType;

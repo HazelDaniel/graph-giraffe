@@ -17,7 +17,7 @@ export * from './components/ui-controls.js';
 export { NodeEditor } from './scripts/node-editor.js';
 export type { CreateEdgeParams } from './scripts/edge-store.js';
 export { NodeTypeRegistry } from './scripts/node-type-registry.js';
-export type { NodeTypeDescriptor, PrimitiveBoundsAuthority, NodeOverlayConfig, RoundedRectConfig, FlatConfig, NodeDrawContext, NodeOverlayContext, RendererDrawAPI, DomNodeRenderer, DomNodeViewContext, PrimitiveMeasurementTemplate, PrimitiveMeasurementCleanup, PrimitiveMeasurementTemplateContext, PrimitiveLayoutOptions, ConnectionStateContext, ConnectionStateReducer, } from './scripts/node-type-registry.js';
+export type { NodeTypeDescriptor, PrimitiveBoundsAuthority, NodeOverlayConfig, RoundedRectConfig, FlatConfig, NodeDrawContext, NodeOverlayContext, RendererDrawAPI, DomNodeRenderer, DomNodeViewContext, PrimitiveMeasurementTemplate, PrimitiveMeasurementCleanup, PrimitiveMeasurementTemplateContext, PrimitiveLayoutOptions, ConnectionStateContext, ConnectionStateReducer, PropResolutionReason, PropResolutionContext, PropResolutionResult, } from './scripts/node-type-registry.js';
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
 export { PrimitiveMeasurementProvider } from './scripts/primitive-measurement.js';
