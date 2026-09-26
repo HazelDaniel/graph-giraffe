@@ -148,7 +148,43 @@ API literally. Concrete node and edge types should retain strong generic types f
 their data and props. The important separation is between semantic capabilities,
 interaction, layout, and renderer implementations.
 
-### 3.3 Intrinsic measurement and resolved geometry
+### 3.3 Dynamic configuration props and registered variants
+
+The current `NodePropType` shape is sufficient as the renderer-facing and
+serialized representation, but prop editing must become descriptor-resolvable.
+A primitive descriptor may provide a synchronous `resolveProps` hook that receives
+the node, previous props, proposed props, all nodes, incident edges, and the
+mutation reason (`edit`, `connection`, `create`, `type-change`, or `history`). It
+returns the complete canonical prop shape, including dynamic fields, values, and
+enum options, or rejects the mutation with a structured warning.
+
+Resolution is atomic: the editor clones the proposed shape, invokes the resolver,
+commits only an accepted result, records one complete before/after history entry,
+and then invalidates intrinsic measurement and dependent container bounds. A
+rejected edit changes neither graph state nor history. Dynamic fields such as
+Proctor's `compositeOn` selector therefore remain application-owned descriptor
+logic while core owns invocation, history, measurement invalidation, and event
+ordering.
+
+Rejected or normalized edits emit a structured `node:propValidation` event so
+adapters can provide a toast, inline message, or other host-specific warning.
+The React adapter exposes the same event through `onNodePropValidation`.
+
+Future primitive variants are registered as stable `nodeType` values with their
+own descriptors, props, renderers, measurement templates, and connection rules.
+Variant changes preserve node identity, edges, parent, position, lock/collapse
+state, and selection. A descriptor-level `migrateProps` hook atomically converts
+the old shape to the target descriptor's shape; incompatible migrations reject
+with the same validation warning path.
+
+Registered variants must participate in ordinary node behavior through descriptor
+capabilities rather than literal `nodeType === "node"` checks. The registry and
+scene/interaction layers must expose the required capability queries for
+selection, dragging, parenting, connecting, composition, history, serialization,
+and rendering. The editor-wide DOM/WebGL mode invariant still applies to every
+registered variant.
+
+### 3.4 Intrinsic measurement and resolved geometry
 
 Primitive dimensions may be resolved by hidden, off-screen DOM measurement
 templates generated directly from a primitive descriptor and its configuration
@@ -319,6 +355,12 @@ Extend the node registry without breaking current descriptors.
   and display style.
 - Define primitive capability queries for selection, dragging, editing, locking,
   collapsing, connecting, and custom actions.
+- Add descriptor-owned prop resolution and variant migration hooks; normalize
+  dependent prop shapes atomically before history and measurement invalidation.
+- Add structured prop-validation events and React adapter callbacks for rejected
+  or normalized edits.
+- Replace remaining ordinary-node type checks with registry capability queries so
+  registered variants retain normal graph behavior.
 - Add descriptor versioning/validation so malformed plugins fail at registration.
 - Preserve `register`, `replace`, and built-in type names for snapshot portability.
 
