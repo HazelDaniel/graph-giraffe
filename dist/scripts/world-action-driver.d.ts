@@ -1,7 +1,7 @@
 import { EdgeStore } from "./edge-store.js";
 import { HistoryStack, HistoryStackOptions } from "./history.js";
 import { NodeStore } from "./node-store.js";
-import { EdgeData, HandleSide, NodeData, NodeType, ThemeName } from "./types.js";
+import { EdgeData, HandleSide, NodeData, NodePropValue, NodeType, ThemeName } from "./types.js";
 export interface WorldActionSideEffects {
     showProperties(node: NodeData): void;
     hideProperties(): void;
@@ -71,7 +71,7 @@ export declare class WorldActionDriver {
     toggleSubgraphCollapse(subgraphId: number): boolean;
     ungraphSubgraph(subgraphId: number): boolean;
     updateLabel(nodeId: number, label: string): boolean;
-    updatePropValue(nodeId: number, label: string, value: string | boolean): boolean;
+    updatePropValue(nodeId: number, label: string, value: NodePropValue): boolean;
     undo(): boolean;
     redo(): boolean;
     private pushCommand;

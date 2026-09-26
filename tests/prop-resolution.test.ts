@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { nodeDescriptor } from "../src/scripts/builtin-types.js";
 import { WorldActionDriver } from "../src/scripts/world-action-driver.js";
+import { nodePropsEqual } from "../src/scripts/history-snapshots.js";
 import type { NodePropType } from "../src/scripts/types.js";
 
 function props(role = "ordinary"): NodePropType {
@@ -28,6 +29,26 @@ function readRole(props: NodePropType | undefined): string | undefined {
 }
 
 describe("descriptor prop resolution", () => {
+  it("compares array-valued prop selections structurally", () => {
+    const left = props("composite-primary");
+    const right = props("composite-primary");
+    left.enums.column.push({
+      label: "Composite On",
+      value: ["tenant_id", "region_id"],
+      uiPrimitive: "multi-select",
+      options: ["tenant_id", "region_id"],
+    });
+    right.enums.column.push({
+      label: "Composite On",
+      value: ["tenant_id", "region_id"],
+      uiPrimitive: "multi-select",
+      options: ["tenant_id", "region_id"],
+    });
+    expect(nodePropsEqual(left, right)).toBe(true);
+    (right.enums.column[1].value as string[]).reverse();
+    expect(nodePropsEqual(left, right)).toBe(false);
+  });
+
   it("normalizes dependent fields atomically and restores them through history", () => {
     const driver = new WorldActionDriver();
     driver.store.getRegistry()!.replace({

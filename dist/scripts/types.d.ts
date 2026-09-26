@@ -268,10 +268,11 @@ export interface BGShaderLocations {
 }
 export interface NodePropPrimitive {
     label: string;
-    value: string | boolean;
+    value: NodePropValue;
     uiPrimitive: string;
     options?: string[];
 }
+export type NodePropValue = string | string[] | boolean;
 export interface NodePropType {
     groups: string[];
     booleans: {
@@ -286,7 +287,7 @@ export interface NodePropType {
 }
 export interface PropChangePayload {
     label: string;
-    value: string | boolean;
+    value: NodePropValue;
     uiPrimitive: string;
 }
 export interface NodeData {

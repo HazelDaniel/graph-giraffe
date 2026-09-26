@@ -13,6 +13,7 @@ export * from './components/loading-screen.js';
 export * from './components/minimap.js';
 export * from './components/prop-group.js';
 export * from './components/select.js';
+export * from './components/multi-select.js';
 export * from './components/selection-toolbar.js';
 export * from './components/texture-select.js';
 export * from './components/ui-controls.js';
@@ -46,6 +47,7 @@ export type {
   PropResolutionContext,
   PropResolutionResult,
 } from './scripts/node-type-registry.js';
+export { nodePropValueEqual, nodePropsEqual } from './scripts/history-snapshots.js';
 
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
@@ -118,6 +120,7 @@ export type {
   AddUploadedTextureParams,
   NodePropType,
   NodePropPrimitive,
+  NodePropValue,
   PropChangePayload,
   ConnectionPreviewData,
   CustomOverlay,

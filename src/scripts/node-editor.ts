@@ -30,6 +30,8 @@ import {
   SelectionSnapshot,
   captureNodeHistorySnapshot,
   cloneNodeProps,
+  nodePropsEqual,
+  nodePropValueEqual,
   orderSnapshotsParentsFirst,
 } from "./history-snapshots.js";
 import {
@@ -78,6 +80,7 @@ import {
   ControlledEdge,
   GraphProjection,
   getSubgraphLinkLocal,
+  NodePropValue,
 } from "./types.js";
 import { MsdfAtlas } from "./msdf-text.js";
 import {
@@ -686,7 +689,7 @@ export class NodeEditor {
   private updatePropValue(
     props: NodeData["props"],
     targetLabel: string,
-    newValue: string | boolean
+    newValue: NodePropValue
   ): boolean {
     if (!props) return false;
 
@@ -697,7 +700,7 @@ export class NodeEditor {
     ];
     for (const primitive of primitives) {
       if (primitive.label === targetLabel) {
-        if (primitive.value === newValue) return false;
+        if (nodePropValueEqual(primitive.value, newValue)) return false;
         primitive.value = newValue;
         return true;
       }
@@ -728,7 +731,7 @@ export class NodeEditor {
   private dispatchPropValidation(
     node: NodeData,
     label: string,
-    value: string | boolean,
+    value: NodePropValue,
     accepted: boolean,
     normalized: boolean,
     message: string,
@@ -749,7 +752,7 @@ export class NodeEditor {
   private applyPropEdit(
     node: NodeData,
     label: string,
-    value: string | boolean
+    value: NodePropValue
   ): boolean {
     if (!node.props) return false;
     const proposedProps = cloneNodeProps(node.props);
@@ -1160,7 +1163,7 @@ export class NodeEditor {
         text: node.text,
         locked: Boolean(node.isLocked),
         collapsed: Boolean(node.isCollapsed),
-        props: JSON.stringify(node.props),
+        props: cloneNodeProps(node.props),
       };
 
       node.text = input.label ?? input.nodeType;
@@ -1184,7 +1187,7 @@ export class NodeEditor {
         previous.width !== node.width || previous.height !== node.height ||
         previous.text !== node.text || previous.locked !== Boolean(node.isLocked) ||
         previous.collapsed !== Boolean(node.isCollapsed) ||
-        previous.props !== JSON.stringify(node.props)
+        !nodePropsEqual(previous.props, node.props)
       ) {
         affectedNodeIds.add(node.id);
       }
@@ -4760,7 +4763,7 @@ export class NodeEditor {
       );
       return;
     }
-    if (JSON.stringify(node.props) === JSON.stringify(result.props)) return;
+    if (nodePropsEqual(node.props, result.props)) return;
     this.store.updateProps(nodeId, cloneNodeProps(result.props));
     if (result.warning) {
       this.dispatchPropValidation(

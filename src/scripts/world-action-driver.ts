@@ -9,6 +9,7 @@ import {
   captureEdgeHistorySnapshot,
   captureNodeHistorySnapshot,
   cloneNodeProps,
+  nodePropValueEqual,
   orderSnapshotsParentsFirst,
 } from "./history-snapshots.js";
 import {
@@ -43,6 +44,7 @@ import {
   HandleSide,
   NodeData,
   NodePropType,
+  NodePropValue,
   NodeType,
   ThemeName,
   isContainerNodeType,
@@ -814,7 +816,7 @@ export class WorldActionDriver {
     return true;
   }
 
-  updatePropValue(nodeId: number, label: string, value: string | boolean): boolean {
+  updatePropValue(nodeId: number, label: string, value: NodePropValue): boolean {
     const node = this.store.get(nodeId);
     if (!node?.props) return false;
 
@@ -1479,7 +1481,7 @@ export class WorldActionDriver {
   private setPropValue(
     props: NodePropType,
     targetLabel: string,
-    newValue: string | boolean
+    newValue: NodePropValue
   ): boolean {
     const primitives = [
       ...Object.values(props.booleans).flat(),
@@ -1489,7 +1491,7 @@ export class WorldActionDriver {
 
     for (const primitive of primitives) {
       if (primitive.label !== targetLabel) continue;
-      if (primitive.value === newValue) return false;
+      if (nodePropValueEqual(primitive.value, newValue)) return false;
       primitive.value = newValue;
       return true;
     }

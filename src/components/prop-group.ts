@@ -1,4 +1,5 @@
 import { NodePropType, PropChangePayload } from "../scripts/types.js";
+import "./multi-select.js";
 
 class GGInputPair extends HTMLElement {
   constructor() {
@@ -55,6 +56,9 @@ class GGInputPair extends HTMLElement {
           accent-color: #2C9F92;
         }
         ::slotted(gg-select) {
+          width: 100%;
+        }
+        ::slotted(gg-multi-select) {
           width: 100%;
         }
       </style>
@@ -167,6 +171,18 @@ export class GGPropGroup extends HTMLElement {
         control.addEventListener("gg-select-change", (e: Event) => {
           this.dispatchPropChange(label, (e.target as any).value, uiPrimitive);
         });
+      } else if (uiPrimitive === "multi-select") {
+        control = document.createElement("gg-multi-select");
+        (control as any).values = Array.isArray(value) ? value : [];
+        if (Array.isArray(options)) {
+          for (const option of options) {
+            const optionTemplate = `<gg-option value="${option}">${option}</gg-option>`;
+            control.insertAdjacentHTML("beforeend", optionTemplate);
+          }
+        }
+        control.addEventListener("gg-multi-select-change", (e: Event) => {
+          this.dispatchPropChange(label, (e as CustomEvent<{ values: string[] }>).detail.values, uiPrimitive);
+        });
       } else {
         const input = document.createElement("input");
         input.type = uiPrimitive === "checkbox" ? "checkbox" : uiPrimitive; // fallback to text
@@ -237,7 +253,7 @@ export class GGPropGroup extends HTMLElement {
 
   private dispatchPropChange(
     label: string,
-    value: string | boolean,
+    value: string | string[] | boolean,
     uiPrimitive: string
   ) {
     const payload: PropChangePayload = { label, value, uiPrimitive };

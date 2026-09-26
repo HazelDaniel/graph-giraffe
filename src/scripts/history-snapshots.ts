@@ -54,7 +54,11 @@ export interface EdgeHistorySnapshot {
 function clonePrimitiveList(
   entries: NodePropPrimitive[] | undefined
 ): NodePropPrimitive[] {
-  return entries?.map((entry) => ({ ...entry })) ?? [];
+  return entries?.map((entry) => ({
+    ...entry,
+    value: Array.isArray(entry.value) ? [...entry.value] : entry.value,
+    options: entry.options ? [...entry.options] : undefined,
+  })) ?? [];
 }
 
 function clonePrimitiveGroups(
@@ -67,6 +71,40 @@ function clonePrimitiveGroups(
   return cloned;
 }
 
+export function nodePropValueEqual(
+  left: string | string[] | boolean,
+  right: string | string[] | boolean
+): boolean {
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    return left.every((value, index) => value === right[index]);
+  }
+  return left === right;
+}
+
+function stringArrayEqual(left: readonly string[] | undefined, right: readonly string[] | undefined): boolean {
+  const a = left ?? [];
+  const b = right ?? [];
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function propListEqual(
+  left: NodePropPrimitive[] | undefined,
+  right: NodePropPrimitive[] | undefined
+): boolean {
+  const a = left ?? [];
+  const b = right ?? [];
+  if (a.length !== b.length) return false;
+  return a.every((item, index) => {
+    const other = b[index];
+    return !!other &&
+      item.label === other.label &&
+      item.uiPrimitive === other.uiPrimitive &&
+      nodePropValueEqual(item.value, other.value) &&
+      stringArrayEqual(item.options, other.options);
+  });
+}
+
 export function cloneNodeProps(props: NodePropType | undefined): NodePropType | undefined {
   if (!props) return undefined;
 
@@ -76,6 +114,21 @@ export function cloneNodeProps(props: NodePropType | undefined): NodePropType | 
     texts: clonePrimitiveGroups(props.texts),
     enums: clonePrimitiveGroups(props.enums),
   };
+}
+
+export function nodePropsEqual(left: NodePropType | undefined, right: NodePropType | undefined): boolean {
+  if (left === right) return true;
+  if (!left || !right || !stringArrayEqual(left.groups, right.groups)) return false;
+  for (const key of new Set([...Object.keys(left.booleans), ...Object.keys(right.booleans)])) {
+    if (!propListEqual(left.booleans[key], right.booleans[key])) return false;
+  }
+  for (const key of new Set([...Object.keys(left.texts), ...Object.keys(right.texts)])) {
+    if (!propListEqual(left.texts[key], right.texts[key])) return false;
+  }
+  for (const key of new Set([...Object.keys(left.enums), ...Object.keys(right.enums)])) {
+    if (!propListEqual(left.enums[key], right.enums[key])) return false;
+  }
+  return true;
 }
 
 export function captureNodeHistorySnapshot(node: NodeData): NodeHistorySnapshot {

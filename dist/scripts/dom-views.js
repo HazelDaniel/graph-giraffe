@@ -185,7 +185,9 @@ function renderPropRows(props) {
             gkHash[groupKey] = true;
         }
         for (const item of list) {
-            const value = typeof item.value === "boolean" ? (item.value ? "on" : "off") : item.value;
+            const value = typeof item.value === "boolean"
+                ? (item.value ? "on" : "off")
+                : Array.isArray(item.value) ? item.value.join(", ") : item.value;
             rows.push(`<div class="prop-row"><span class="prop-label">${escapeHtml(item.label)}</span><span class="prop-value">${escapeHtml(value)}</span></div>`);
         }
     };

@@ -1,3 +1,4 @@
+import "./multi-select.js";
 class GGInputPair extends HTMLElement {
     constructor() {
         super();
@@ -53,6 +54,9 @@ class GGInputPair extends HTMLElement {
           accent-color: #2C9F92;
         }
         ::slotted(gg-select) {
+          width: 100%;
+        }
+        ::slotted(gg-multi-select) {
           width: 100%;
         }
       </style>
@@ -154,6 +158,19 @@ export class GGPropGroup extends HTMLElement {
                 }
                 control.addEventListener("gg-select-change", (e) => {
                     this.dispatchPropChange(label, e.target.value, uiPrimitive);
+                });
+            }
+            else if (uiPrimitive === "multi-select") {
+                control = document.createElement("gg-multi-select");
+                control.values = Array.isArray(value) ? value : [];
+                if (Array.isArray(options)) {
+                    for (const option of options) {
+                        const optionTemplate = `<gg-option value="${option}">${option}</gg-option>`;
+                        control.insertAdjacentHTML("beforeend", optionTemplate);
+                    }
+                }
+                control.addEventListener("gg-multi-select-change", (e) => {
+                    this.dispatchPropChange(label, e.detail.values, uiPrimitive);
                 });
             }
             else {

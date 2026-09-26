@@ -1,6 +1,6 @@
 import { EdgeStore } from "./edge-store.js";
 import { HistoryStack } from "./history.js";
-import { captureEdgeHistorySnapshot, captureNodeHistorySnapshot, cloneNodeProps, orderSnapshotsParentsFirst, } from "./history-snapshots.js";
+import { captureEdgeHistorySnapshot, captureNodeHistorySnapshot, cloneNodeProps, nodePropValueEqual, orderSnapshotsParentsFirst, } from "./history-snapshots.js";
 import { CloneSubgraphCommand, CreateHubFromConnectionDropCommand, CreateNodeCommand, CreateSubgraphCommand, ConnectCommand, DeleteEdgeCommand, DeleteNodeCommand, DeleteSelectionCommand, DuplicateIntoCompositionCommand, MoveNodeCommand, MoveSelectionCommand, ReparentCommand, ToggleLockCommand, ToggleSubgraphCollapseCommand, UngraphCommand, UpdateLabelCommand, UpdatePropCommand, } from "./commands.js";
 import { NodeStore } from "./node-store.js";
 import { getParentFrameWorldPosition, getWorldPosition, } from "./scene-graph.js";
@@ -1178,7 +1178,7 @@ export class WorldActionDriver {
         for (const primitive of primitives) {
             if (primitive.label !== targetLabel)
                 continue;
-            if (primitive.value === newValue)
+            if (nodePropValueEqual(primitive.value, newValue))
                 return false;
             primitive.value = newValue;
             return true;

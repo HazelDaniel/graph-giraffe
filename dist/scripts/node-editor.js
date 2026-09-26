@@ -8,7 +8,7 @@ import { NodeStore } from "./node-store.js";
 import { Renderer } from "./renderer.js";
 import { UIControls } from "./controls.js";
 import { HistoryStack } from "./history.js";
-import { captureNodeHistorySnapshot, cloneNodeProps, orderSnapshotsParentsFirst, } from "./history-snapshots.js";
+import { captureNodeHistorySnapshot, cloneNodeProps, nodePropsEqual, nodePropValueEqual, orderSnapshotsParentsFirst, } from "./history-snapshots.js";
 import { CreateNodeCommand, CreateHubFromConnectionDropCommand, CreateSubgraphCommand, CloneSubgraphCommand, ConnectCommand, DeleteNodeCommand, DeleteEdgeCommand, DeleteSelectionCommand, DuplicateIntoCompositionCommand, MoveNodeCommand, MoveSelectionCommand, ReparentCommand, ToggleLockCommand, ToggleSubgraphCollapseCommand, UngraphCommand, UpdateLabelCommand, UpdatePropCommand, } from "./commands.js";
 import { GraphEventEmitter } from "./events.js";
 import { DEFAULT_HANDLE_STYLE, NODE_LAYOUT, isCandidateNodeType, isContainerNodeType, isNodePrimitiveType, getSubgraphLinkLocal, } from "./types.js";
@@ -416,7 +416,7 @@ export class NodeEditor {
         ];
         for (const primitive of primitives) {
             if (primitive.label === targetLabel) {
-                if (primitive.value === newValue)
+                if (nodePropValueEqual(primitive.value, newValue))
                     return false;
                 primitive.value = newValue;
                 return true;
@@ -822,7 +822,7 @@ export class NodeEditor {
                 text: node.text,
                 locked: Boolean(node.isLocked),
                 collapsed: Boolean(node.isCollapsed),
-                props: JSON.stringify(node.props),
+                props: cloneNodeProps(node.props),
             };
             node.text = input.label ?? input.nodeType;
             node.props = cloneNodeProps(input.props ?? node.props);
@@ -844,7 +844,7 @@ export class NodeEditor {
                 previous.width !== node.width || previous.height !== node.height ||
                 previous.text !== node.text || previous.locked !== Boolean(node.isLocked) ||
                 previous.collapsed !== Boolean(node.isCollapsed) ||
-                previous.props !== JSON.stringify(node.props)) {
+                !nodePropsEqual(previous.props, node.props)) {
                 affectedNodeIds.add(node.id);
             }
         }
@@ -3704,7 +3704,7 @@ export class NodeEditor {
             this.dispatchPropValidation(node, "__connection_state__", action, false, false, result.message, result.code);
             return;
         }
-        if (JSON.stringify(node.props) === JSON.stringify(result.props))
+        if (nodePropsEqual(node.props, result.props))
             return;
         this.store.updateProps(nodeId, cloneNodeProps(result.props));
         if (result.warning) {

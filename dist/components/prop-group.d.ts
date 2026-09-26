@@ -1,4 +1,5 @@
 import { NodePropType } from "../scripts/types.js";
+import "./multi-select.js";
 export declare class GGPropGroup extends HTMLElement {
     constructor();
     /**

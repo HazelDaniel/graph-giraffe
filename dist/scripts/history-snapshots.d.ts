@@ -37,7 +37,9 @@ export interface EdgeHistorySnapshot {
     isSelected: boolean;
     visible: boolean;
 }
+export declare function nodePropValueEqual(left: string | string[] | boolean, right: string | string[] | boolean): boolean;
 export declare function cloneNodeProps(props: NodePropType | undefined): NodePropType | undefined;
+export declare function nodePropsEqual(left: NodePropType | undefined, right: NodePropType | undefined): boolean;
 export declare function captureNodeHistorySnapshot(node: NodeData): NodeHistorySnapshot;
 export declare function captureEdgeHistorySnapshot(edge: EdgeData): EdgeHistorySnapshot;
 /**

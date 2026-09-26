@@ -1,5 +1,5 @@
 import { Command } from "./commands";
-import { NodeType } from "./types";
+import { NodePropValue, NodeType } from "./types";
 export interface GraphBeforeEvents {
     "before:connect": {
         sourceId: number;
@@ -39,13 +39,13 @@ export interface GraphEvents {
         nodeId: number;
         nodeType: NodeType;
         label: string;
-        value: string | boolean;
+        value: NodePropValue;
     };
     "node:propValidation": {
         nodeId: number;
         nodeType: NodeType;
         label: string;
-        value: string | boolean;
+        value: NodePropValue;
         accepted: boolean;
         normalized: boolean;
         message: string;
