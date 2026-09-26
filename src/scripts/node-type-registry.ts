@@ -1,5 +1,6 @@
 import type {
   ConnectionMode,
+  EdgeData,
   HandleSide,
   NodeData,
   NodePropType,
@@ -159,6 +160,19 @@ export interface PrimitiveLayoutOptions {
   positionChildren?: boolean;
 }
 
+export interface ConnectionStateContext {
+  node: NodeData;
+  edge: EdgeData;
+  action: "add" | "remove";
+  /** All edges still incident to `node` after the action is applied. */
+  incidentEdges: readonly EdgeData[];
+  allNodes: ReadonlyMap<number, NodeData>;
+}
+
+export type ConnectionStateReducer = (
+  context: ConnectionStateContext
+) => NodePropType | undefined;
+
 // ─── Overlay Config ──────────────────────────────────────
 
 export interface NodeOverlayConfig {
@@ -201,6 +215,8 @@ export interface NodeTypeDescriptor {
 
   createDefaultProps?: () => NodePropType | undefined;
   calculateHeight?: (node: NodeData) => number;
+  /** Derive persisted declarative props from an edge lifecycle transition. */
+  connectionStateReducer?: ConnectionStateReducer;
 
   renderMode?: "textured" | "rounded-rect" | "rounded-triangle" | "flat" | "dom";
   renderConfig?: RoundedRectConfig | RoundedTriangleConfig | FlatConfig;

@@ -107,6 +107,7 @@ export declare class WorldActionDriver {
     private removeNodesAndEdges;
     private removeNodeAndIncidentEdges;
     private syncHandleStates;
+    private applyConnectionState;
     private refreshContainerChain;
     private refreshContainerChains;
     private setPropValue;

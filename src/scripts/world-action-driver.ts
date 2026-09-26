@@ -919,6 +919,7 @@ export class WorldActionDriver {
       syncHandleStates: (id) => this.syncHandleStates(id),
       applyCompositionReferenceForEdge: (e) => this.applyCompositionReferenceForEdge(e),
       clearCompositionReferenceForEdge: (e) => this.clearCompositionReferenceForEdge(e),
+      applyConnectionState: (e, action) => this.applyConnectionState(e, action),
       removeContainerOnly: (id) => this.store.removeContainerOnly(id),
     };
   }
@@ -1406,6 +1407,30 @@ export class WorldActionDriver {
       "right",
       this.edgeStore.hasConnection(nodeId, "right")
     );
+  }
+
+  private applyConnectionState(
+    edge: EdgeData | EdgeHistorySnapshot,
+    action: "add" | "remove"
+  ): void {
+    const registry = this.store.getRegistry();
+    for (const nodeId of [edge.sourceNodeId, edge.targetNodeId]) {
+      const node = this.store.get(nodeId);
+      const reducer = node ? registry?.get(node.nodeType)?.connectionStateReducer : undefined;
+      if (!node || !reducer) continue;
+      const incidentEdges = this.edgeStore.allEdges().filter(
+        (candidate) =>
+          candidate.sourceNodeId === nodeId || candidate.targetNodeId === nodeId
+      );
+      const nextProps = reducer({
+        node,
+        edge: edge as EdgeData,
+        action,
+        incidentEdges,
+        allNodes: this.store.allNodesMap,
+      });
+      if (nextProps !== undefined) this.store.updateProps(nodeId, cloneNodeProps(nextProps));
+    }
   }
 
   private refreshContainerChain(containerId: number | null): void {

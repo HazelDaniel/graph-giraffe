@@ -40,6 +40,8 @@ export type {
   PrimitiveMeasurementCleanup,
   PrimitiveMeasurementTemplateContext,
   PrimitiveLayoutOptions,
+  ConnectionStateContext,
+  ConnectionStateReducer,
 } from './scripts/node-type-registry.js';
 
 export { DomNodeLayer } from './scripts/dom-node-layer.js';

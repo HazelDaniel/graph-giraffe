@@ -1,4 +1,4 @@
-import { ConnectionMode, HandleStyle, NodeHandleData, NodeData, ThemeName, NodeType } from './types.js';
+import { ConnectionMode, HandleStyle, NodeHandleData, NodeData, ThemeName, NodeType, NodePropType } from './types.js';
 import type { NodeTypeRegistry, PrimitiveLayoutOptions } from './node-type-registry.js';
 /**
  * Owns the canonical node list.
@@ -127,6 +127,8 @@ export declare class NodeStore {
     regenerateTextures(theme: ThemeName): void;
     /** Update the label text of a node and regenerate its texture. */
     updateLabel(id: number, newLabel: string, theme: ThemeName): void;
+    /** Replace a primitive's declarative configuration and refresh its presentation. */
+    updateProps(id: number, props: NodePropType | undefined): boolean;
     updateHandleConnectionState(nodeId: number, side: NodeHandleData['side'], isConnected: boolean): void;
     setCompositionReference(nodeId: number, compositionId: number, theme: ThemeName): boolean;
     clearCompositionReference(nodeId: number, theme: ThemeName): boolean;

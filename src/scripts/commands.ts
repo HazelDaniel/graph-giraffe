@@ -71,6 +71,10 @@ export interface CommandContext {
   clearCompositionReferenceForEdge(
     edge: EdgeData | EdgeHistorySnapshot
   ): void;
+  applyConnectionState(
+    edge: EdgeData | EdgeHistorySnapshot,
+    action: "add" | "remove"
+  ): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -218,6 +222,7 @@ export class DeleteEdgeCommand implements Command {
       ctx.clearCompositionReferenceForEdge(removed);
       ctx.syncHandleStates(removed.sourceNodeId);
       ctx.syncHandleStates(removed.targetNodeId);
+      ctx.applyConnectionState(removed, "remove");
     }
     ctx.clearSelectionState();
     ctx.syncPropertiesPanel();
@@ -366,6 +371,7 @@ export class ConnectCommand implements Command {
       ctx.clearCompositionReferenceForEdge(removed);
       ctx.syncHandleStates(removed.sourceNodeId);
       ctx.syncHandleStates(removed.targetNodeId);
+      ctx.applyConnectionState(removed, "remove");
     }
     ctx.syncToolbarState();
   }

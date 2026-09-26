@@ -573,6 +573,15 @@ export class NodeStore {
     this.a11yTree.updateLabel(id, newLabel, node.nodeType);
   }
 
+  /** Replace a primitive's declarative configuration and refresh its presentation. */
+  updateProps(id: number, props: NodePropType | undefined): boolean {
+    const node = this.get(id);
+    if (!node) return false;
+    node.props = props;
+    this.syncNodePresentation(id);
+    return true;
+  }
+
   updateHandleConnectionState(
     nodeId: number,
     side: NodeHandleData['side'],

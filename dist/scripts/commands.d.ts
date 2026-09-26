@@ -40,6 +40,7 @@ export interface CommandContext {
     syncHandleStates(nodeId: number): void;
     applyCompositionReferenceForEdge(edge: EdgeData | EdgeHistorySnapshot): void;
     clearCompositionReferenceForEdge(edge: EdgeData | EdgeHistorySnapshot): void;
+    applyConnectionState(edge: EdgeData | EdgeHistorySnapshot, action: "add" | "remove"): void;
 }
 /**
  * Node property mutation (checkbox, text field, enum change in sidebar).

@@ -100,6 +100,7 @@ export class DeleteEdgeCommand {
             ctx.clearCompositionReferenceForEdge(removed);
             ctx.syncHandleStates(removed.sourceNodeId);
             ctx.syncHandleStates(removed.targetNodeId);
+            ctx.applyConnectionState(removed, "remove");
         }
         ctx.clearSelectionState();
         ctx.syncPropertiesPanel();
@@ -210,6 +211,7 @@ export class ConnectCommand {
             ctx.clearCompositionReferenceForEdge(removed);
             ctx.syncHandleStates(removed.sourceNodeId);
             ctx.syncHandleStates(removed.targetNodeId);
+            ctx.applyConnectionState(removed, "remove");
         }
         ctx.syncToolbarState();
     }

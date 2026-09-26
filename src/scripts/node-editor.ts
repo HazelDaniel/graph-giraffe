@@ -1179,13 +1179,16 @@ export class NodeEditor {
         affectedEdgeIds.add(edge.id);
         affectedNodeIds.add(edge.sourceNodeId);
         affectedNodeIds.add(edge.targetNodeId);
+        this.applyConnectionStateForEdge(edge, "add");
       }
     }
 
     for (const nodeId of affectedNodeIds) this.syncHandleStates(nodeId);
     for (const nodeId of selectedBefore) affectedNodeIds.add(nodeId);
     this.clearSelectionState();
-    this.history.clear();
+    // Controlled echoes are projections of an already-applied graph state.
+    // They must not erase local undo/redo history; only initial hydration and
+    // explicit graph imports establish a fresh history boundary.
     this.syncPrimitiveMeasurements();
     this.domNodeLayer?.reconcile(affectedNodeIds);
     this.markMinimapDirty();
@@ -1464,6 +1467,7 @@ export class NodeEditor {
     this.syncHandleStates(edge.sourceNodeId);
     this.syncHandleStates(edge.targetNodeId);
     this.applyCompositionReferenceForEdge(edge);
+    this.applyConnectionStateForEdge(edge, "add");
     this.pushCommand(new ConnectCommand({ edgeSnapshot: { ...edge } }));
     this.events.dispatch("connect", {
       sourceId: edge.sourceNodeId,
@@ -1690,6 +1694,8 @@ export class NodeEditor {
         this.applyCompositionReferenceForEdge(e),
       clearCompositionReferenceForEdge: (e) =>
         this.clearCompositionReferenceForEdge(e),
+      applyConnectionState: (e, action) =>
+        this.applyConnectionStateForEdge(e as EdgeData, action),
     };
   }
 
@@ -2449,6 +2455,7 @@ export class NodeEditor {
       this.clearCompositionReferenceForEdge(snapshot);
       this.syncHandleStates(snapshot.sourceNodeId);
       this.syncHandleStates(snapshot.targetNodeId);
+      this.applyConnectionStateForEdge(snapshot, "remove");
     }
     return snapshots;
   }
@@ -2530,6 +2537,7 @@ export class NodeEditor {
         this.syncHandleStates(edge.sourceNodeId);
         this.syncHandleStates(edge.targetNodeId);
         this.applyCompositionReferenceForEdge(edge);
+        this.applyConnectionStateForEdge(edge, "add");
       }
     }
     this.markMinimapDirty();
@@ -2780,6 +2788,7 @@ export class NodeEditor {
     this.clearCompositionReferenceForEdge(snapshot);
     this.syncHandleStates(edge.sourceNodeId);
     this.syncHandleStates(edge.targetNodeId);
+    this.applyConnectionStateForEdge(snapshot, "remove");
     this.clearSelectionAndHideProperties();
 
     this.pushCommand(
@@ -3928,6 +3937,7 @@ export class NodeEditor {
             this.syncHandleStates(edge.sourceNodeId);
             this.syncHandleStates(edge.targetNodeId);
             this.applyCompositionReferenceForEdge(edge);
+            this.applyConnectionStateForEdge(edge, "add");
             const snapshot: EdgeHistorySnapshot = { ...edge };
             this.pushCommand(
               new ConnectCommand({
@@ -4425,6 +4435,7 @@ export class NodeEditor {
     this.syncHandleStates(edge.sourceNodeId);
     this.syncHandleStates(edge.targetNodeId);
     this.applyCompositionReferenceForEdge(edge);
+    this.applyConnectionStateForEdge(edge, "add");
 
     const hubSnapshot = this.captureNodeSnapshot(hub);
     const edgeSnapshot = { ...edge };
@@ -4606,6 +4617,7 @@ export class NodeEditor {
     }
 
     for (const edge of removedEdges) {
+      this.applyConnectionStateForEdge(edge, "remove");
       if (!removedIdSet.has(edge.sourceNodeId)) {
         this.clearCompositionReferenceForEdge(edge);
       }
@@ -4647,6 +4659,50 @@ export class NodeEditor {
       "right",
       this.edgeStore.hasConnection(nodeId, "right")
     );
+  }
+
+  private applyConnectionState(nodeId: number, edge: EdgeData, action: "add" | "remove"): void {
+    const node = this.store.get(nodeId);
+    if (!node) return;
+    const descriptor = this.typeRegistry.get(node.nodeType);
+    const reducer = descriptor?.connectionStateReducer;
+    if (!reducer) return;
+
+    const incidentEdges = this.edgeStore.allEdges().filter(
+      (candidate) =>
+        candidate.sourceNodeId === nodeId || candidate.targetNodeId === nodeId
+    );
+    const nextProps = reducer({
+      node,
+      edge,
+      action,
+      incidentEdges,
+      allNodes: this.store.allNodesMap,
+    });
+    if (nextProps === undefined) return;
+    if (JSON.stringify(node.props) === JSON.stringify(nextProps)) return;
+    this.store.updateProps(nodeId, cloneNodeProps(nextProps));
+    this.events.dispatch("node:propChange", {
+      nodeId,
+      nodeType: node.nodeType,
+      label: "__connection_state__",
+      value: action,
+    });
+    this.events.dispatch("geometry:change", { nodeIds: [nodeId] });
+  }
+
+  private applyConnectionStateForEdge(edge: EdgeData, action: "add" | "remove"): void {
+    this.applyConnectionState(edge.sourceNodeId, edge, action);
+    this.applyConnectionState(edge.targetNodeId, edge, action);
+    if (action === "remove") {
+      this.events.dispatch("edge:remove", {
+        edgeId: edge.id,
+        sourceId: edge.sourceNodeId,
+        sourceType: this.store.get(edge.sourceNodeId)?.nodeType ?? "node",
+        targetId: edge.targetNodeId,
+        targetType: this.store.get(edge.targetNodeId)?.nodeType ?? "node",
+      });
+    }
   }
 
   private hasSelection(): boolean {

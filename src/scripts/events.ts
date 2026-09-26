@@ -90,6 +90,13 @@ export interface GraphEvents {
     targetType: NodeType;
     edgeId: number;
   };
+  "edge:remove": {
+    edgeId: number;
+    sourceId: number;
+    sourceType: NodeType;
+    targetId: number;
+    targetType: NodeType;
+  };
   "selection:change": {
     nodeIds: number[];
     edgeIds: number[];

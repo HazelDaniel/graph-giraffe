@@ -361,6 +361,8 @@ export declare class NodeEditor {
     private removeContainerOnly;
     private removeNodeAndIncidentEdges;
     private syncHandleStates;
+    private applyConnectionState;
+    private applyConnectionStateForEdge;
     private hasSelection;
     private zoomThrottleTimer;
     private readonly ZOOM_THROTTLE_MS;

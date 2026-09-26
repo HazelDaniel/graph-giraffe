@@ -1,4 +1,4 @@
-import type { ConnectionMode, HandleSide, NodeData, NodePropType, NodeShaderLocations } from "./types.js";
+import type { ConnectionMode, EdgeData, HandleSide, NodeData, NodePropType, NodeShaderLocations } from "./types.js";
 import type { MsdfTextRenderer } from "./msdf-text.js";
 import type { IconBackgroundRenderer } from "./icon-background-renderer.js";
 import type { TextureCache } from "./texture-cache.js";
@@ -129,6 +129,15 @@ export type PrimitiveMeasurementCleanup = (ctx: PrimitiveMeasurementTemplateCont
 export interface PrimitiveLayoutOptions {
     positionChildren?: boolean;
 }
+export interface ConnectionStateContext {
+    node: NodeData;
+    edge: EdgeData;
+    action: "add" | "remove";
+    /** All edges still incident to `node` after the action is applied. */
+    incidentEdges: readonly EdgeData[];
+    allNodes: ReadonlyMap<number, NodeData>;
+}
+export type ConnectionStateReducer = (context: ConnectionStateContext) => NodePropType | undefined;
 export interface NodeOverlayConfig {
     titlePosition: "header" | "container-top" | "center";
     showTitle: boolean;
@@ -169,6 +178,8 @@ export interface NodeTypeDescriptor {
     textureKinds?: string[];
     createDefaultProps?: () => NodePropType | undefined;
     calculateHeight?: (node: NodeData) => number;
+    /** Derive persisted declarative props from an edge lifecycle transition. */
+    connectionStateReducer?: ConnectionStateReducer;
     renderMode?: "textured" | "rounded-rect" | "rounded-triangle" | "flat" | "dom";
     renderConfig?: RoundedRectConfig | RoundedTriangleConfig | FlatConfig;
     rawDraw?: (ctx: NodeDrawContext) => boolean;
