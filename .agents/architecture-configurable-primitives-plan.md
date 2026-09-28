@@ -364,6 +364,14 @@ Extend the node registry without breaking current descriptors.
 - Add descriptor versioning/validation so malformed plugins fail at registration.
 - Preserve `register`, `replace`, and built-in type names for snapshot portability.
 
+Implementation status (2026-09-28): descriptor prop resolution, structured
+validation events, multi-valued props, capability queries, composition-aware
+variant behavior, and descriptor-owned `migrateProps` are implemented in core.
+The sidepane now preserves its control tree for value-only edits and rebuilds it
+only when the resolved declarative schema changes. Edge descriptors, handle
+normalization, descriptor validation/versioning, and the remaining renderer
+switch removal remain Phase 2 work.
+
 **Exit criteria:** a custom node and a custom edge can be registered without edits
 to `NodeEditor`, `renderer.ts`, `edge-geometry.ts`, or built-in switch statements.
 
