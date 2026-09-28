@@ -57,6 +57,7 @@ function getVerticalContainerSize(fallback, children) {
 }
 export const nodeDescriptor = {
     type: "node",
+    supportsComposition: true,
     category: "leaf",
     zTier: 0.4,
     defaultSize: { width: 190, height: 150 },

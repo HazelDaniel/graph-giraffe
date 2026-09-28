@@ -85,6 +85,7 @@ type NodeDataForMeasurement = Parameters<NonNullable<NodeTypeDescriptor["calcula
 
 export const nodeDescriptor: NodeTypeDescriptor = {
   type: "node",
+  supportsComposition: true,
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 190, height: 150 },

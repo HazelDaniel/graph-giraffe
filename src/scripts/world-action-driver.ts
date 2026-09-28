@@ -1226,7 +1226,7 @@ export class WorldActionDriver {
     if (sourceOwningSubgraphId !== targetOwningSubgraphId) return false;
 
     if (
-      sourceNode.nodeType === "node" &&
+      this.store.getRegistry()?.supportsComposition(sourceNode.nodeType) &&
       targetNode.nodeType === "composition" &&
       !this.canCreateCompositionReference(sourceNodeId, targetNodeId)
     ) {
@@ -1234,11 +1234,11 @@ export class WorldActionDriver {
     }
 
     if (
-      sourceNode.nodeType !== "hub" &&
+      !this.store.getRegistry()?.allowsMultiConnect(sourceNode.nodeType) &&
       this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide)
     ) return false;
     if (
-      targetNode.nodeType !== "hub" &&
+      !this.store.getRegistry()?.allowsMultiConnect(targetNode.nodeType) &&
       this.edgeStore.hasConnection(targetNodeId, targetHandleSide)
     ) return false;
     return true;
@@ -1247,7 +1247,8 @@ export class WorldActionDriver {
   private isCompositionReferenceEdge(edge: EdgeData | EdgeHistorySnapshot): boolean {
     const source = this.store.get(edge.sourceNodeId);
     const target = this.store.get(edge.targetNodeId);
-    return source?.nodeType === "node" && target?.nodeType === "composition";
+    const registry = this.store.getRegistry();
+    return Boolean(source && target && registry?.supportsComposition(source.nodeType) && target.nodeType === "composition");
   }
 
   private canCreateCompositionReference(
@@ -1257,7 +1258,7 @@ export class WorldActionDriver {
     const source = this.store.get(sourceNodeId);
     const target = this.store.get(targetCompositionId);
     if (!source || !target) return false;
-    if (source.nodeType !== "node" || target.nodeType !== "composition") {
+    if (!this.store.getRegistry()?.supportsComposition(source.nodeType) || target.nodeType !== "composition") {
       return false;
     }
     if (source.parentId === null) return false;

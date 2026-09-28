@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { nodeDescriptor } from "../src/scripts/builtin-types.js";
 import { WorldActionDriver } from "../src/scripts/world-action-driver.js";
 import { nodePropsEqual } from "../src/scripts/history-snapshots.js";
+import { NodeTypeRegistry } from "../src/scripts/node-type-registry.js";
 import type { NodePropType } from "../src/scripts/types.js";
 
 function props(role = "ordinary"): NodePropType {
@@ -29,6 +30,35 @@ function readRole(props: NodePropType | undefined): string | undefined {
 }
 
 describe("descriptor prop resolution", () => {
+  it("exposes variant capabilities and descriptor-owned prop migration", () => {
+    const registry = new NodeTypeRegistry();
+    registry.register({
+      ...nodeDescriptor,
+      type: "variant-node",
+      migrateProps: ({ props }) => ({
+        status: "accept",
+        props: props ?? { groups: [], booleans: {}, texts: {}, enums: {} },
+      }),
+    });
+
+    expect(registry.supportsComposition("variant-node")).toBe(true);
+    expect(registry.isSelectable("variant-node")).toBe(true);
+    expect(registry.isDraggable("variant-node")).toBe(true);
+    expect(registry.isEditable("variant-node")).toBe(true);
+    expect(registry.migrateProps({
+      node: {
+        ...({} as any),
+        id: 1,
+        nodeType: "node",
+      },
+      previousType: "node",
+      nextType: "variant-node",
+      props: props(),
+      allNodes: new Map(),
+      incidentEdges: [],
+    }).status).toBe("accept");
+  });
+
   it("compares array-valued prop selections structurally", () => {
     const left = props("composite-primary");
     const right = props("composite-primary");

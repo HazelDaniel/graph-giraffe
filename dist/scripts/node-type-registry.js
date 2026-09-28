@@ -63,6 +63,19 @@ export class NodeTypeRegistry {
     isLeaf(type) {
         return this.leafTypes.has(type);
     }
+    isSelectable(type) {
+        return this.descriptors.get(type)?.selectable ?? true;
+    }
+    isDraggable(type) {
+        return this.descriptors.get(type)?.draggable ?? true;
+    }
+    isEditable(type) {
+        const descriptor = this.descriptors.get(type);
+        return descriptor?.editable ?? (descriptor?.toolbarActions?.includes("edit") ?? false);
+    }
+    supportsComposition(type) {
+        return this.descriptors.get(type)?.supportsComposition ?? false;
+    }
     getZTier(type) {
         return this.descriptors.get(type)?.zTier ?? 0.4;
     }
@@ -101,6 +114,13 @@ export class NodeTypeRegistry {
         if (!desc)
             return false;
         return desc.isConnectionCandidate(connectionMode);
+    }
+    migrateProps(context) {
+        const descriptor = this.descriptors.get(context.nextType);
+        return descriptor?.migrateProps?.(context) ?? {
+            status: "accept",
+            props: context.props ?? { groups: [], booleans: {}, texts: {}, enums: {} },
+        };
     }
     hasHandles(type, connectionMode) {
         const desc = this.descriptors.get(type);

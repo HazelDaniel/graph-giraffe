@@ -31,6 +31,7 @@ import {
   captureNodeHistorySnapshot,
   cloneNodeProps,
   nodePropsEqual,
+  nodePropsShapeEqual,
   nodePropValueEqual,
   orderSnapshotsParentsFirst,
 } from "./history-snapshots.js";
@@ -68,6 +69,7 @@ import {
   HandleSide,
   ThemeName,
   NodeType,
+  NodePropType,
   DEFAULT_HANDLE_STYLE,
   NODE_LAYOUT,
   isCandidateNodeType,
@@ -766,8 +768,11 @@ export class NodeEditor {
 
     const beforeSnapshot = this.captureNodeSnapshot(node);
     const selectionBefore = this.captureSelectionSnapshot();
+    const previousProps = cloneNodeProps(node.props);
     this.store.updateProps(node.id, cloneNodeProps(result.props));
-    this.syncPropertiesPanelForSelection();
+    if (!nodePropsShapeEqual(previousProps, result.props)) {
+      this.syncPropertiesPanelForSelection();
+    }
     const afterSnapshot = this.captureNodeSnapshot(node);
     const parentId = node.parentId;
 
@@ -1064,6 +1069,7 @@ export class NodeEditor {
     const affectedNodeIds = new Set<number>();
     const affectedEdgeIds = new Set<number>();
     const selectedBefore = new Set<number>(this.selectedNodeIds);
+    const migratedProps = new Map<number, NodePropType>();
 
     // Remove incident edges first. A controlled projection may remove a
     // parent while retaining some of its former children; the controlled-only
@@ -1106,7 +1112,21 @@ export class NodeEditor {
     for (const input of nodes) {
       const node = this.store.get(input.id);
       if (!node || node.nodeType === input.nodeType) continue;
+      const migration = this.typeRegistry.migrateProps({
+        node,
+        previousType: node.nodeType,
+        nextType: input.nodeType,
+        props: cloneNodeProps(input.props ?? node.props),
+        allNodes: this.store.allNodesMap,
+        incidentEdges: this.edgeStore.allEdges().filter(
+          (edge) => edge.sourceNodeId === node.id || edge.targetNodeId === node.id
+        ),
+      });
+      if (migration.status === "reject") {
+        throw new Error(`Cannot change node ${input.id} to ${input.nodeType}: ${migration.message}`);
+      }
       this.store.replaceControlledNodeType(input.id, input.nodeType, this.theme);
+      migratedProps.set(input.id, cloneNodeProps(migration.props)!);
       affectedNodeIds.add(input.id);
     }
 
@@ -1167,7 +1187,7 @@ export class NodeEditor {
       };
 
       node.text = input.label ?? input.nodeType;
-      node.props = cloneNodeProps(input.props ?? node.props);
+      node.props = cloneNodeProps(migratedProps.get(input.id) ?? input.props ?? node.props);
       node.isLocked = input.isLocked ?? false;
       node.isCollapsed = input.isCollapsed ?? false;
       if (input.textureIds) node.textureIds = { ...input.textureIds };
@@ -1634,7 +1654,7 @@ export class NodeEditor {
           (node.nodeType === "group" && kind === "group-body") ||
           (node.nodeType === "composition" && kind === "composition-body") ||
           (node.nodeType === "composition-child" && kind === "node-body") || // fallback for body
-          (node.nodeType === "node" &&
+          (this.typeRegistry.supportsComposition(node.nodeType) &&
             node.compositionRefId !== null &&
             kind === "composition-reference-body")
         ) {
@@ -1650,7 +1670,7 @@ export class NodeEditor {
           (node.nodeType === "composition" && kind === "composition-head") ||
           (node.nodeType === "composition-child" &&
             kind === "composition-child-head") ||
-          (node.nodeType === "node" &&
+          (this.typeRegistry.supportsComposition(node.nodeType) &&
             node.compositionRefId !== null &&
             kind === "composition-reference-child-head")
         ) {
@@ -2599,8 +2619,8 @@ export class NodeEditor {
         isSelected: snapshot.isSelected,
         visible: snapshot.visible,
         idOverride: snapshot.id,
-        sourceCanHaveMultipleConnections: source?.nodeType === "hub",
-        targetCanHaveMultipleConnections: target?.nodeType === "hub",
+        sourceCanHaveMultipleConnections: source ? this.typeRegistry.allowsMultiConnect(source.nodeType) : false,
+        targetCanHaveMultipleConnections: target ? this.typeRegistry.allowsMultiConnect(target.nodeType) : false,
       });
 
       if (edge) {
@@ -2618,7 +2638,7 @@ export class NodeEditor {
   ): boolean {
     const source = this.store.get(edge.sourceNodeId);
     const target = this.store.get(edge.targetNodeId);
-    return source?.nodeType === "node" && target?.nodeType === "composition";
+    return Boolean(source && target && this.typeRegistry.supportsComposition(source.nodeType) && target.nodeType === "composition");
   }
 
   private canCreateCompositionReference(
@@ -2628,7 +2648,7 @@ export class NodeEditor {
     const source = this.store.get(sourceNodeId);
     const target = this.store.get(targetCompositionId);
     if (!source || !target) return false;
-    if (source.nodeType !== "node" || target.nodeType !== "composition") {
+    if (!this.typeRegistry.supportsComposition(source.nodeType) || target.nodeType !== "composition") {
       return false;
     }
     if (source.parentId === null) return false;
@@ -3370,11 +3390,7 @@ export class NodeEditor {
           ]);
     }
 
-    if (
-      node.nodeType === "node" ||
-      node.nodeType === "composition-child" ||
-      node.nodeType === "hub"
-    ) {
+    if (this.typeRegistry.isLeaf(node.nodeType) && this.typeRegistry.isEditable(node.nodeType)) {
       return baseButtons([
         ["edit", `${EDIT}`, "Edit"],
         ["delete", `${DELETE}`, "Delete"],
@@ -3999,8 +4015,8 @@ export class NodeEditor {
             sourceHandleSide: source.sourceHandleSide,
             targetNodeId: target.nodeId,
             targetHandleSide: target.handle.side,
-            sourceCanHaveMultipleConnections: sourceNode.nodeType === "hub",
-            targetCanHaveMultipleConnections: targetNode.nodeType === "hub",
+            sourceCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(sourceNode.nodeType),
+            targetCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(targetNode.nodeType),
           });
 
           if (edge) {
@@ -4472,7 +4488,7 @@ export class NodeEditor {
             sourceHandleSide: source.sourceHandleSide,
             targetNodeId: hub.id,
             targetHandleSide: "left" as const,
-            sourceCanHaveMultipleConnections: sourceNode?.nodeType === "hub",
+            sourceCanHaveMultipleConnections: sourceNode ? this.typeRegistry.allowsMultiConnect(sourceNode.nodeType) : false,
             targetCanHaveMultipleConnections: true,
           }
         : {
@@ -4481,7 +4497,7 @@ export class NodeEditor {
             targetNodeId: source.sourceNodeId,
             targetHandleSide: source.sourceHandleSide,
             sourceCanHaveMultipleConnections: true,
-            targetCanHaveMultipleConnections: sourceNode?.nodeType === "hub",
+            targetCanHaveMultipleConnections: sourceNode ? this.typeRegistry.allowsMultiConnect(sourceNode.nodeType) : false,
           };
 
     if (
@@ -4559,7 +4575,7 @@ export class NodeEditor {
 
       // Composition-reference special case (business logic, not type metadata)
       if (
-        sourceNode.nodeType === "node" &&
+        this.typeRegistry.supportsComposition(sourceNode.nodeType) &&
         targetNode.nodeType === "composition" &&
         !this.canCreateCompositionReference(sourceNodeId, targetNodeId)
       ) {
@@ -4599,7 +4615,7 @@ export class NodeEditor {
     }
 
     if (
-      sourceNode.nodeType === "node" &&
+      this.typeRegistry.supportsComposition(sourceNode.nodeType) &&
       targetNode.nodeType === "composition" &&
       !this.canCreateCompositionReference(sourceNodeId, targetNodeId)
     ) {
@@ -4607,12 +4623,12 @@ export class NodeEditor {
     }
 
     if (
-      sourceNode.nodeType !== "hub" &&
+      !this.typeRegistry.allowsMultiConnect(sourceNode.nodeType) &&
       this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide)
     )
       return false;
     if (
-      targetNode.nodeType !== "hub" &&
+      !this.typeRegistry.allowsMultiConnect(targetNode.nodeType) &&
       this.edgeStore.hasConnection(targetNodeId, targetHandleSide)
     )
       return false;

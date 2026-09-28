@@ -6077,10 +6077,11 @@ class NodeStore {
     handle.isConnected = isConnected;
   }
   setCompositionReference(nodeId, compositionId, theme) {
+    var _a2;
     const node = this.get(nodeId);
     const composition = this.get(compositionId);
     if (!node || !composition) return false;
-    if (node.nodeType !== "node" || composition.nodeType !== "composition") return false;
+    if (!((_a2 = this.registry) == null ? void 0 : _a2.supportsComposition(node.nodeType)) || composition.nodeType !== "composition") return false;
     if (node.parentId === null) return false;
     node.compositionRefId = compositionId;
     node.textureIds = getCompositionReferenceTextureIds();
@@ -6089,8 +6090,9 @@ class NodeStore {
     return true;
   }
   clearCompositionReference(nodeId, theme) {
+    var _a2;
     const node = this.get(nodeId);
-    if (!node || node.nodeType !== "node" || node.compositionRefId === null) {
+    if (!node || !((_a2 = this.registry) == null ? void 0 : _a2.supportsComposition(node.nodeType)) || node.compositionRefId === null) {
       return false;
     }
     node.compositionRefId = null;
@@ -6100,9 +6102,10 @@ class NodeStore {
     return true;
   }
   getCompositionReferenceNodes(compositionId) {
+    var _a2;
     const refs = [];
     for (const node of this.nodes.values()) {
-      if (node.nodeType === "node" && node.compositionRefId === compositionId) {
+      if (((_a2 = this.registry) == null ? void 0 : _a2.supportsComposition(node.nodeType)) && node.compositionRefId === compositionId) {
         refs.push(node);
       }
     }
@@ -9364,6 +9367,15 @@ function propListEqual(left, right) {
     return !!other && item.label === other.label && item.uiPrimitive === other.uiPrimitive && nodePropValueEqual(item.value, other.value) && stringArrayEqual(item.options, other.options);
   });
 }
+function propListShapeEqual(left, right) {
+  const a = left ?? [];
+  const b = right ?? [];
+  if (a.length !== b.length) return false;
+  return a.every((item, index) => {
+    const other = b[index];
+    return !!other && item.label === other.label && item.uiPrimitive === other.uiPrimitive && stringArrayEqual(item.options, other.options);
+  });
+}
 function cloneNodeProps(props) {
   if (!props) return void 0;
   return {
@@ -9384,6 +9396,20 @@ function nodePropsEqual(left, right) {
   }
   for (const key of /* @__PURE__ */ new Set([...Object.keys(left.enums), ...Object.keys(right.enums)])) {
     if (!propListEqual(left.enums[key], right.enums[key])) return false;
+  }
+  return true;
+}
+function nodePropsShapeEqual(left, right) {
+  if (left === right) return true;
+  if (!left || !right || !stringArrayEqual(left.groups, right.groups)) return false;
+  for (const key of /* @__PURE__ */ new Set([...Object.keys(left.booleans), ...Object.keys(right.booleans)])) {
+    if (!propListShapeEqual(left.booleans[key], right.booleans[key])) return false;
+  }
+  for (const key of /* @__PURE__ */ new Set([...Object.keys(left.texts), ...Object.keys(right.texts)])) {
+    if (!propListShapeEqual(left.texts[key], right.texts[key])) return false;
+  }
+  for (const key of /* @__PURE__ */ new Set([...Object.keys(left.enums), ...Object.keys(right.enums)])) {
+    if (!propListShapeEqual(left.enums[key], right.enums[key])) return false;
   }
   return true;
 }
@@ -10055,6 +10081,23 @@ class NodeTypeRegistry {
   isLeaf(type) {
     return this.leafTypes.has(type);
   }
+  isSelectable(type) {
+    var _a2;
+    return ((_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.selectable) ?? true;
+  }
+  isDraggable(type) {
+    var _a2;
+    return ((_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.draggable) ?? true;
+  }
+  isEditable(type) {
+    var _a2;
+    const descriptor = this.descriptors.get(type);
+    return (descriptor == null ? void 0 : descriptor.editable) ?? (((_a2 = descriptor == null ? void 0 : descriptor.toolbarActions) == null ? void 0 : _a2.includes("edit")) ?? false);
+  }
+  supportsComposition(type) {
+    var _a2;
+    return ((_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.supportsComposition) ?? false;
+  }
   getZTier(type) {
     var _a2;
     return ((_a2 = this.descriptors.get(type)) == null ? void 0 : _a2.zTier) ?? 0.4;
@@ -10090,6 +10133,14 @@ class NodeTypeRegistry {
     const desc = this.descriptors.get(type);
     if (!desc) return false;
     return desc.isConnectionCandidate(connectionMode);
+  }
+  migrateProps(context) {
+    var _a2;
+    const descriptor = this.descriptors.get(context.nextType);
+    return ((_a2 = descriptor == null ? void 0 : descriptor.migrateProps) == null ? void 0 : _a2.call(descriptor, context)) ?? {
+      status: "accept",
+      props: context.props ?? { groups: [], booleans: {}, texts: {}, enums: {} }
+    };
   }
   hasHandles(type, connectionMode) {
     const desc = this.descriptors.get(type);
@@ -10733,6 +10784,7 @@ function getVerticalContainerSize(fallback, children) {
 }
 const nodeDescriptor = {
   type: "node",
+  supportsComposition: true,
   category: "leaf",
   zTier: 0.4,
   defaultSize: { width: 190, height: 150 },
@@ -12205,8 +12257,11 @@ const _NodeEditor = class _NodeEditor {
     }
     const beforeSnapshot = this.captureNodeSnapshot(node);
     const selectionBefore = this.captureSelectionSnapshot();
+    const previousProps = cloneNodeProps(node.props);
     this.store.updateProps(node.id, cloneNodeProps(result.props));
-    this.syncPropertiesPanelForSelection();
+    if (!nodePropsShapeEqual(previousProps, result.props)) {
+      this.syncPropertiesPanelForSelection();
+    }
     const afterSnapshot = this.captureNodeSnapshot(node);
     const parentId = node.parentId;
     if (parentId !== null) this.refreshContainerChain(parentId);
@@ -12467,6 +12522,7 @@ const _NodeEditor = class _NodeEditor {
     const affectedNodeIds = /* @__PURE__ */ new Set();
     const affectedEdgeIds = /* @__PURE__ */ new Set();
     const selectedBefore = new Set(this.selectedNodeIds);
+    const migratedProps = /* @__PURE__ */ new Map();
     for (const current of [...this.store.allNodesMap.values()]) {
       if (incomingNodes.has(current.id)) continue;
       for (const edge of this.edgeStore.removeEdgesForNode(current.id)) {
@@ -12500,7 +12556,21 @@ const _NodeEditor = class _NodeEditor {
     for (const input of nodes) {
       const node = this.store.get(input.id);
       if (!node || node.nodeType === input.nodeType) continue;
+      const migration = this.typeRegistry.migrateProps({
+        node,
+        previousType: node.nodeType,
+        nextType: input.nodeType,
+        props: cloneNodeProps(input.props ?? node.props),
+        allNodes: this.store.allNodesMap,
+        incidentEdges: this.edgeStore.allEdges().filter(
+          (edge) => edge.sourceNodeId === node.id || edge.targetNodeId === node.id
+        )
+      });
+      if (migration.status === "reject") {
+        throw new Error(`Cannot change node ${input.id} to ${input.nodeType}: ${migration.message}`);
+      }
       this.store.replaceControlledNodeType(input.id, input.nodeType, this.theme);
+      migratedProps.set(input.id, cloneNodeProps(migration.props));
       affectedNodeIds.add(input.id);
     }
     for (const input of nodes) {
@@ -12551,7 +12621,7 @@ const _NodeEditor = class _NodeEditor {
         props: cloneNodeProps(node.props)
       };
       node.text = input.label ?? input.nodeType;
-      node.props = cloneNodeProps(input.props ?? node.props);
+      node.props = cloneNodeProps(migratedProps.get(input.id) ?? input.props ?? node.props);
       node.isLocked = input.isLocked ?? false;
       node.isCollapsed = input.isCollapsed ?? false;
       if (input.textureIds) node.textureIds = { ...input.textureIds };
@@ -12930,12 +13000,12 @@ const _NodeEditor = class _NodeEditor {
     const applyToNodes = (nodes) => {
       for (const node of nodes) {
         if (isNodePrimitiveType(node.nodeType) && kind === "node-body" || node.nodeType === "group" && kind === "group-body" || node.nodeType === "composition" && kind === "composition-body" || node.nodeType === "composition-child" && kind === "node-body" || // fallback for body
-        node.nodeType === "node" && node.compositionRefId !== null && kind === "composition-reference-body") {
+        this.typeRegistry.supportsComposition(node.nodeType) && node.compositionRefId !== null && kind === "composition-reference-body") {
           if (node.textureIds.body !== textureId) {
             node.textureIds.body = textureId;
           }
         }
-        if (isNodePrimitiveType(node.nodeType) && kind === "node-head" || node.nodeType === "group" && kind === "group-head" || node.nodeType === "composition" && kind === "composition-head" || node.nodeType === "composition-child" && kind === "composition-child-head" || node.nodeType === "node" && node.compositionRefId !== null && kind === "composition-reference-child-head") {
+        if (isNodePrimitiveType(node.nodeType) && kind === "node-head" || node.nodeType === "group" && kind === "group-head" || node.nodeType === "composition" && kind === "composition-head" || node.nodeType === "composition-child" && kind === "composition-child-head" || this.typeRegistry.supportsComposition(node.nodeType) && node.compositionRefId !== null && kind === "composition-reference-child-head") {
           if (node.textureIds.head !== textureId) {
             node.textureIds.head = textureId;
           }
@@ -13661,8 +13731,8 @@ const _NodeEditor = class _NodeEditor {
         isSelected: snapshot.isSelected,
         visible: snapshot.visible,
         idOverride: snapshot.id,
-        sourceCanHaveMultipleConnections: (source == null ? void 0 : source.nodeType) === "hub",
-        targetCanHaveMultipleConnections: (target == null ? void 0 : target.nodeType) === "hub"
+        sourceCanHaveMultipleConnections: source ? this.typeRegistry.allowsMultiConnect(source.nodeType) : false,
+        targetCanHaveMultipleConnections: target ? this.typeRegistry.allowsMultiConnect(target.nodeType) : false
       });
       if (edge) {
         this.syncHandleStates(edge.sourceNodeId);
@@ -13676,13 +13746,13 @@ const _NodeEditor = class _NodeEditor {
   isCompositionReferenceEdge(edge) {
     const source = this.store.get(edge.sourceNodeId);
     const target = this.store.get(edge.targetNodeId);
-    return (source == null ? void 0 : source.nodeType) === "node" && (target == null ? void 0 : target.nodeType) === "composition";
+    return Boolean(source && target && this.typeRegistry.supportsComposition(source.nodeType) && target.nodeType === "composition");
   }
   canCreateCompositionReference(sourceNodeId, targetCompositionId) {
     const source = this.store.get(sourceNodeId);
     const target = this.store.get(targetCompositionId);
     if (!source || !target) return false;
-    if (source.nodeType !== "node" || target.nodeType !== "composition") {
+    if (!this.typeRegistry.supportsComposition(source.nodeType) || target.nodeType !== "composition") {
       return false;
     }
     if (source.parentId === null) return false;
@@ -14254,7 +14324,7 @@ const _NodeEditor = class _NodeEditor {
         ["delete", `${DELETE}`, "Delete"]
       ]);
     }
-    if (node.nodeType === "node" || node.nodeType === "composition-child" || node.nodeType === "hub") {
+    if (this.typeRegistry.isLeaf(node.nodeType) && this.typeRegistry.isEditable(node.nodeType)) {
       return baseButtons([
         ["edit", `${EDIT}`, "Edit"],
         ["delete", `${DELETE}`, "Delete"]
@@ -14740,8 +14810,8 @@ const _NodeEditor = class _NodeEditor {
             sourceHandleSide: source.sourceHandleSide,
             targetNodeId: target.nodeId,
             targetHandleSide: target.handle.side,
-            sourceCanHaveMultipleConnections: sourceNode.nodeType === "hub",
-            targetCanHaveMultipleConnections: targetNode.nodeType === "hub"
+            sourceCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(sourceNode.nodeType),
+            targetCanHaveMultipleConnections: this.typeRegistry.allowsMultiConnect(targetNode.nodeType)
           });
           if (edge) {
             this.syncHandleStates(edge.sourceNodeId);
@@ -15124,7 +15194,7 @@ const _NodeEditor = class _NodeEditor {
       sourceHandleSide: source.sourceHandleSide,
       targetNodeId: hub.id,
       targetHandleSide: "left",
-      sourceCanHaveMultipleConnections: (sourceNode == null ? void 0 : sourceNode.nodeType) === "hub",
+      sourceCanHaveMultipleConnections: sourceNode ? this.typeRegistry.allowsMultiConnect(sourceNode.nodeType) : false,
       targetCanHaveMultipleConnections: true
     } : {
       sourceNodeId: hub.id,
@@ -15132,7 +15202,7 @@ const _NodeEditor = class _NodeEditor {
       targetNodeId: source.sourceNodeId,
       targetHandleSide: source.sourceHandleSide,
       sourceCanHaveMultipleConnections: true,
-      targetCanHaveMultipleConnections: (sourceNode == null ? void 0 : sourceNode.nodeType) === "hub"
+      targetCanHaveMultipleConnections: sourceNode ? this.typeRegistry.allowsMultiConnect(sourceNode.nodeType) : false
     };
     if (!this.isValidConnection(
       edgeParams.sourceNodeId,
@@ -15187,7 +15257,7 @@ const _NodeEditor = class _NodeEditor {
       if (sourceOwningSubgraphId2 !== targetOwningSubgraphId2) {
         return false;
       }
-      if (sourceNode.nodeType === "node" && targetNode.nodeType === "composition" && !this.canCreateCompositionReference(sourceNodeId, targetNodeId)) {
+      if (this.typeRegistry.supportsComposition(sourceNode.nodeType) && targetNode.nodeType === "composition" && !this.canCreateCompositionReference(sourceNodeId, targetNodeId)) {
         return false;
       }
       if (!this.typeRegistry.allowsMultiConnect(sourceNode.nodeType) && this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide)) return false;
@@ -15211,12 +15281,12 @@ const _NodeEditor = class _NodeEditor {
     if (sourceOwningSubgraphId !== targetOwningSubgraphId) {
       return false;
     }
-    if (sourceNode.nodeType === "node" && targetNode.nodeType === "composition" && !this.canCreateCompositionReference(sourceNodeId, targetNodeId)) {
+    if (this.typeRegistry.supportsComposition(sourceNode.nodeType) && targetNode.nodeType === "composition" && !this.canCreateCompositionReference(sourceNodeId, targetNodeId)) {
       return false;
     }
-    if (sourceNode.nodeType !== "hub" && this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide))
+    if (!this.typeRegistry.allowsMultiConnect(sourceNode.nodeType) && this.edgeStore.hasConnection(sourceNodeId, sourceHandleSide))
       return false;
-    if (targetNode.nodeType !== "hub" && this.edgeStore.hasConnection(targetNodeId, targetHandleSide))
+    if (!this.typeRegistry.allowsMultiConnect(targetNode.nodeType) && this.edgeStore.hasConnection(targetNodeId, targetHandleSide))
       return false;
     return true;
   }
@@ -16235,6 +16305,7 @@ export {
   nodeDescriptor,
   nodePropValueEqual,
   nodePropsEqual,
+  nodePropsShapeEqual,
   projectWorldPoint,
   projectWorldRect,
   registerDomNodeDescriptors,

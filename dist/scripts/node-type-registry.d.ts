@@ -146,6 +146,15 @@ export interface PropResolutionContext {
     incidentEdges: readonly EdgeData[];
     reason: PropResolutionReason;
 }
+/** Context passed when a controlled graph changes a node's registered type. */
+export interface PropMigrationContext {
+    node: NodeData;
+    previousType: string;
+    nextType: string;
+    props: NodePropType | undefined;
+    allNodes: ReadonlyMap<number, NodeData>;
+    incidentEdges: readonly EdgeData[];
+}
 export type PropResolutionResult = {
     status: "accept";
     props: NodePropType;
@@ -203,6 +212,8 @@ export interface NodeTypeDescriptor {
     connectionStateReducer?: ConnectionStateReducer;
     /** Normalize or reject a complete proposed prop shape at the mutation boundary. */
     resolveProps?: (context: PropResolutionContext) => PropResolutionResult;
+    /** Migrate persisted props when a node changes to this descriptor's type. */
+    migrateProps?: (context: PropMigrationContext) => PropResolutionResult;
     renderMode?: "textured" | "rounded-rect" | "rounded-triangle" | "flat" | "dom";
     renderConfig?: RoundedRectConfig | RoundedTriangleConfig | FlatConfig;
     rawDraw?: (ctx: NodeDrawContext) => boolean;
@@ -224,6 +235,11 @@ export interface NodeTypeDescriptor {
     collapsible?: boolean;
     lockable?: boolean;
     usesCanvasLabel?: boolean;
+    /** Whether this leaf participates in ordinary node composition semantics. */
+    supportsComposition?: boolean;
+    selectable?: boolean;
+    draggable?: boolean;
+    editable?: boolean;
 }
 export declare class NodeTypeRegistry {
     private descriptors;
@@ -251,6 +267,10 @@ export declare class NodeTypeRegistry {
     getAll(): IterableIterator<NodeTypeDescriptor>;
     isContainer(type: string): boolean;
     isLeaf(type: string): boolean;
+    isSelectable(type: string): boolean;
+    isDraggable(type: string): boolean;
+    isEditable(type: string): boolean;
+    supportsComposition(type: string): boolean;
     getZTier(type: string): number;
     getDefaultSize(type: string, collapsed?: boolean): {
         width: number;
@@ -264,6 +284,7 @@ export declare class NodeTypeRegistry {
     getBoundsAuthority(type: string): PrimitiveBoundsAuthority;
     canReparentTo(childType: string, parentType: string | null): boolean;
     isConnectionCandidate(type: string, connectionMode: ConnectionMode): boolean;
+    migrateProps(context: PropMigrationContext): PropResolutionResult;
     hasHandles(type: string, connectionMode: ConnectionMode): boolean;
     allowsMultiConnect(type: string): boolean;
     isValidConnectionSide(type: string, side: HandleSide, role: "source" | "target"): boolean;

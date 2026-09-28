@@ -185,6 +185,16 @@ export interface PropResolutionContext {
   reason: PropResolutionReason;
 }
 
+/** Context passed when a controlled graph changes a node's registered type. */
+export interface PropMigrationContext {
+  node: NodeData;
+  previousType: string;
+  nextType: string;
+  props: NodePropType | undefined;
+  allNodes: ReadonlyMap<number, NodeData>;
+  incidentEdges: readonly EdgeData[];
+}
+
 export type PropResolutionResult =
   | {
       status: "accept";
@@ -247,6 +257,8 @@ export interface NodeTypeDescriptor {
   connectionStateReducer?: ConnectionStateReducer;
   /** Normalize or reject a complete proposed prop shape at the mutation boundary. */
   resolveProps?: (context: PropResolutionContext) => PropResolutionResult;
+  /** Migrate persisted props when a node changes to this descriptor's type. */
+  migrateProps?: (context: PropMigrationContext) => PropResolutionResult;
 
   renderMode?: "textured" | "rounded-rect" | "rounded-triangle" | "flat" | "dom";
   renderConfig?: RoundedRectConfig | RoundedTriangleConfig | FlatConfig;
@@ -274,6 +286,11 @@ export interface NodeTypeDescriptor {
   collapsible?: boolean;
   lockable?: boolean;
   usesCanvasLabel?: boolean;
+  /** Whether this leaf participates in ordinary node composition semantics. */
+  supportsComposition?: boolean;
+  selectable?: boolean;
+  draggable?: boolean;
+  editable?: boolean;
 }
 
 // ─── Registry ────────────────────────────────────────────
@@ -358,6 +375,23 @@ export class NodeTypeRegistry {
     return this.leafTypes.has(type);
   }
 
+  isSelectable(type: string): boolean {
+    return this.descriptors.get(type)?.selectable ?? true;
+  }
+
+  isDraggable(type: string): boolean {
+    return this.descriptors.get(type)?.draggable ?? true;
+  }
+
+  isEditable(type: string): boolean {
+    const descriptor = this.descriptors.get(type);
+    return descriptor?.editable ?? (descriptor?.toolbarActions?.includes("edit") ?? false);
+  }
+
+  supportsComposition(type: string): boolean {
+    return this.descriptors.get(type)?.supportsComposition ?? false;
+  }
+
   getZTier(type: string): number {
     return this.descriptors.get(type)?.zTier ?? 0.4;
   }
@@ -402,6 +436,14 @@ export class NodeTypeRegistry {
     const desc = this.descriptors.get(type);
     if (!desc) return false;
     return desc.isConnectionCandidate(connectionMode);
+  }
+
+  migrateProps(context: PropMigrationContext): PropResolutionResult {
+    const descriptor = this.descriptors.get(context.nextType);
+    return descriptor?.migrateProps?.(context) ?? {
+      status: "accept",
+      props: context.props ?? { groups: [], booleans: {}, texts: {}, enums: {} },
+    };
   }
 
   hasHandles(type: string, connectionMode: ConnectionMode): boolean {

@@ -39,6 +39,19 @@ function propListEqual(left, right) {
             stringArrayEqual(item.options, other.options);
     });
 }
+function propListShapeEqual(left, right) {
+    const a = left ?? [];
+    const b = right ?? [];
+    if (a.length !== b.length)
+        return false;
+    return a.every((item, index) => {
+        const other = b[index];
+        return !!other &&
+            item.label === other.label &&
+            item.uiPrimitive === other.uiPrimitive &&
+            stringArrayEqual(item.options, other.options);
+    });
+}
 export function cloneNodeProps(props) {
     if (!props)
         return undefined;
@@ -64,6 +77,26 @@ export function nodePropsEqual(left, right) {
     }
     for (const key of new Set([...Object.keys(left.enums), ...Object.keys(right.enums)])) {
         if (!propListEqual(left.enums[key], right.enums[key]))
+            return false;
+    }
+    return true;
+}
+/** Compare only the declarative control shape, excluding current values. */
+export function nodePropsShapeEqual(left, right) {
+    if (left === right)
+        return true;
+    if (!left || !right || !stringArrayEqual(left.groups, right.groups))
+        return false;
+    for (const key of new Set([...Object.keys(left.booleans), ...Object.keys(right.booleans)])) {
+        if (!propListShapeEqual(left.booleans[key], right.booleans[key]))
+            return false;
+    }
+    for (const key of new Set([...Object.keys(left.texts), ...Object.keys(right.texts)])) {
+        if (!propListShapeEqual(left.texts[key], right.texts[key]))
+            return false;
+    }
+    for (const key of new Set([...Object.keys(left.enums), ...Object.keys(right.enums)])) {
+        if (!propListShapeEqual(left.enums[key], right.enums[key]))
             return false;
     }
     return true;

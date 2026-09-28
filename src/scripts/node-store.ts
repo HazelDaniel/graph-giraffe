@@ -600,7 +600,7 @@ export class NodeStore {
     const node = this.get(nodeId);
     const composition = this.get(compositionId);
     if (!node || !composition) return false;
-    if (node.nodeType !== 'node' || composition.nodeType !== 'composition') return false;
+    if (!this.registry?.supportsComposition(node.nodeType) || composition.nodeType !== 'composition') return false;
     if (node.parentId === null) return false;
 
     node.compositionRefId = compositionId;
@@ -612,7 +612,7 @@ export class NodeStore {
 
   clearCompositionReference(nodeId: number, theme: ThemeName): boolean {
     const node = this.get(nodeId);
-    if (!node || node.nodeType !== 'node' || node.compositionRefId === null) {
+    if (!node || !this.registry?.supportsComposition(node.nodeType) || node.compositionRefId === null) {
       return false;
     }
 
@@ -626,7 +626,7 @@ export class NodeStore {
   getCompositionReferenceNodes(compositionId: number): NodeData[] {
     const refs: NodeData[] = [];
     for (const node of this.nodes.values()) {
-      if (node.nodeType === 'node' && node.compositionRefId === compositionId) {
+      if (this.registry?.supportsComposition(node.nodeType) && node.compositionRefId === compositionId) {
         refs.push(node);
       }
     }

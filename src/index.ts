@@ -46,8 +46,9 @@ export type {
   PropResolutionReason,
   PropResolutionContext,
   PropResolutionResult,
+  PropMigrationContext,
 } from './scripts/node-type-registry.js';
-export { nodePropValueEqual, nodePropsEqual } from './scripts/history-snapshots.js';
+export { nodePropValueEqual, nodePropsEqual, nodePropsShapeEqual } from './scripts/history-snapshots.js';
 
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
