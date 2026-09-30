@@ -131,6 +131,30 @@ export class GGPropGroup extends HTMLElement {
       </style>
       <div id="container" part="root"></div>
     `;
+        // Controls are rebuilt when a descriptor changes its declarative shape.
+        // Keep the event bridge on this stable host instead of attaching handlers
+        // to each generated control, so one edit cannot invalidate later edits.
+        this.addEventListener("change", (event) => {
+            const target = event.target;
+            if (!target?.dataset.propLabel)
+                return;
+            const input = target;
+            this.dispatchPropChange(target.dataset.propLabel, input.type === "checkbox" ? input.checked : input.value, target.dataset.uiPrimitive ?? input.type);
+        });
+        this.addEventListener("gg-select-change", (event) => {
+            const target = event.target;
+            const detail = event.detail;
+            if (!target?.dataset.propLabel || !detail)
+                return;
+            this.dispatchPropChange(target.dataset.propLabel, detail.value, target.dataset.uiPrimitive ?? "select");
+        });
+        this.addEventListener("gg-multi-select-change", (event) => {
+            const target = event.target;
+            const detail = event.detail;
+            if (!target?.dataset.propLabel || !detail)
+                return;
+            this.dispatchPropChange(target.dataset.propLabel, detail.values, target.dataset.uiPrimitive ?? "multi-select");
+        });
     }
     /**
      * Generates the DOM based on the NodePropType data.
@@ -147,6 +171,8 @@ export class GGPropGroup extends HTMLElement {
             let control;
             if (uiPrimitive === "select") {
                 control = document.createElement("gg-select");
+                control.dataset.propLabel = label;
+                control.dataset.uiPrimitive = uiPrimitive;
                 // We assume gg-select has an 'options' setter and 'value' property.
                 // For now, we'll just set its value attribute.
                 control.setAttribute("value", value);
@@ -156,12 +182,11 @@ export class GGPropGroup extends HTMLElement {
                         control.insertAdjacentHTML("beforeend", optionTemplate);
                     }
                 }
-                control.addEventListener("gg-select-change", (e) => {
-                    this.dispatchPropChange(label, e.target.value, uiPrimitive);
-                });
             }
             else if (uiPrimitive === "multi-select") {
                 control = document.createElement("gg-multi-select");
+                control.dataset.propLabel = label;
+                control.dataset.uiPrimitive = uiPrimitive;
                 control.values = Array.isArray(value) ? value : [];
                 if (Array.isArray(options)) {
                     for (const option of options) {
@@ -169,24 +194,17 @@ export class GGPropGroup extends HTMLElement {
                         control.insertAdjacentHTML("beforeend", optionTemplate);
                     }
                 }
-                control.addEventListener("gg-multi-select-change", (e) => {
-                    this.dispatchPropChange(label, e.detail.values, uiPrimitive);
-                });
             }
             else {
                 const input = document.createElement("input");
                 input.type = uiPrimitive === "checkbox" ? "checkbox" : uiPrimitive; // fallback to text
+                input.dataset.propLabel = label;
+                input.dataset.uiPrimitive = uiPrimitive;
                 if (uiPrimitive === "checkbox") {
                     input.checked = value;
-                    input.addEventListener("change", (e) => {
-                        this.dispatchPropChange(label, input.checked, uiPrimitive);
-                    });
                 }
                 else {
                     input.value = value;
-                    input.addEventListener("change", (e) => {
-                        this.dispatchPropChange(label, input.value, uiPrimitive);
-                    });
                 }
                 control = input;
             }
