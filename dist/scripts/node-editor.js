@@ -730,6 +730,7 @@ export class NodeEditor {
         const affectedNodeIds = new Set();
         const affectedEdgeIds = new Set();
         const selectedBefore = new Set(this.selectedNodeIds);
+        const selectedEdgesBefore = new Set(this.selectedEdgeIds);
         const migratedProps = new Map();
         // Remove incident edges first. A controlled projection may remove a
         // parent while retaining some of its former children; the controlled-only
@@ -932,6 +933,17 @@ export class NodeEditor {
         for (const nodeId of selectedBefore)
             affectedNodeIds.add(nodeId);
         this.clearSelectionState();
+        // A controlled projection is an echo of host state, not a new user
+        // selection. Preserve selections for records that still exist so a
+        // projected edit does not silently disable the next properties edit.
+        for (const nodeId of selectedBefore) {
+            if (this.store.get(nodeId))
+                this.setNodeSelected(nodeId, true);
+        }
+        for (const edgeId of selectedEdgesBefore) {
+            if (this.edgeStore.get(edgeId))
+                this.setEdgeSelected(edgeId, true);
+        }
         // Controlled echoes are projections of an already-applied graph state.
         // They must not erase local undo/redo history; only initial hydration and
         // explicit graph imports establish a fresh history boundary.

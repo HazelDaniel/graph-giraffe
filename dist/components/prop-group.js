@@ -132,37 +132,32 @@ export class GGPropGroup extends HTMLElement {
       <div id="container" part="root"></div>
     `;
         const container = this.shadowRoot.getElementById("container");
-        // Controls are rebuilt when a descriptor changes its declarative shape.
-        // Keep the event bridge on this stable host instead of attaching handlers
-        // to each generated control, so one edit cannot invalidate later edits.
-        container.addEventListener("change", (event) => {
-            const target = event.target;
-            if (!target?.dataset.propLabel)
-                return;
-            // `change` is retargeted to gg-input-pair at this shadow boundary. The
-            // native control remains slotted in the pair's light DOM, so read from
-            // that control rather than from the pair host itself.
-            const input = target instanceof HTMLInputElement
-                ? target
-                : target.querySelector("input");
-            if (!input)
-                return;
-            this.dispatchPropChange(target.dataset.propLabel, input.type === "checkbox" ? input.checked : input.value, target.dataset.uiPrimitive ?? input.type);
-        });
-        container.addEventListener("gg-select-change", (event) => {
-            const target = event.target;
+        // Custom controls emit composed events from nested shadow roots. Resolve
+        // their declarative field identity from the composed path at this stable
+        // host boundary.
+        this.shadowRoot.addEventListener("gg-select-change", (event) => {
+            const target = this.getFieldTarget(event);
             const detail = event.detail;
             if (!target?.dataset.propLabel || !detail)
                 return;
             this.dispatchPropChange(target.dataset.propLabel, detail.value, target.dataset.uiPrimitive ?? "select");
-        });
-        container.addEventListener("gg-multi-select-change", (event) => {
-            const target = event.target;
+        }, true);
+        this.shadowRoot.addEventListener("gg-multi-select-change", (event) => {
+            const target = this.getFieldTarget(event);
             const detail = event.detail;
             if (!target?.dataset.propLabel || !detail)
                 return;
             this.dispatchPropChange(target.dataset.propLabel, detail.values, target.dataset.uiPrimitive ?? "multi-select");
-        });
+        }, true);
+    }
+    getFieldTarget(event) {
+        const path = event.composedPath();
+        for (const entry of path) {
+            const candidate = entry;
+            if (candidate.dataset?.propLabel)
+                return entry;
+        }
+        return null;
     }
     /**
      * Generates the DOM based on the NodePropType data.
@@ -214,6 +209,9 @@ export class GGPropGroup extends HTMLElement {
                 else {
                     input.value = value;
                 }
+                input.addEventListener("change", () => {
+                    this.dispatchPropChange(label, input.type === "checkbox" ? input.checked : input.value, uiPrimitive);
+                });
                 control = input;
             }
             return control;
@@ -221,9 +219,8 @@ export class GGPropGroup extends HTMLElement {
         // Helper to create a gg-input-pair
         const createPair = (primitive) => {
             const pair = document.createElement("gg-input-pair");
-            // Events crossing the pair's shadow root are retargeted to this host.
-            // Keep the field identity here so the stable delegated listener can
-            // resolve the edit without reaching through the shadow boundary.
+            // Keep the field identity on the pair for custom events retargeted by
+            // its shadow root.
             pair.dataset.propLabel = primitive.label;
             pair.dataset.uiPrimitive = primitive.uiPrimitive;
             if ("uiPrimitive" in primitive && primitive["uiPrimitive"] === "checkbox")

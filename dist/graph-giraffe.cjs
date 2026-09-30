@@ -1972,20 +1972,9 @@ class GGPropGroup extends HTMLElement {
       </style>
       <div id="container" part="root"></div>
     `;
-    const container = this.shadowRoot.getElementById("container");
-    container.addEventListener("change", (event) => {
-      const target = event.target;
-      if (!(target == null ? void 0 : target.dataset.propLabel)) return;
-      const input = target instanceof HTMLInputElement ? target : target.querySelector("input");
-      if (!input) return;
-      this.dispatchPropChange(
-        target.dataset.propLabel,
-        input.type === "checkbox" ? input.checked : input.value,
-        target.dataset.uiPrimitive ?? input.type
-      );
-    });
-    container.addEventListener("gg-select-change", (event) => {
-      const target = event.target;
+    this.shadowRoot.getElementById("container");
+    this.shadowRoot.addEventListener("gg-select-change", (event) => {
+      const target = this.getFieldTarget(event);
       const detail = event.detail;
       if (!(target == null ? void 0 : target.dataset.propLabel) || !detail) return;
       this.dispatchPropChange(
@@ -1993,9 +1982,9 @@ class GGPropGroup extends HTMLElement {
         detail.value,
         target.dataset.uiPrimitive ?? "select"
       );
-    });
-    container.addEventListener("gg-multi-select-change", (event) => {
-      const target = event.target;
+    }, true);
+    this.shadowRoot.addEventListener("gg-multi-select-change", (event) => {
+      const target = this.getFieldTarget(event);
       const detail = event.detail;
       if (!(target == null ? void 0 : target.dataset.propLabel) || !detail) return;
       this.dispatchPropChange(
@@ -2003,7 +1992,16 @@ class GGPropGroup extends HTMLElement {
         detail.values,
         target.dataset.uiPrimitive ?? "multi-select"
       );
-    });
+    }, true);
+  }
+  getFieldTarget(event) {
+    var _a2;
+    const path = event.composedPath();
+    for (const entry of path) {
+      const candidate = entry;
+      if ((_a2 = candidate.dataset) == null ? void 0 : _a2.propLabel) return entry;
+    }
+    return null;
   }
   /**
    * Generates the DOM based on the NodePropType data.
@@ -2048,6 +2046,13 @@ class GGPropGroup extends HTMLElement {
         } else {
           input.value = value;
         }
+        input.addEventListener("change", () => {
+          this.dispatchPropChange(
+            label,
+            input.type === "checkbox" ? input.checked : input.value,
+            uiPrimitive
+          );
+        });
         control = input;
       }
       return control;
@@ -12552,6 +12557,7 @@ const _NodeEditor = class _NodeEditor {
     const affectedNodeIds = /* @__PURE__ */ new Set();
     const affectedEdgeIds = /* @__PURE__ */ new Set();
     const selectedBefore = new Set(this.selectedNodeIds);
+    const selectedEdgesBefore = new Set(this.selectedEdgeIds);
     const migratedProps = /* @__PURE__ */ new Map();
     for (const current of [...this.store.allNodesMap.values()]) {
       if (incomingNodes.has(current.id)) continue;
@@ -12716,6 +12722,12 @@ const _NodeEditor = class _NodeEditor {
     for (const nodeId of affectedNodeIds) this.syncHandleStates(nodeId);
     for (const nodeId of selectedBefore) affectedNodeIds.add(nodeId);
     this.clearSelectionState();
+    for (const nodeId of selectedBefore) {
+      if (this.store.get(nodeId)) this.setNodeSelected(nodeId, true);
+    }
+    for (const edgeId of selectedEdgesBefore) {
+      if (this.edgeStore.get(edgeId)) this.setEdgeSelected(edgeId, true);
+    }
     this.syncPrimitiveMeasurements();
     (_c = this.domNodeLayer) == null ? void 0 : _c.reconcile(affectedNodeIds);
     this.markMinimapDirty();
