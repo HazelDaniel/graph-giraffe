@@ -12437,6 +12437,17 @@ const _NodeEditor = class _NodeEditor {
   getGraph() {
     return projectGraph(this.store.allNodesMap.values(), this.edgeStore.allEdges());
   }
+  /** Resolve a screen-space pointer location without mutating graph state. */
+  resolveInteractionTarget(screenX, screenY) {
+    const handle = this.hitTestHandle(screenX, screenY);
+    if (handle) {
+      return { kind: "handle", nodeId: handle.nodeId, side: handle.handle.side };
+    }
+    const nodeId = this.pick(screenX, screenY);
+    if (this.store.get(nodeId)) return { kind: "node", nodeId };
+    const edge = this.hitTestEdge(screenX, screenY);
+    return edge ? { kind: "edge", edgeId: edge.id } : { kind: "pane" };
+  }
   /**
    * Apply a host-owned graph projection without creating history entries.
    * Adapters use this to implement controlled React/Vue/Svelte integrations.
@@ -14529,11 +14540,11 @@ const _NodeEditor = class _NodeEditor {
     const { left, top } = canvas.getBoundingClientRect();
     const screenX = e.clientX - left;
     const screenY = e.clientY - top;
-    const handleHit = this.hitTestHandle(screenX, screenY);
-    if (handleHit) {
+    const target = this.resolveInteractionTarget(screenX, screenY);
+    if (target.kind === "handle") {
       this.activeConnectionDrag = {
-        sourceNodeId: handleHit.nodeId,
-        sourceHandleSide: handleHit.handle.side,
+        sourceNodeId: target.nodeId,
+        sourceHandleSide: target.side,
         screenX,
         screenY
       };
@@ -14543,21 +14554,20 @@ const _NodeEditor = class _NodeEditor {
       });
       this.selectedEdgeIds.clear();
       this.selectionKind = this.selectedNodeIds.size > 0 ? "node" : null;
-      this.hoveredHandle = handleHit;
+      this.hoveredHandle = this.hitTestHandle(screenX, screenY);
       this.draggingNode = null;
       this.dragSnapshot = null;
       this.syncToolbarState();
       return;
     }
-    const nodeId = this.pick(screenX, screenY);
+    const nodeId = target.kind === "node" ? target.nodeId : 0;
     const node = this.store.get(nodeId);
     if (!node) {
-      const edgeHit = this.hitTestEdge(screenX, screenY);
-      if (edgeHit) {
+      if (target.kind === "edge") {
         this.controls.hideProperties();
-        this.selectEdgeByClick(edgeHit.id);
+        this.selectEdgeByClick(target.edgeId);
         this.events.dispatch("edge:click", {
-          edgeId: edgeHit.id,
+          edgeId: target.edgeId,
           event: e
         });
         this.hoveredHandle = null;

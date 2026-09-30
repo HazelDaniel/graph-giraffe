@@ -1,6 +1,6 @@
 import { type CreateEdgeParams } from "./edge-store.js";
 import { GraphEventEmitter } from "./events.js";
-import { ConnectionMode, EdgeData, NodeEditorConfig, NodeData, AddUploadedTextureParams, CustomOverlay, ControlledNode, ControlledEdge, CoordinateTransform, GraphProjection, SceneQuery } from "./types.js";
+import { ConnectionMode, EdgeData, NodeEditorConfig, NodeData, AddUploadedTextureParams, CustomOverlay, ControlledNode, ControlledEdge, CoordinateTransform, GraphProjection, InteractionTarget, SceneQuery } from "./types.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
 import { type CommentLayerController } from "./overlay-primitives.js";
 import type { GraphSnapshot } from "./graph-serialization.js";
@@ -142,6 +142,8 @@ export declare class NodeEditor implements SceneQuery, CoordinateTransform {
     getEdgeCount(): number;
     /** Return one detached, renderer-neutral view of the complete graph. */
     getGraph(): GraphProjection;
+    /** Resolve a screen-space pointer location without mutating graph state. */
+    resolveInteractionTarget(screenX: number, screenY: number): InteractionTarget;
     /**
      * Apply a host-owned graph projection without creating history entries.
      * Adapters use this to implement controlled React/Vue/Svelte integrations.

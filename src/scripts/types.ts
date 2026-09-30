@@ -138,6 +138,13 @@ export interface CoordinateTransform {
   setViewport(panX: number, panY: number, zoom: number): void;
 }
 
+/** Renderer-neutral result of resolving a pointer location in the scene. */
+export type InteractionTarget =
+  | { kind: "handle"; nodeId: number; side: HandleSide }
+  | { kind: "node"; nodeId: number }
+  | { kind: "edge"; edgeId: number }
+  | { kind: "pane" };
+
 export interface CustomOverlay {
   id: string;
   element: HTMLElement;

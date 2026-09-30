@@ -101,6 +101,7 @@ export type {
   NodeEditorConfig,
   SceneQuery,
   CoordinateTransform,
+  InteractionTarget,
   NodeData,
   EdgeData,
   NodeType,
