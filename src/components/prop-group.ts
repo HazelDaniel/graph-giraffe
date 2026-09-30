@@ -137,10 +137,11 @@ export class GGPropGroup extends HTMLElement {
       </style>
       <div id="container" part="root"></div>
     `;
+    const container = this.shadowRoot!.getElementById("container")!;
     // Controls are rebuilt when a descriptor changes its declarative shape.
     // Keep the event bridge on this stable host instead of attaching handlers
     // to each generated control, so one edit cannot invalidate later edits.
-    this.addEventListener("change", (event) => {
+    container.addEventListener("change", (event) => {
       const target = event.target as HTMLElement | null;
       if (!target?.dataset.propLabel) return;
       // `change` is retargeted to gg-input-pair at this shadow boundary. The
@@ -156,7 +157,7 @@ export class GGPropGroup extends HTMLElement {
         target.dataset.uiPrimitive ?? input.type
       );
     });
-    this.addEventListener("gg-select-change", (event: Event) => {
+    container.addEventListener("gg-select-change", (event: Event) => {
       const target = event.target as HTMLElement | null;
       const detail = (event as CustomEvent<{ value: string }>).detail;
       if (!target?.dataset.propLabel || !detail) return;
@@ -166,7 +167,7 @@ export class GGPropGroup extends HTMLElement {
         target.dataset.uiPrimitive ?? "select"
       );
     });
-    this.addEventListener("gg-multi-select-change", (event: Event) => {
+    container.addEventListener("gg-multi-select-change", (event: Event) => {
       const target = event.target as HTMLElement | null;
       const detail = (event as CustomEvent<{ values: string[] }>).detail;
       if (!target?.dataset.propLabel || !detail) return;

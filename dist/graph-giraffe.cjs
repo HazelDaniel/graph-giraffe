@@ -1972,7 +1972,8 @@ class GGPropGroup extends HTMLElement {
       </style>
       <div id="container" part="root"></div>
     `;
-    this.addEventListener("change", (event) => {
+    const container = this.shadowRoot.getElementById("container");
+    container.addEventListener("change", (event) => {
       const target = event.target;
       if (!(target == null ? void 0 : target.dataset.propLabel)) return;
       const input = target instanceof HTMLInputElement ? target : target.querySelector("input");
@@ -1983,7 +1984,7 @@ class GGPropGroup extends HTMLElement {
         target.dataset.uiPrimitive ?? input.type
       );
     });
-    this.addEventListener("gg-select-change", (event) => {
+    container.addEventListener("gg-select-change", (event) => {
       const target = event.target;
       const detail = event.detail;
       if (!(target == null ? void 0 : target.dataset.propLabel) || !detail) return;
@@ -1993,7 +1994,7 @@ class GGPropGroup extends HTMLElement {
         target.dataset.uiPrimitive ?? "select"
       );
     });
-    this.addEventListener("gg-multi-select-change", (event) => {
+    container.addEventListener("gg-multi-select-change", (event) => {
       const target = event.target;
       const detail = event.detail;
       if (!(target == null ? void 0 : target.dataset.propLabel) || !detail) return;
