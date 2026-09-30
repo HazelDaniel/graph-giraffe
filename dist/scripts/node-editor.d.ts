@@ -1,6 +1,6 @@
 import { type CreateEdgeParams } from "./edge-store.js";
 import { GraphEventEmitter } from "./events.js";
-import { ConnectionMode, EdgeData, NodeEditorConfig, NodeData, AddUploadedTextureParams, CustomOverlay, ControlledNode, ControlledEdge, GraphProjection } from "./types.js";
+import { ConnectionMode, EdgeData, NodeEditorConfig, NodeData, AddUploadedTextureParams, CustomOverlay, ControlledNode, ControlledEdge, CoordinateTransform, GraphProjection, SceneQuery } from "./types.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
 import { type CommentLayerController } from "./overlay-primitives.js";
 import type { GraphSnapshot } from "./graph-serialization.js";
@@ -9,7 +9,7 @@ import type { GraphSnapshot } from "./graph-serialization.js";
  * It owns every internal module and wires them together via callbacks.
  * No internal type leaks out of this file's public API.
  */
-export declare class NodeEditor {
+export declare class NodeEditor implements SceneQuery, CoordinateTransform {
     private canvasId;
     private backgroundCanvasId;
     private vsSource;
@@ -82,17 +82,18 @@ export declare class NodeEditor {
     private canvas;
     private backgroundCanvas;
     private static _instance;
+    private disposed;
     static create(canvasId: string, backgroundCanvasId: string, vsSource: string, fsSource: string, bgVsSource: string, bgFsSource: string, msdfVsSource: string, msdfFsSource: string, IconBGVsSource: string, IconBGFsSource: string, options?: NodeEditorConfig, nodeTextureUploadList?: AddUploadedTextureParams[]): Promise<NodeEditor>;
     /**
-     * Release the singleton slot for framework adapters that own the editor's
-     * host DOM. The adapter must remove its container after calling this method.
-     * A future full dispose lifecycle can extend this without exposing internals.
+     * Release the singleton slot for legacy adapter integrations. New callers
+     * should dispose the editor instance; instance disposal is owner-aware and
+     * releases only its own singleton slot.
      */
-    static release(): void;
+    static release(owner?: NodeEditor): void;
     /**
-     * Release DOM measurement roots and renderer-owned DOM resources. Framework
-     * adapters should call this before releasing the singleton and removing the
-     * host container.
+     * Release renderer-owned resources and the singleton slot. This operation is
+     * idempotent so framework adapters can safely call it from async cancellation
+     * and unmount cleanup paths.
      */
     dispose(): void;
     private msdfAtlas;

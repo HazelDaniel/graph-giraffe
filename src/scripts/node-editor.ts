@@ -57,6 +57,7 @@ import {
   UpdatePropCommand,
 } from "./commands.js";
 import { GraphEventEmitter } from "./events.js";
+import { projectEdge, projectGraph, projectNode } from "./graph-projection.js";
 import {
   ConnectionMode,
   EdgeHeadSkinId,
@@ -80,9 +81,11 @@ import {
   CustomOverlay,
   ControlledNode,
   ControlledEdge,
+  CoordinateTransform,
   GraphProjection,
   getSubgraphLinkLocal,
   NodePropValue,
+  SceneQuery,
 } from "./types.js";
 import { MsdfAtlas } from "./msdf-text.js";
 import {
@@ -199,7 +202,7 @@ interface SelectionDragState {
  * It owns every internal module and wires them together via callbacks.
  * No internal type leaks out of this file's public API.
  */
-export class NodeEditor {
+export class NodeEditor implements SceneQuery, CoordinateTransform {
   public readonly events = new GraphEventEmitter();
   public readonly typeRegistry = new NodeTypeRegistry();
   public cameraDirty: boolean = false;
@@ -288,6 +291,7 @@ export class NodeEditor {
   private backgroundCanvas!: HTMLCanvasElement;
 
   private static _instance: NodeEditor | null = null;
+  private disposed = false;
 
   static async create(
     canvasId: string,
@@ -323,25 +327,32 @@ export class NodeEditor {
   }
 
   /**
-   * Release the singleton slot for framework adapters that own the editor's
-   * host DOM. The adapter must remove its container after calling this method.
-   * A future full dispose lifecycle can extend this without exposing internals.
+   * Release the singleton slot for legacy adapter integrations. New callers
+   * should dispose the editor instance; instance disposal is owner-aware and
+   * releases only its own singleton slot.
    */
-  static release(): void {
-    this._instance = null;
+  static release(owner?: NodeEditor): void {
+    if (owner === undefined || this._instance === owner) {
+      this._instance = null;
+    }
   }
 
   /**
-   * Release DOM measurement roots and renderer-owned DOM resources. Framework
-   * adapters should call this before releasing the singleton and removing the
-   * host container.
+   * Release renderer-owned resources and the singleton slot. This operation is
+   * idempotent so framework adapters can safely call it from async cancellation
+   * and unmount cleanup paths.
    */
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
     this.renderer?.stopLoop();
     this.resizeObserver?.disconnect();
     this.domNodeLayer?.dispose();
     this.domNodeLayer = null;
     this.primitiveMeasurements.dispose();
+    this.selectionToolbar?.remove();
+    this.selectionToolbar = null;
+    NodeEditor.release(this);
   }
 
   private msdfAtlas!: MsdfAtlas;
@@ -873,39 +884,24 @@ export class NodeEditor {
 
   /** Return a detached copy of the current graph projection. */
   getNodes(): NodeData[] {
-    return [...this.store.allNodesMap.values()].map((node) => ({
-      ...node,
-      textureIds: { ...node.textureIds },
-      childIds: [...node.childIds],
-      handles: node.handles.map((handle) => ({ ...handle, style: { ...handle.style } })),
-      props: cloneNodeProps(node.props),
-      subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : undefined,
-    }));
+    return [...this.store.allNodesMap.values()].map(projectNode);
   }
 
   /** Return a detached copy of the current edge projection. */
   getEdges(): EdgeData[] {
-    return this.edgeStore.allEdges().map((edge) => ({ ...edge }));
+    return this.edgeStore.allEdges().map(projectEdge);
   }
 
   /** Return one detached node projection without cloning the complete graph. */
   getNode(id: number): NodeData | undefined {
     const node = this.store.get(id);
-    if (!node) return undefined;
-    return {
-      ...node,
-      textureIds: { ...node.textureIds },
-      childIds: [...node.childIds],
-      handles: node.handles.map((handle) => ({ ...handle, style: { ...handle.style } })),
-      props: cloneNodeProps(node.props),
-      subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : undefined,
-    };
+    return node ? projectNode(node) : undefined;
   }
 
   /** Return one detached edge projection without cloning the complete graph. */
   getEdge(id: number): EdgeData | undefined {
     const edge = this.edgeStore.get(id);
-    return edge ? { ...edge } : undefined;
+    return edge ? projectEdge(edge) : undefined;
   }
 
   getNodeCount(): number {
@@ -918,7 +914,7 @@ export class NodeEditor {
 
   /** Return one detached, renderer-neutral view of the complete graph. */
   getGraph(): GraphProjection {
-    return { nodes: this.getNodes(), edges: this.getEdges() };
+    return projectGraph(this.store.allNodesMap.values(), this.edgeStore.allEdges());
   }
 
   /**

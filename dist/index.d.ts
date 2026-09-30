@@ -23,12 +23,13 @@ export { nodePropValueEqual, nodePropsEqual, nodePropsShapeEqual } from './scrip
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
 export { PrimitiveMeasurementProvider } from './scripts/primitive-measurement.js';
+export { projectEdge, projectGraph, projectNode } from './scripts/graph-projection.js';
 export { createCommentBubble, attachCommentLayer, } from './scripts/overlay-primitives.js';
 export type { CommentRecord, CommentBubble, CommentEvents, CommentEventName, CommentBubbleOptions, CommentLayerOptions, CommentLayerController, } from './scripts/overlay-primitives.js';
 export { registerDomViews, DOM_VIEW_TAGS, } from './scripts/dom-views.js';
 export { createCustomElementDomRenderer, toDomDescriptor, DOM_NODE_DESCRIPTORS, registerDomNodeDescriptors, } from './scripts/dom-descriptors.js';
 export { BUILTIN_DESCRIPTORS, nodeDescriptor, hubDescriptor, branchDescriptor, groupDescriptor, compositionDescriptor, compositionChildDescriptor, subgraphDescriptor, } from './scripts/builtin-types.js';
-export type { NodeEditorConfig, NodeData, EdgeData, NodeType, ContainerNodeType, LeafNodeType, CandidateNodeType, EdgeType, EdgeHeadType, EdgeHeadSkinId, HandleSide, HandleShape, HandleStyle, NodeHandleData, ConnectionMode, ThemeName, ThemeStyle, TextureKind, TextureSource, TextureSourceType, NodeTextureIds, AddUploadedTextureParams, NodePropType, NodePropPrimitive, NodePropValue, PropChangePayload, ConnectionPreviewData, CustomOverlay, ControlledNode, ControlledEdge, GraphProjection, GeometryType, GeometryMeshType, BGGeometryMeshType, } from './scripts/types.js';
+export type { NodeEditorConfig, SceneQuery, CoordinateTransform, NodeData, EdgeData, NodeType, ContainerNodeType, LeafNodeType, CandidateNodeType, EdgeType, EdgeHeadType, EdgeHeadSkinId, HandleSide, HandleShape, HandleStyle, NodeHandleData, ConnectionMode, ThemeName, ThemeStyle, TextureKind, TextureSource, TextureSourceType, NodeTextureIds, AddUploadedTextureParams, NodePropType, NodePropPrimitive, NodePropValue, PropChangePayload, ConnectionPreviewData, CustomOverlay, ControlledNode, ControlledEdge, GraphProjection, GeometryType, GeometryMeshType, BGGeometryMeshType, } from './scripts/types.js';
 export { NODE_LAYOUT, NODE_SIZE, HANDLE_LAYOUT, DEFAULT_HANDLE_STYLE, isContainerNodeType, isLeafNodeType, isNodePrimitiveType, isCandidateNodeType, getDefaultNodeSize, } from './scripts/types.js';
 export type { GraphEvents, GraphBeforeEvents, SyncHandler, AsyncHandler, } from './scripts/events.js';
 export { GraphEventEmitter } from './scripts/events.js';

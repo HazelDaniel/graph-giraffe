@@ -53,6 +53,7 @@ export { nodePropValueEqual, nodePropsEqual, nodePropsShapeEqual } from './scrip
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export type { DomNodeLayerOptions } from './scripts/dom-node-layer.js';
 export { PrimitiveMeasurementProvider } from './scripts/primitive-measurement.js';
+export { projectEdge, projectGraph, projectNode } from './scripts/graph-projection.js';
 
 // ─── Overlay primitives ───────────────────────────────────
 
@@ -98,6 +99,8 @@ export {
 
 export type {
   NodeEditorConfig,
+  SceneQuery,
+  CoordinateTransform,
   NodeData,
   EdgeData,
   NodeType,

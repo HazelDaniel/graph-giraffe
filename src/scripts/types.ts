@@ -120,6 +120,24 @@ export interface GraphProjection {
   edges: EdgeData[];
 }
 
+/** Renderer-independent scene queries used by adapters and semantic tests. */
+export interface SceneQuery {
+  getNodes(): NodeData[];
+  getNode(id: number): NodeData | undefined;
+  getEdges(): EdgeData[];
+  getEdge(id: number): EdgeData | undefined;
+  getGraph(): GraphProjection;
+  getNodeWorldPosition(id: number): { x: number; y: number } | undefined;
+}
+
+/** Coordinate and viewport operations independent of any rendering backend. */
+export interface CoordinateTransform {
+  worldToScreen(worldX: number, worldY: number): { x: number; y: number };
+  screenToWorld(screenX: number, screenY: number): { x: number; y: number };
+  getCameraState(): { panX: number; panY: number; zoom: number };
+  setViewport(panX: number, panY: number, zoom: number): void;
+}
+
 export interface CustomOverlay {
   id: string;
   element: HTMLElement;

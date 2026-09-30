@@ -10043,6 +10043,28 @@ class GraphEventEmitter {
     return true;
   }
 }
+function projectNode(node) {
+  return {
+    ...node,
+    textureIds: { ...node.textureIds },
+    childIds: [...node.childIds],
+    handles: node.handles.map((handle) => ({
+      ...handle,
+      style: { ...handle.style }
+    })),
+    props: cloneNodeProps(node.props),
+    subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : void 0
+  };
+}
+function projectEdge(edge) {
+  return { ...edge };
+}
+function projectGraph(nodes, edges) {
+  return {
+    nodes: [...nodes].map(projectNode),
+    edges: [...edges].map(projectEdge)
+  };
+}
 class NodeTypeRegistry {
   constructor() {
     __publicField(this, "descriptors", /* @__PURE__ */ new Map());
@@ -11898,6 +11920,7 @@ const _NodeEditor = class _NodeEditor {
     __publicField(this, "minimapRevision", 0);
     __publicField(this, "canvas");
     __publicField(this, "backgroundCanvas");
+    __publicField(this, "disposed", false);
     __publicField(this, "msdfAtlas");
     __publicField(this, "iconAtlas");
     __publicField(this, "dpr", 1);
@@ -11982,25 +12005,32 @@ const _NodeEditor = class _NodeEditor {
     return this._instance;
   }
   /**
-   * Release the singleton slot for framework adapters that own the editor's
-   * host DOM. The adapter must remove its container after calling this method.
-   * A future full dispose lifecycle can extend this without exposing internals.
+   * Release the singleton slot for legacy adapter integrations. New callers
+   * should dispose the editor instance; instance disposal is owner-aware and
+   * releases only its own singleton slot.
    */
-  static release() {
-    this._instance = null;
+  static release(owner) {
+    if (owner === void 0 || this._instance === owner) {
+      this._instance = null;
+    }
   }
   /**
-   * Release DOM measurement roots and renderer-owned DOM resources. Framework
-   * adapters should call this before releasing the singleton and removing the
-   * host container.
+   * Release renderer-owned resources and the singleton slot. This operation is
+   * idempotent so framework adapters can safely call it from async cancellation
+   * and unmount cleanup paths.
    */
   dispose() {
-    var _a2, _b, _c;
+    var _a2, _b, _c, _d;
+    if (this.disposed) return;
+    this.disposed = true;
     (_a2 = this.renderer) == null ? void 0 : _a2.stopLoop();
     (_b = this.resizeObserver) == null ? void 0 : _b.disconnect();
     (_c = this.domNodeLayer) == null ? void 0 : _c.dispose();
     this.domNodeLayer = null;
     this.primitiveMeasurements.dispose();
+    (_d = this.selectionToolbar) == null ? void 0 : _d.remove();
+    this.selectionToolbar = null;
+    _NodeEditor.release(this);
   }
   async init() {
     var _a2;
@@ -12379,36 +12409,21 @@ const _NodeEditor = class _NodeEditor {
   }
   /** Return a detached copy of the current graph projection. */
   getNodes() {
-    return [...this.store.allNodesMap.values()].map((node) => ({
-      ...node,
-      textureIds: { ...node.textureIds },
-      childIds: [...node.childIds],
-      handles: node.handles.map((handle) => ({ ...handle, style: { ...handle.style } })),
-      props: cloneNodeProps(node.props),
-      subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : void 0
-    }));
+    return [...this.store.allNodesMap.values()].map(projectNode);
   }
   /** Return a detached copy of the current edge projection. */
   getEdges() {
-    return this.edgeStore.allEdges().map((edge) => ({ ...edge }));
+    return this.edgeStore.allEdges().map(projectEdge);
   }
   /** Return one detached node projection without cloning the complete graph. */
   getNode(id) {
     const node = this.store.get(id);
-    if (!node) return void 0;
-    return {
-      ...node,
-      textureIds: { ...node.textureIds },
-      childIds: [...node.childIds],
-      handles: node.handles.map((handle) => ({ ...handle, style: { ...handle.style } })),
-      props: cloneNodeProps(node.props),
-      subgraphRefIds: node.subgraphRefIds ? [...node.subgraphRefIds] : void 0
-    };
+    return node ? projectNode(node) : void 0;
   }
   /** Return one detached edge projection without cloning the complete graph. */
   getEdge(id) {
     const edge = this.edgeStore.get(id);
-    return edge ? { ...edge } : void 0;
+    return edge ? projectEdge(edge) : void 0;
   }
   getNodeCount() {
     return this.store.groups.size + this.store.nodes.size;
@@ -12418,7 +12433,7 @@ const _NodeEditor = class _NodeEditor {
   }
   /** Return one detached, renderer-neutral view of the complete graph. */
   getGraph() {
-    return { nodes: this.getNodes(), edges: this.getEdges() };
+    return projectGraph(this.store.allNodesMap.values(), this.edgeStore.allEdges());
   }
   /**
    * Apply a host-owned graph projection without creating history entries.
@@ -16346,6 +16361,9 @@ export {
   nodePropValueEqual,
   nodePropsEqual,
   nodePropsShapeEqual,
+  projectEdge,
+  projectGraph,
+  projectNode,
   projectWorldPoint,
   projectWorldRect,
   registerDomNodeDescriptors,

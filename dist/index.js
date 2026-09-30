@@ -23,6 +23,7 @@ export { NodeTypeRegistry } from './scripts/node-type-registry.js';
 export { nodePropValueEqual, nodePropsEqual, nodePropsShapeEqual } from './scripts/history-snapshots.js';
 export { DomNodeLayer } from './scripts/dom-node-layer.js';
 export { PrimitiveMeasurementProvider } from './scripts/primitive-measurement.js';
+export { projectEdge, projectGraph, projectNode } from './scripts/graph-projection.js';
 // ─── Overlay primitives ───────────────────────────────────
 export { createCommentBubble, attachCommentLayer, } from './scripts/overlay-primitives.js';
 // ─── Bundled DOM skins (renderMode: "dom") ───────────────
