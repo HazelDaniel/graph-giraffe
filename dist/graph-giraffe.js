@@ -1973,7 +1973,8 @@ class GGPropGroup extends HTMLElement {
     this.addEventListener("change", (event) => {
       const target = event.target;
       if (!(target == null ? void 0 : target.dataset.propLabel)) return;
-      const input = target;
+      const input = target instanceof HTMLInputElement ? target : target.querySelector("input");
+      if (!input) return;
       this.dispatchPropChange(
         target.dataset.propLabel,
         input.type === "checkbox" ? input.checked : input.value,

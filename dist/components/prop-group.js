@@ -138,7 +138,14 @@ export class GGPropGroup extends HTMLElement {
             const target = event.target;
             if (!target?.dataset.propLabel)
                 return;
-            const input = target;
+            // `change` is retargeted to gg-input-pair at this shadow boundary. The
+            // native control remains slotted in the pair's light DOM, so read from
+            // that control rather than from the pair host itself.
+            const input = target instanceof HTMLInputElement
+                ? target
+                : target.querySelector("input");
+            if (!input)
+                return;
             this.dispatchPropChange(target.dataset.propLabel, input.type === "checkbox" ? input.checked : input.value, target.dataset.uiPrimitive ?? input.type);
         });
         this.addEventListener("gg-select-change", (event) => {

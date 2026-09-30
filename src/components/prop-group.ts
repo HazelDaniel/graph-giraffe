@@ -143,7 +143,13 @@ export class GGPropGroup extends HTMLElement {
     this.addEventListener("change", (event) => {
       const target = event.target as HTMLElement | null;
       if (!target?.dataset.propLabel) return;
-      const input = target as HTMLInputElement;
+      // `change` is retargeted to gg-input-pair at this shadow boundary. The
+      // native control remains slotted in the pair's light DOM, so read from
+      // that control rather than from the pair host itself.
+      const input = target instanceof HTMLInputElement
+        ? target
+        : target.querySelector<HTMLInputElement>("input");
+      if (!input) return;
       this.dispatchPropChange(
         target.dataset.propLabel,
         input.type === "checkbox" ? input.checked : input.value,
