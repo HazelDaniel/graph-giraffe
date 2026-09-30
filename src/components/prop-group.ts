@@ -234,6 +234,11 @@ export class GGPropGroup extends HTMLElement {
     // Helper to create a gg-input-pair
     const createPair = (primitive: any) => {
       const pair = document.createElement("gg-input-pair") as any;
+      // Events crossing the pair's shadow root are retargeted to this host.
+      // Keep the field identity here so the stable delegated listener can
+      // resolve the edit without reaching through the shadow boundary.
+      pair.dataset.propLabel = primitive.label;
+      pair.dataset.uiPrimitive = primitive.uiPrimitive;
       if ("uiPrimitive" in primitive && primitive["uiPrimitive"] === "checkbox")
         pair.classList.add("row");
       pair.label = primitive.label;

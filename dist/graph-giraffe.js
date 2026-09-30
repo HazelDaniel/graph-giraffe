@@ -2050,6 +2050,8 @@ class GGPropGroup extends HTMLElement {
     };
     const createPair = (primitive) => {
       const pair = document.createElement("gg-input-pair");
+      pair.dataset.propLabel = primitive.label;
+      pair.dataset.uiPrimitive = primitive.uiPrimitive;
       if ("uiPrimitive" in primitive && primitive["uiPrimitive"] === "checkbox")
         pair.classList.add("row");
       pair.label = primitive.label;
