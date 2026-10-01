@@ -172,6 +172,8 @@ export interface NodeEditorConfig {
    * adopt the editor's configured mode regardless of how they were authored.
    */
   renderMode?: "webgl" | "dom";
+  /** Edge presentation descriptors registered before graph hydration. */
+  edgeTypes?: import("./edge-type-registry.js").EdgeDescriptor[];
   minZoom?: number;
   maxZoom?: number;
 }

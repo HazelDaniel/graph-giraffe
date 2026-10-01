@@ -12083,6 +12083,9 @@ const _NodeEditor = class _NodeEditor {
         this.typeRegistry.register(descriptor);
       }
     }
+    for (const descriptor of options.edgeTypes ?? []) {
+      this.edgeTypes.register(descriptor);
+    }
     this.camera = new Camera(this);
     this.camera.setZoomRange(options.minZoom ?? 0.1, options.maxZoom ?? 5);
     this.store = new NodeStore(
@@ -12484,6 +12487,7 @@ const _NodeEditor = class _NodeEditor {
       assetsPath: config.assetsPath ?? "assets",
       minimap: config.minimap ?? true,
       renderMode: config.renderMode ?? "webgl",
+      edgeTypes: config.edgeTypes ?? [],
       minZoom: config.minZoom ?? 0.1,
       maxZoom: config.maxZoom ?? 5
     };

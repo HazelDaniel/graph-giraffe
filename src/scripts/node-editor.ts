@@ -403,6 +403,9 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
         this.typeRegistry.register(descriptor);
       }
     }
+    for (const descriptor of options.edgeTypes ?? []) {
+      this.edgeTypes.register(descriptor);
+    }
 
     // gl.enable(gl.DEPTH_TEST); // TODO: enable this so we can benefit from instancing with our current approach to drawing of nodes and labels
 
@@ -826,6 +829,7 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
       assetsPath: config.assetsPath ?? "assets",
       minimap: config.minimap ?? true,
       renderMode: config.renderMode ?? "webgl",
+      edgeTypes: config.edgeTypes ?? [],
       minZoom: config.minZoom ?? 0.1,
       maxZoom: config.maxZoom ?? 5,
     };
