@@ -107,6 +107,7 @@ import {
 import { DomNodeLayer } from "./dom-node-layer.js";
 import { PrimitiveGeometry } from "./primitive-geometry.js";
 import { PrimitiveMeasurementProvider } from "./primitive-measurement.js";
+import { EdgeTypeRegistry } from "./edge-type-registry.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import {
   GGMinimap,
@@ -204,6 +205,7 @@ interface SelectionDragState {
  * No internal type leaks out of this file's public API.
  */
 export class NodeEditor implements SceneQuery, CoordinateTransform {
+  public readonly edgeTypes = new EdgeTypeRegistry();
   public readonly events = new GraphEventEmitter();
   public readonly typeRegistry = new NodeTypeRegistry();
   public cameraDirty: boolean = false;
@@ -542,6 +544,7 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
       this.msdfAtlas,
       this.iconAtlas,
       this.typeRegistry,
+      this.edgeTypes,
       this.renderMode
     );
 
@@ -932,6 +935,11 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
     return edge ? { kind: "edge", edgeId: edge.id } : { kind: "pane" };
   }
 
+  /** Register an edge presentation that selects an existing core route. */
+  registerEdgeType(descriptor: import("./edge-type-registry.js").EdgeDescriptor): void {
+    this.edgeTypes.register(descriptor);
+  }
+
   /**
    * Apply a host-owned graph projection without creating history entries.
    * Adapters use this to implement controlled React/Vue/Svelte integrations.
@@ -1011,6 +1019,18 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
       if (input.parentId != null && !this.store.setParent(input.id, input.parentId)) {
         throw new Error(`Invalid controlled parent ${input.parentId} for node ${input.id}`);
       }
+    }
+    // Resolve descriptor-owned dynamic prop shapes before the first pane or
+    // DOM skin observes a controlled graph.
+    for (const input of nodes) {
+      const node = this.store.get(input.id);
+      const proposedProps = cloneNodeProps(input.props ?? node?.props);
+      if (!node || !proposedProps) continue;
+      const resolved = this.resolveProps(node, proposedProps, "history");
+      if (resolved.status === "reject") {
+        throw new Error(`Controlled node ${input.id} props rejected: ${resolved.message}`);
+      }
+      node.props = cloneNodeProps(resolved.props);
     }
     const controlledById = new Map(nodes.map((input) => [input.id, input]));
     const parentFrame = (nodeId: number): { x: number; y: number } => {
@@ -1171,6 +1191,25 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
       if (parent) parent.childIds = childIds;
     }
 
+    // Seed every node with incoming props before resolving so sibling-derived
+    // fields are independent of controlled input order.
+    for (const input of nodes) {
+      const node = this.store.get(input.id);
+      if (!node) continue;
+      node.props = cloneNodeProps(migratedProps.get(input.id) ?? input.props ?? node.props);
+    }
+    for (const input of nodes) {
+      const node = this.store.get(input.id);
+      const proposedProps = cloneNodeProps(node?.props);
+      if (!node || !proposedProps) continue;
+      const resolved = this.resolveProps(node, proposedProps, "history");
+      if (resolved.status === "reject") {
+        throw new Error(`Controlled node ${input.id} props rejected: ${resolved.message}`);
+      }
+      if (!nodePropsEqual(node.props, resolved.props)) affectedNodeIds.add(node.id);
+      node.props = cloneNodeProps(resolved.props);
+    }
+
     const controlledById = new Map(nodes.map((input) => [input.id, input]));
     const parentFrame = (nodeId: number): { x: number; y: number } => {
       const node = controlledById.get(nodeId);
@@ -1199,7 +1238,7 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
       };
 
       node.text = input.label ?? input.nodeType;
-      node.props = cloneNodeProps(migratedProps.get(input.id) ?? input.props ?? node.props);
+      node.props = cloneNodeProps(node.props);
       node.isLocked = input.isLocked ?? false;
       node.isCollapsed = input.isCollapsed ?? false;
       if (input.textureIds) node.textureIds = { ...input.textureIds };
@@ -3436,6 +3475,17 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
   private syncSelectionToolbar(): void {
     if (!this.selectionToolbar) return;
 
+    // Reparenting and container layout are a single interaction transaction,
+    // but their parent/local coordinates are mutated before the final bounds
+    // refresh completes. Keeping the toolbar visible during that window lets
+    // one render frame expose an intermediate anchor. It is a selection
+    // affordance, so hide it during the drag and place it once the drop has
+    // settled in syncToolbarState().
+    if (this.draggingNode || this.draggingSelection) {
+      this.selectionToolbar.hide();
+      return;
+    }
+
     const node = this.getSingleSelectedNode();
     if (!node) {
       this.selectionToolbar.hide();
@@ -4667,7 +4717,8 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
         (nodeId) => {
           const frame = this.getPrimitiveFrame(nodeId);
           return frame ? { width: frame.width, height: frame.height } : undefined;
-        }
+        },
+        this.edgeTypes.get(edges[i].edgeType)
       );
       if (!geometry) continue;
       const sourceNode = this.store.get(edges[i].sourceNodeId);
@@ -4680,7 +4731,8 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
       ) {
         continue;
       }
-      if (hitTestEdgePolyline(screenX, screenY, geometry.screenPoints)) {
+      const tolerance = this.edgeTypes.get(edges[i].edgeType)?.hitTest.tolerance ?? 8;
+      if (hitTestEdgePolyline(screenX, screenY, geometry.screenPoints, tolerance)) {
         return { id: edges[i].id };
       }
     }

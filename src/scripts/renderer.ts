@@ -41,6 +41,7 @@ import type {
   NodeOverlayContext,
   RendererDrawAPI,
 } from "./node-type-registry.js";
+import type { EdgeTypeRegistry } from "./edge-type-registry.js";
 
 /**
  * Owns the WebGL draw loop and all rendering logic.
@@ -77,6 +78,7 @@ export class Renderer {
     private msdfAtlas: MsdfAtlas,
     private iconAtlas: MsdfAtlas,
     private registry?: NodeTypeRegistry,
+    private edgeRegistry?: EdgeTypeRegistry,
     private renderMode: "webgl" | "dom" = "webgl"
   ) {
     this.labelCtx = labelCanvas.getContext("2d");
@@ -292,7 +294,8 @@ export class Renderer {
     this.labelCtx.fillStyle = "rgba(226, 232, 240, 0.95)";
 
     for (const route of this.edgeFrame) {
-      if (!route.edge.label) continue;
+      const descriptor = this.edgeRegistry?.get(route.edge.edgeType);
+      if (!route.edge.label || descriptor?.label.enabled === false) continue;
 
       const x = route.labelScreenPoint.x;
       const y = route.labelScreenPoint.y - 12;
@@ -406,7 +409,7 @@ export class Renderer {
 
     const lineVertices: number[] = [];
     const headVertices: number[] = [];
-    const lineDraws: Array<{ first: number; count: number; z: number }> = [];
+    const lineDraws: Array<{ first: number; count: number; z: number; color: string; width: number }> = [];
     const headDraws: Array<{ first: number; count: number; z: number }> = [];
     let lineCursor = 0;
     let headCursor = 0;
@@ -452,14 +455,22 @@ export class Renderer {
         edge,
         this.store,
         this.camera,
-        this.resolveNodeDimensions
+        this.resolveNodeDimensions,
+        this.edgeRegistry?.get(edge.edgeType)
       );
       if (!geometry || geometry.worldPoints.length < 2) continue;
 
       this.edgeFrame.push(geometry);
       if (edge.isSelected) continue;
 
-      lineDraws.push({ first: lineCursor, count: geometry.worldPoints.length, z: edgeZ });
+      const descriptor = this.edgeRegistry?.get(edge.edgeType);
+      lineDraws.push({
+        first: lineCursor,
+        count: geometry.worldPoints.length,
+        z: edgeZ,
+        color: descriptor?.stroke.color ?? "rgba(97, 158, 255, 0.82)",
+        width: descriptor?.stroke.width ?? 1,
+      });
       lineCursor += geometry.worldPoints.length;
 
       for (const point of geometry.worldPoints) {
@@ -467,7 +478,9 @@ export class Renderer {
       }
 
       if (geometry.arrowhead) {
-        const region = this.edgeHeadTextures.getRegion(edge.headSkinId);
+        const region = this.edgeHeadTextures.getRegion(
+          this.edgeRegistry?.get(edge.edgeType)?.head.skinId ?? edge.headSkinId
+        );
         headDraws.push({ first: headCursor, count: 6, z: edgeZ });
         headCursor += 6;
         headVertices.push(
@@ -507,9 +520,10 @@ export class Renderer {
     gl.uniform1i(this.locations.u_Use9Slice, 0);
     gl.uniform1i(this.locations.u_RenderMode, 0);
 
-    gl.uniform4f(this.locations.u_Color, 0.38, 0.38, 0.39, 0.72);
     let vertexOffset = 0;
     for (const draw of lineDraws) {
+      gl.lineWidth(draw.width);
+      gl.uniform4f(this.locations.u_Color, ...this.parseColor(draw.color));
       gl.drawArrays(gl.LINE_STRIP, vertexOffset, draw.count);
       vertexOffset += draw.count;
     }
@@ -540,7 +554,8 @@ export class Renderer {
         selectedEdge,
         this.store,
         this.camera,
-        this.resolveNodeDimensions
+        this.resolveNodeDimensions,
+        this.edgeRegistry?.get(selectedEdge.edgeType)
       );
       if (selectedGeometry) {
         this.drawSingleEdge(

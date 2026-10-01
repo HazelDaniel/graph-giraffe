@@ -2,6 +2,7 @@ import { type CreateEdgeParams } from "./edge-store.js";
 import { GraphEventEmitter } from "./events.js";
 import { ConnectionMode, EdgeData, NodeEditorConfig, NodeData, AddUploadedTextureParams, CustomOverlay, ControlledNode, ControlledEdge, CoordinateTransform, GraphProjection, InteractionTarget, SceneQuery } from "./types.js";
 import { NodeTypeRegistry } from "./node-type-registry.js";
+import { EdgeTypeRegistry } from "./edge-type-registry.js";
 import { type CommentLayerController } from "./overlay-primitives.js";
 import type { GraphSnapshot } from "./graph-serialization.js";
 /**
@@ -21,6 +22,7 @@ export declare class NodeEditor implements SceneQuery, CoordinateTransform {
     private IconBGVsSource;
     private IconBGFsSource;
     private nodeTextureUploadList;
+    readonly edgeTypes: EdgeTypeRegistry;
     readonly events: GraphEventEmitter;
     readonly typeRegistry: NodeTypeRegistry;
     cameraDirty: boolean;
@@ -144,6 +146,8 @@ export declare class NodeEditor implements SceneQuery, CoordinateTransform {
     getGraph(): GraphProjection;
     /** Resolve a screen-space pointer location without mutating graph state. */
     resolveInteractionTarget(screenX: number, screenY: number): InteractionTarget;
+    /** Register an edge presentation that selects an existing core route. */
+    registerEdgeType(descriptor: import("./edge-type-registry.js").EdgeDescriptor): void;
     /**
      * Apply a host-owned graph projection without creating history entries.
      * Adapters use this to implement controlled React/Vue/Svelte integrations.

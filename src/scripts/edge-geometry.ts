@@ -3,6 +3,7 @@ import { getHandleScreenGeometry } from './handle-geometry.js';
 import { NodeStore } from './node-store.js';
 import { getWorldPosition } from './scene-graph.js';
 import { EdgeData, HandleSide, NodeHandleData } from './types.js';
+import type { EdgeDescriptor } from './edge-type-registry.js';
 
 export type PrimitiveDimensionsResolver = (
   nodeId: number
@@ -35,7 +36,8 @@ export function buildEdgeRouteGeometry(
   edge: EdgeData,
   store: NodeStore,
   camera: Camera,
-  resolveDimensions?: PrimitiveDimensionsResolver
+  resolveDimensions?: PrimitiveDimensionsResolver,
+  descriptor?: EdgeDescriptor
 ): EdgeRouteGeometry | null {
   const sourceNode = store.get(edge.sourceNodeId);
   const targetNode = store.get(edge.targetNodeId);
@@ -57,7 +59,7 @@ export function buildEdgeRouteGeometry(
     edge.sourceHandleSide,
     targetWorld,
     edge.targetHandleSide,
-    'orthogonal'
+    descriptor?.route ?? edge.edgeType
   );
   const screenPoints = route.worldPoints.map((point) => camera.worldToScreen(point.x, point.y));
   const labelWorldPoint = getPolylineMidpoint(route.worldPoints);
@@ -69,7 +71,7 @@ export function buildEdgeRouteGeometry(
     screenPoints,
     labelWorldPoint,
     labelScreenPoint,
-    arrowhead: edge.headType === 'arrow' ? route.arrowhead : null,
+    arrowhead: (descriptor?.head.type ?? edge.headType) === 'arrow' ? route.arrowhead : null,
   };
 }
 

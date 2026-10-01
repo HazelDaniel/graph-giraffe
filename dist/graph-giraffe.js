@@ -5334,7 +5334,10 @@ function isPointInsideHandle(screenX, screenY, geometry) {
   const halfSize = geometry.size / 2;
   return Math.abs(screenX - geometry.centerX) <= halfSize && Math.abs(screenY - geometry.centerY) <= halfSize;
 }
-function buildEdgeRouteGeometry(edge, store, camera, resolveDimensions) {
+const MIN_SAMPLE_COUNT = 48;
+const MAX_SAMPLE_COUNT = 72;
+const SAMPLE_DISTANCE_STEP = 42;
+function buildEdgeRouteGeometry(edge, store, camera, resolveDimensions, descriptor) {
   const sourceNode = store.get(edge.sourceNodeId);
   const targetNode = store.get(edge.targetNodeId);
   if (!sourceNode || !targetNode) return null;
@@ -5351,7 +5354,8 @@ function buildEdgeRouteGeometry(edge, store, camera, resolveDimensions) {
     sourceWorld,
     edge.sourceHandleSide,
     targetWorld,
-    edge.targetHandleSide
+    edge.targetHandleSide,
+    (descriptor == null ? void 0 : descriptor.route) ?? edge.edgeType
   );
   const screenPoints = route.worldPoints.map((point) => camera.worldToScreen(point.x, point.y));
   const labelWorldPoint = getPolylineMidpoint(route.worldPoints);
@@ -5362,7 +5366,7 @@ function buildEdgeRouteGeometry(edge, store, camera, resolveDimensions) {
     screenPoints,
     labelWorldPoint,
     labelScreenPoint,
-    arrowhead: edge.headType === "arrow" ? route.arrowhead : null
+    arrowhead: ((descriptor == null ? void 0 : descriptor.head.type) ?? edge.headType) === "arrow" ? route.arrowhead : null
   };
 }
 function buildConnectionPreviewGeometry(sourceNodeId, sourceHandleSide, screenX, screenY, store, camera, resolveDimensions) {
@@ -5409,13 +5413,51 @@ function hitTestEdgePolyline(screenX, screenY, polyline, thresholdPx = 8) {
   return false;
 }
 function buildCubicRoute(sourceWorld, sourceSide, targetWorld, targetSide, edgeType) {
-  {
+  if (edgeType === "line") {
+    return {
+      worldPoints: [sourceWorld, targetWorld],
+      arrowhead: buildEdgeHeadGeometry(sourceWorld, targetWorld)
+    };
+  }
+  if (edgeType === "orthogonal") {
     return buildOrthogonalRoute(sourceWorld, sourceSide, targetWorld, targetSide);
   }
+  const sourceVec = sideVector(sourceSide);
+  const targetVec = sideVector(targetSide);
+  const dx = targetWorld.x - sourceWorld.x;
+  const dy = targetWorld.y - sourceWorld.y;
+  const distance = Math.hypot(dx, dy);
+  const bend = clamp(distance * (edgeType === "line-curve" ? 0.24 : 0.34), 64, 260);
+  const control1 = {
+    x: sourceWorld.x + sourceVec.x * bend + (sourceVec.x === 0 ? clamp(dx * 0.12, -80, 80) : 0),
+    y: sourceWorld.y + sourceVec.y * bend + (sourceVec.y === 0 ? clamp(dy * 0.12, -80, 80) : 0)
+  };
+  const control2 = {
+    x: targetWorld.x + targetVec.x * bend - (targetVec.x === 0 ? clamp(dx * 0.12, -80, 80) : 0),
+    y: targetWorld.y + targetVec.y * bend - (targetVec.y === 0 ? clamp(dy * 0.12, -80, 80) : 0)
+  };
+  const sampleCount = clamp(
+    Math.ceil(distance / SAMPLE_DISTANCE_STEP) + 8,
+    MIN_SAMPLE_COUNT,
+    MAX_SAMPLE_COUNT
+  );
+  const worldPoints = [];
+  for (let i = 0; i <= sampleCount; i++) {
+    const t = i / sampleCount;
+    worldPoints.push(sampleCubic(sourceWorld, control1, control2, targetWorld, t));
+  }
+  return {
+    worldPoints,
+    arrowhead: buildEdgeHeadGeometry(
+      targetWorld,
+      targetWorld,
+      derivativeAtEnd(control2, targetWorld)
+    )
+  };
 }
 function buildEdgeHeadGeometry(tip, previousPoint, tangentOverride) {
   const tangent = normalize(
-    {
+    tangentOverride ?? {
       x: tip.x - previousPoint.x,
       y: tip.y - previousPoint.y
     }
@@ -5424,6 +5466,12 @@ function buildEdgeHeadGeometry(tip, previousPoint, tangentOverride) {
   return {
     tip,
     tangent
+  };
+}
+function derivativeAtEnd(control2, end) {
+  return {
+    x: 3 * (end.x - control2.x),
+    y: 3 * (end.y - control2.y)
   };
 }
 function getHandleWorldPoint(nodeId, handle, store, camera, resolveDimensions) {
@@ -5462,6 +5510,17 @@ function getPolylineMidpoint(points) {
     };
   }
   return points[points.length - 1];
+}
+function sampleCubic(p0, p1, p2, p3, t) {
+  const u = 1 - t;
+  const tt = t * t;
+  const uu = u * u;
+  const uuu = uu * u;
+  const ttt = tt * t;
+  return {
+    x: uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x,
+    y: uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y
+  };
 }
 function getOppositeSide(side) {
   switch (side) {
@@ -5600,6 +5659,9 @@ function normalize(point) {
 }
 function lerp(a, b, t) {
   return a + (b - a) * t;
+}
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 function describeNodeType(type) {
   switch (type) {
@@ -7360,7 +7422,7 @@ class PrimitiveGeometry {
   }
 }
 class Renderer {
-  constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, getBgColor, getFontColor, getSelectedNodeIds, getPrimitiveFrame, canRender, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry, renderMode = "webgl") {
+  constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, getBgColor, getFontColor, getSelectedNodeIds, getPrimitiveFrame, canRender, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry, edgeRegistry, renderMode = "webgl") {
     __publicField(this, "modelMatrix", new Matrix4());
     __publicField(this, "projMatrix", new Matrix4());
     __publicField(this, "textRenderer");
@@ -7406,6 +7468,7 @@ class Renderer {
     this.msdfAtlas = msdfAtlas;
     this.iconAtlas = iconAtlas;
     this.registry = registry;
+    this.edgeRegistry = edgeRegistry;
     this.renderMode = renderMode;
     this.labelCtx = labelCanvas.getContext("2d");
     this.edgeVertexBuffer = gl.createBuffer();
@@ -7565,13 +7628,15 @@ class Renderer {
     this.labelCtx.restore();
   }
   drawEdgeLabels() {
+    var _a2;
     if (!this.labelCtx) return;
     this.labelCtx.save();
     this.labelCtx.font = "500 12px Inter, sans-serif";
     this.labelCtx.textBaseline = "middle";
     this.labelCtx.fillStyle = "rgba(226, 232, 240, 0.95)";
     for (const route of this.edgeFrame) {
-      if (!route.edge.label) continue;
+      const descriptor = (_a2 = this.edgeRegistry) == null ? void 0 : _a2.get(route.edge.edgeType);
+      if (!route.edge.label || (descriptor == null ? void 0 : descriptor.label.enabled) === false) continue;
       const x = route.labelScreenPoint.x;
       const y = route.labelScreenPoint.y - 12;
       const isSelected = route.edge.isSelected;
@@ -7645,6 +7710,7 @@ class Renderer {
     }
   }
   drawEdges() {
+    var _a2, _b, _c, _d, _e;
     const gl = this.gl;
     const visibleEdges = this.edgeStore.allEdges().filter((edge) => edge.visible);
     this.edgeFrame = [];
@@ -7686,18 +7752,28 @@ class Renderer {
         edge,
         this.store,
         this.camera,
-        this.resolveNodeDimensions
+        this.resolveNodeDimensions,
+        (_a2 = this.edgeRegistry) == null ? void 0 : _a2.get(edge.edgeType)
       );
       if (!geometry || geometry.worldPoints.length < 2) continue;
       this.edgeFrame.push(geometry);
       if (edge.isSelected) continue;
-      lineDraws.push({ first: lineCursor, count: geometry.worldPoints.length, z: edgeZ });
+      const descriptor = (_b = this.edgeRegistry) == null ? void 0 : _b.get(edge.edgeType);
+      lineDraws.push({
+        first: lineCursor,
+        count: geometry.worldPoints.length,
+        z: edgeZ,
+        color: (descriptor == null ? void 0 : descriptor.stroke.color) ?? "rgba(97, 158, 255, 0.82)",
+        width: (descriptor == null ? void 0 : descriptor.stroke.width) ?? 1
+      });
       lineCursor += geometry.worldPoints.length;
       for (const point of geometry.worldPoints) {
         lineVertices.push(point.x, point.y, edgeZ, 0, 0);
       }
       if (geometry.arrowhead) {
-        const region = this.edgeHeadTextures.getRegion(edge.headSkinId);
+        const region = this.edgeHeadTextures.getRegion(
+          ((_d = (_c = this.edgeRegistry) == null ? void 0 : _c.get(edge.edgeType)) == null ? void 0 : _d.head.skinId) ?? edge.headSkinId
+        );
         headDraws.push({ first: headCursor, count: 6, z: edgeZ });
         headCursor += 6;
         headVertices.push(
@@ -7734,9 +7810,10 @@ class Renderer {
     gl.uniform1i(this.locations.u_UseTexture, 0);
     gl.uniform1i(this.locations.u_Use9Slice, 0);
     gl.uniform1i(this.locations.u_RenderMode, 0);
-    gl.uniform4f(this.locations.u_Color, 0.38, 0.38, 0.39, 0.72);
     let vertexOffset = 0;
     for (const draw of lineDraws) {
+      gl.lineWidth(draw.width);
+      gl.uniform4f(this.locations.u_Color, ...this.parseColor(draw.color));
       gl.drawArrays(gl.LINE_STRIP, vertexOffset, draw.count);
       vertexOffset += draw.count;
     }
@@ -7765,7 +7842,8 @@ class Renderer {
         selectedEdge,
         this.store,
         this.camera,
-        this.resolveNodeDimensions
+        this.resolveNodeDimensions,
+        (_e = this.edgeRegistry) == null ? void 0 : _e.get(selectedEdge.edgeType)
       );
       if (selectedGeometry) {
         this.drawSingleEdge(
@@ -10785,6 +10863,48 @@ class PrimitiveMeasurementProvider {
     this.geometry.clearIntrinsicMeasurement(nodeId);
   }
 }
+const DEFAULT_STROKE = { color: "rgba(97, 158, 255, 0.82)", width: 1 };
+class EdgeTypeRegistry {
+  constructor() {
+    __publicField(this, "descriptors", /* @__PURE__ */ new Map());
+    for (const route of ["line", "cubic", "line-curve", "orthogonal"]) {
+      this.register({
+        type: route,
+        route,
+        stroke: { ...DEFAULT_STROKE },
+        head: { type: route === "line" ? "none" : "arrow", skinId: "arrow" },
+        label: { enabled: true, editable: false },
+        hitTest: { tolerance: 8 },
+        actions: { selectable: true, deletable: true }
+      });
+    }
+  }
+  register(descriptor) {
+    if (this.descriptors.has(descriptor.type)) {
+      throw new Error(`EdgeTypeRegistry: type "${descriptor.type}" is already registered`);
+    }
+    if (!["line", "cubic", "line-curve", "orthogonal"].includes(descriptor.route)) {
+      throw new Error(`EdgeTypeRegistry: unsupported route "${descriptor.route}"`);
+    }
+    if (descriptor.hitTest.tolerance < 0) {
+      throw new Error(`EdgeTypeRegistry: hit-test tolerance cannot be negative`);
+    }
+    this.descriptors.set(descriptor.type, descriptor);
+  }
+  replace(descriptor) {
+    if (!this.descriptors.has(descriptor.type)) {
+      throw new Error(`EdgeTypeRegistry: type "${descriptor.type}" is not registered`);
+    }
+    this.descriptors.delete(descriptor.type);
+    this.register(descriptor);
+  }
+  get(type) {
+    return this.descriptors.get(type);
+  }
+  has(type) {
+    return this.descriptors.has(type);
+  }
+}
 function createDefaultProps() {
   return {
     groups: ["Appearance", "Data", "Meta"],
@@ -11847,6 +11967,7 @@ const TOOLBAR_ACTION_MAP = {
 };
 const _NodeEditor = class _NodeEditor {
   constructor(canvasId, backgroundCanvasId, vsSource, fsSource, bgVsSource, bgFsSource, msdfVsSource, msdfFsSource, IconBGVsSource, IconBGFsSource, options = {}, nodeTextureUploadList) {
+    __publicField(this, "edgeTypes", new EdgeTypeRegistry());
     __publicField(this, "events", new GraphEventEmitter());
     __publicField(this, "typeRegistry", new NodeTypeRegistry());
     __publicField(this, "cameraDirty", false);
@@ -12129,6 +12250,7 @@ const _NodeEditor = class _NodeEditor {
       this.msdfAtlas,
       this.iconAtlas,
       this.typeRegistry,
+      this.edgeTypes,
       this.renderMode
     );
     (_a2 = this.domNodeLayer) == null ? void 0 : _a2.setCull(
@@ -12446,6 +12568,10 @@ const _NodeEditor = class _NodeEditor {
     const edge = this.hitTestEdge(screenX, screenY);
     return edge ? { kind: "edge", edgeId: edge.id } : { kind: "pane" };
   }
+  /** Register an edge presentation that selects an existing core route. */
+  registerEdgeType(descriptor) {
+    this.edgeTypes.register(descriptor);
+  }
   /**
    * Apply a host-owned graph projection without creating history entries.
    * Adapters use this to implement controlled React/Vue/Svelte integrations.
@@ -12521,6 +12647,16 @@ const _NodeEditor = class _NodeEditor {
       if (input.parentId != null && !this.store.setParent(input.id, input.parentId)) {
         throw new Error(`Invalid controlled parent ${input.parentId} for node ${input.id}`);
       }
+    }
+    for (const input of nodes) {
+      const node = this.store.get(input.id);
+      const proposedProps = cloneNodeProps(input.props ?? (node == null ? void 0 : node.props));
+      if (!node || !proposedProps) continue;
+      const resolved = this.resolveProps(node, proposedProps, "history");
+      if (resolved.status === "reject") {
+        throw new Error(`Controlled node ${input.id} props rejected: ${resolved.message}`);
+      }
+      node.props = cloneNodeProps(resolved.props);
     }
     const controlledById = new Map(nodes.map((input) => [input.id, input]));
     const parentFrame = (nodeId) => {
@@ -12655,6 +12791,22 @@ const _NodeEditor = class _NodeEditor {
       const parent = this.store.get(parentId);
       if (parent) parent.childIds = childIds;
     }
+    for (const input of nodes) {
+      const node = this.store.get(input.id);
+      if (!node) continue;
+      node.props = cloneNodeProps(migratedProps.get(input.id) ?? input.props ?? node.props);
+    }
+    for (const input of nodes) {
+      const node = this.store.get(input.id);
+      const proposedProps = cloneNodeProps(node == null ? void 0 : node.props);
+      if (!node || !proposedProps) continue;
+      const resolved = this.resolveProps(node, proposedProps, "history");
+      if (resolved.status === "reject") {
+        throw new Error(`Controlled node ${input.id} props rejected: ${resolved.message}`);
+      }
+      if (!nodePropsEqual(node.props, resolved.props)) affectedNodeIds.add(node.id);
+      node.props = cloneNodeProps(resolved.props);
+    }
     const controlledById = new Map(nodes.map((input) => [input.id, input]));
     const parentFrame = (nodeId) => {
       const node = controlledById.get(nodeId);
@@ -12681,7 +12833,7 @@ const _NodeEditor = class _NodeEditor {
         props: cloneNodeProps(node.props)
       };
       node.text = input.label ?? input.nodeType;
-      node.props = cloneNodeProps(migratedProps.get(input.id) ?? input.props ?? node.props);
+      node.props = cloneNodeProps(node.props);
       node.isLocked = input.isLocked ?? false;
       node.isCollapsed = input.isCollapsed ?? false;
       if (input.textureIds) node.textureIds = { ...input.textureIds };
@@ -14410,6 +14562,10 @@ const _NodeEditor = class _NodeEditor {
   }
   syncSelectionToolbar() {
     if (!this.selectionToolbar) return;
+    if (this.draggingNode || this.draggingSelection) {
+      this.selectionToolbar.hide();
+      return;
+    }
     const node = this.getSingleSelectedNode();
     if (!node) {
       this.selectionToolbar.hide();
@@ -15356,6 +15512,7 @@ const _NodeEditor = class _NodeEditor {
     return true;
   }
   hitTestEdge(screenX, screenY) {
+    var _a2;
     const edges = this.edgeStore.allEdges().filter((edge) => edge.visible);
     for (let i = edges.length - 1; i >= 0; i--) {
       const geometry = buildEdgeRouteGeometry(
@@ -15365,7 +15522,8 @@ const _NodeEditor = class _NodeEditor {
         (nodeId) => {
           const frame = this.getPrimitiveFrame(nodeId);
           return frame ? { width: frame.width, height: frame.height } : void 0;
-        }
+        },
+        this.edgeTypes.get(edges[i].edgeType)
       );
       if (!geometry) continue;
       const sourceNode = this.store.get(edges[i].sourceNodeId);
@@ -15373,7 +15531,8 @@ const _NodeEditor = class _NodeEditor {
       if (!sourceNode || !targetNode || !this.store.isEffectivelyVisible(sourceNode.id) || !this.store.isEffectivelyVisible(targetNode.id)) {
         continue;
       }
-      if (hitTestEdgePolyline(screenX, screenY, geometry.screenPoints)) {
+      const tolerance = ((_a2 = this.edgeTypes.get(edges[i].edgeType)) == null ? void 0 : _a2.hitTest.tolerance) ?? 8;
+      if (hitTestEdgePolyline(screenX, screenY, geometry.screenPoints, tolerance)) {
         return { id: edges[i].id };
       }
     }
@@ -16322,6 +16481,7 @@ export {
   DOM_NODE_DESCRIPTORS,
   DOM_VIEW_TAGS,
   DomNodeLayer,
+  EdgeTypeRegistry,
   GGMinimap,
   GGPropGroup,
   GraphEventEmitter,

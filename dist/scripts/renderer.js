@@ -41,12 +41,13 @@ export class Renderer {
     msdfAtlas;
     iconAtlas;
     registry;
+    edgeRegistry;
     renderMode;
     modelMatrix = new Matrix4();
     projMatrix = new Matrix4();
     constructor(gl, canvas, bgCanvas, program, locations, geometry, bgGeometry, store, edgeStore, camera, bgProgram, bgLocations, labelCanvas, getConnectionPreview, 
     /** Callback so Renderer never stores bgColor itself — it belongs to the editor. */
-    getBgColor, getFontColor, getSelectedNodeIds, getPrimitiveFrame, canRender, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry, renderMode = "webgl") {
+    getBgColor, getFontColor, getSelectedNodeIds, getPrimitiveFrame, canRender, onFrame, msdfProgram, iconBGProgram, msdfAtlas, iconAtlas, registry, edgeRegistry, renderMode = "webgl") {
         this.gl = gl;
         this.canvas = canvas;
         this.bgCanvas = bgCanvas;
@@ -72,6 +73,7 @@ export class Renderer {
         this.msdfAtlas = msdfAtlas;
         this.iconAtlas = iconAtlas;
         this.registry = registry;
+        this.edgeRegistry = edgeRegistry;
         this.renderMode = renderMode;
         this.labelCtx = labelCanvas.getContext("2d");
         this.edgeVertexBuffer = gl.createBuffer();
@@ -242,7 +244,8 @@ export class Renderer {
         this.labelCtx.textBaseline = "middle";
         this.labelCtx.fillStyle = "rgba(226, 232, 240, 0.95)";
         for (const route of this.edgeFrame) {
-            if (!route.edge.label)
+            const descriptor = this.edgeRegistry?.get(route.edge.edgeType);
+            if (!route.edge.label || descriptor?.label.enabled === false)
                 continue;
             const x = route.labelScreenPoint.x;
             const y = route.labelScreenPoint.y - 12;
@@ -358,19 +361,26 @@ export class Renderer {
             const maxY = Math.max(sPos.y + sourceFrame.height, tPos.y + targetFrame.height);
             if (!this.isRectInViewport(minX, minY, maxX - minX, maxY - minY, 100))
                 continue;
-            const geometry = buildEdgeRouteGeometry(edge, this.store, this.camera, this.resolveNodeDimensions);
+            const geometry = buildEdgeRouteGeometry(edge, this.store, this.camera, this.resolveNodeDimensions, this.edgeRegistry?.get(edge.edgeType));
             if (!geometry || geometry.worldPoints.length < 2)
                 continue;
             this.edgeFrame.push(geometry);
             if (edge.isSelected)
                 continue;
-            lineDraws.push({ first: lineCursor, count: geometry.worldPoints.length, z: edgeZ });
+            const descriptor = this.edgeRegistry?.get(edge.edgeType);
+            lineDraws.push({
+                first: lineCursor,
+                count: geometry.worldPoints.length,
+                z: edgeZ,
+                color: descriptor?.stroke.color ?? "rgba(97, 158, 255, 0.82)",
+                width: descriptor?.stroke.width ?? 1,
+            });
             lineCursor += geometry.worldPoints.length;
             for (const point of geometry.worldPoints) {
                 lineVertices.push(point.x, point.y, edgeZ, 0, 0);
             }
             if (geometry.arrowhead) {
-                const region = this.edgeHeadTextures.getRegion(edge.headSkinId);
+                const region = this.edgeHeadTextures.getRegion(this.edgeRegistry?.get(edge.edgeType)?.head.skinId ?? edge.headSkinId);
                 headDraws.push({ first: headCursor, count: 6, z: edgeZ });
                 headCursor += 6;
                 headVertices.push(...this.buildHeadQuadVertices(geometry.arrowhead, region, edgeZ));
@@ -389,9 +399,10 @@ export class Renderer {
         gl.uniform1i(this.locations.u_UseTexture, 0);
         gl.uniform1i(this.locations.u_Use9Slice, 0);
         gl.uniform1i(this.locations.u_RenderMode, 0);
-        gl.uniform4f(this.locations.u_Color, 0.38, 0.38, 0.39, 0.72);
         let vertexOffset = 0;
         for (const draw of lineDraws) {
+            gl.lineWidth(draw.width);
+            gl.uniform4f(this.locations.u_Color, ...this.parseColor(draw.color));
             gl.drawArrays(gl.LINE_STRIP, vertexOffset, draw.count);
             vertexOffset += draw.count;
         }
@@ -412,7 +423,7 @@ export class Renderer {
         }
         const selectedEdges = visibleEdges.filter((edge) => edge.isSelected);
         for (const selectedEdge of selectedEdges) {
-            const selectedGeometry = buildEdgeRouteGeometry(selectedEdge, this.store, this.camera, this.resolveNodeDimensions);
+            const selectedGeometry = buildEdgeRouteGeometry(selectedEdge, this.store, this.camera, this.resolveNodeDimensions, this.edgeRegistry?.get(selectedEdge.edgeType));
             if (selectedGeometry) {
                 this.drawSingleEdge(selectedGeometry, "rgba(245, 158, 11, 0.98)", "rgba(251, 191, 36, 1)");
             }

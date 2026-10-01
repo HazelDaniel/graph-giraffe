@@ -21,6 +21,7 @@ import { NodeTypeRegistry, } from "./node-type-registry.js";
 import { DomNodeLayer } from "./dom-node-layer.js";
 import { PrimitiveGeometry } from "./primitive-geometry.js";
 import { PrimitiveMeasurementProvider } from "./primitive-measurement.js";
+import { EdgeTypeRegistry } from "./edge-type-registry.js";
 import { BUILTIN_DESCRIPTORS } from "./builtin-types.js";
 import { computeCameraStateFromWorldPoint, } from "../components/minimap.js";
 import { attachCommentLayer, } from "./overlay-primitives.js";
@@ -53,6 +54,7 @@ export class NodeEditor {
     IconBGVsSource;
     IconBGFsSource;
     nodeTextureUploadList;
+    edgeTypes = new EdgeTypeRegistry();
     events = new GraphEventEmitter();
     typeRegistry = new NodeTypeRegistry();
     cameraDirty = false;
@@ -288,7 +290,7 @@ export class NodeEditor {
             this.domNodeLayer?.syncFrame();
             this.updateOverlays();
             this.refreshMinimap();
-        }, msdfProgram, iconBGProgam, this.msdfAtlas, this.iconAtlas, this.typeRegistry, this.renderMode);
+        }, msdfProgram, iconBGProgam, this.msdfAtlas, this.iconAtlas, this.typeRegistry, this.edgeTypes, this.renderMode);
         // DOM views mirror the WebGL draw pass: hide views outside the viewport
         // so per-frame DOM cost tracks the on-screen graph, not the whole graph.
         this.domNodeLayer?.setCull((x, y, w, h) => this.renderer.isRectInViewport(x, y, w, h));
@@ -592,6 +594,10 @@ export class NodeEditor {
         const edge = this.hitTestEdge(screenX, screenY);
         return edge ? { kind: "edge", edgeId: edge.id } : { kind: "pane" };
     }
+    /** Register an edge presentation that selects an existing core route. */
+    registerEdgeType(descriptor) {
+        this.edgeTypes.register(descriptor);
+    }
     /**
      * Apply a host-owned graph projection without creating history entries.
      * Adapters use this to implement controlled React/Vue/Svelte integrations.
@@ -666,6 +672,19 @@ export class NodeEditor {
             if (input.parentId != null && !this.store.setParent(input.id, input.parentId)) {
                 throw new Error(`Invalid controlled parent ${input.parentId} for node ${input.id}`);
             }
+        }
+        // Resolve descriptor-owned dynamic prop shapes before the first pane or
+        // DOM skin observes a controlled graph.
+        for (const input of nodes) {
+            const node = this.store.get(input.id);
+            const proposedProps = cloneNodeProps(input.props ?? node?.props);
+            if (!node || !proposedProps)
+                continue;
+            const resolved = this.resolveProps(node, proposedProps, "history");
+            if (resolved.status === "reject") {
+                throw new Error(`Controlled node ${input.id} props rejected: ${resolved.message}`);
+            }
+            node.props = cloneNodeProps(resolved.props);
         }
         const controlledById = new Map(nodes.map((input) => [input.id, input]));
         const parentFrame = (nodeId) => {
@@ -819,6 +838,27 @@ export class NodeEditor {
             if (parent)
                 parent.childIds = childIds;
         }
+        // Seed every node with incoming props before resolving so sibling-derived
+        // fields are independent of controlled input order.
+        for (const input of nodes) {
+            const node = this.store.get(input.id);
+            if (!node)
+                continue;
+            node.props = cloneNodeProps(migratedProps.get(input.id) ?? input.props ?? node.props);
+        }
+        for (const input of nodes) {
+            const node = this.store.get(input.id);
+            const proposedProps = cloneNodeProps(node?.props);
+            if (!node || !proposedProps)
+                continue;
+            const resolved = this.resolveProps(node, proposedProps, "history");
+            if (resolved.status === "reject") {
+                throw new Error(`Controlled node ${input.id} props rejected: ${resolved.message}`);
+            }
+            if (!nodePropsEqual(node.props, resolved.props))
+                affectedNodeIds.add(node.id);
+            node.props = cloneNodeProps(resolved.props);
+        }
         const controlledById = new Map(nodes.map((input) => [input.id, input]));
         const parentFrame = (nodeId) => {
             const node = controlledById.get(nodeId);
@@ -848,7 +888,7 @@ export class NodeEditor {
                 props: cloneNodeProps(node.props),
             };
             node.text = input.label ?? input.nodeType;
-            node.props = cloneNodeProps(migratedProps.get(input.id) ?? input.props ?? node.props);
+            node.props = cloneNodeProps(node.props);
             node.isLocked = input.isLocked ?? false;
             node.isCollapsed = input.isCollapsed ?? false;
             if (input.textureIds)
@@ -2672,6 +2712,16 @@ export class NodeEditor {
     syncSelectionToolbar() {
         if (!this.selectionToolbar)
             return;
+        // Reparenting and container layout are a single interaction transaction,
+        // but their parent/local coordinates are mutated before the final bounds
+        // refresh completes. Keeping the toolbar visible during that window lets
+        // one render frame expose an intermediate anchor. It is a selection
+        // affordance, so hide it during the drag and place it once the drop has
+        // settled in syncToolbarState().
+        if (this.draggingNode || this.draggingSelection) {
+            this.selectionToolbar.hide();
+            return;
+        }
         const node = this.getSingleSelectedNode();
         if (!node) {
             this.selectionToolbar.hide();
@@ -3637,7 +3687,7 @@ export class NodeEditor {
             const geometry = buildEdgeRouteGeometry(edges[i], this.store, this.camera, (nodeId) => {
                 const frame = this.getPrimitiveFrame(nodeId);
                 return frame ? { width: frame.width, height: frame.height } : undefined;
-            });
+            }, this.edgeTypes.get(edges[i].edgeType));
             if (!geometry)
                 continue;
             const sourceNode = this.store.get(edges[i].sourceNodeId);
@@ -3648,7 +3698,8 @@ export class NodeEditor {
                 !this.store.isEffectivelyVisible(targetNode.id)) {
                 continue;
             }
-            if (hitTestEdgePolyline(screenX, screenY, geometry.screenPoints)) {
+            const tolerance = this.edgeTypes.get(edges[i].edgeType)?.hitTest.tolerance ?? 8;
+            if (hitTestEdgePolyline(screenX, screenY, geometry.screenPoints, tolerance)) {
                 return { id: edges[i].id };
             }
         }

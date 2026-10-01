@@ -3,7 +3,7 @@ import { getWorldPosition } from './scene-graph.js';
 const MIN_SAMPLE_COUNT = 48;
 const MAX_SAMPLE_COUNT = 72;
 const SAMPLE_DISTANCE_STEP = 42;
-export function buildEdgeRouteGeometry(edge, store, camera, resolveDimensions) {
+export function buildEdgeRouteGeometry(edge, store, camera, resolveDimensions, descriptor) {
     const sourceNode = store.get(edge.sourceNodeId);
     const targetNode = store.get(edge.targetNodeId);
     if (!sourceNode || !targetNode)
@@ -14,7 +14,7 @@ export function buildEdgeRouteGeometry(edge, store, camera, resolveDimensions) {
         return null;
     const sourceWorld = getHandleWorldPoint(sourceNode.id, sourceHandle, store, camera, resolveDimensions);
     const targetWorld = getHandleWorldPoint(targetNode.id, targetHandle, store, camera, resolveDimensions);
-    const route = buildCubicRoute(sourceWorld, edge.sourceHandleSide, targetWorld, edge.targetHandleSide, 'orthogonal');
+    const route = buildCubicRoute(sourceWorld, edge.sourceHandleSide, targetWorld, edge.targetHandleSide, descriptor?.route ?? edge.edgeType);
     const screenPoints = route.worldPoints.map((point) => camera.worldToScreen(point.x, point.y));
     const labelWorldPoint = getPolylineMidpoint(route.worldPoints);
     const labelScreenPoint = camera.worldToScreen(labelWorldPoint.x, labelWorldPoint.y);
@@ -24,7 +24,7 @@ export function buildEdgeRouteGeometry(edge, store, camera, resolveDimensions) {
         screenPoints,
         labelWorldPoint,
         labelScreenPoint,
-        arrowhead: edge.headType === 'arrow' ? route.arrowhead : null,
+        arrowhead: (descriptor?.head.type ?? edge.headType) === 'arrow' ? route.arrowhead : null,
     };
 }
 export function buildConnectionPreviewGeometry(sourceNodeId, sourceHandleSide, screenX, screenY, store, camera, resolveDimensions) {
