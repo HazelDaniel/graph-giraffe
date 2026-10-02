@@ -3546,6 +3546,10 @@ export class NodeEditor implements SceneQuery, CoordinateTransform {
         this.handleDeleteSelected();
         return;
       case "edit":
+        this.events.dispatch("node:edit", {
+          nodeId: node.id,
+          nodeType: node.nodeType,
+        });
         this.beginLabelEdit(node);
         this.controls.showProperties(node);
         return;

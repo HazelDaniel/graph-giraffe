@@ -77,6 +77,11 @@ export interface GraphEvents {
     nodeType: NodeType;
     event: MouseEvent;
   };
+  "node:edit": {
+    nodeId: number;
+    nodeType: NodeType;
+    event?: MouseEvent;
+  };
   "node:dragStart": {
     nodeIds: number[];
     event: MouseEvent;
