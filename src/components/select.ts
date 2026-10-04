@@ -533,7 +533,7 @@ export class CustomSelect extends HTMLElement {
 }
 
 if (!customElements.get("gg-select")) {
-  customElements.define("gg-select", CustomSelect);
+  if (!customElements.get("gg-select")) customElements.define("gg-select", CustomSelect);
 }
 
 declare global {

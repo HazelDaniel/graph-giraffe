@@ -155,6 +155,7 @@ export class MultiSelect extends HTMLElement {
     }
 }
 if (!customElements.get("gg-multi-select")) {
-    customElements.define("gg-multi-select", MultiSelect);
+    if (!customElements.get("gg-multi-select"))
+        customElements.define("gg-multi-select", MultiSelect);
 }
 //# sourceMappingURL=multi-select.js.map

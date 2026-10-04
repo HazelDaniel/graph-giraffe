@@ -801,7 +801,7 @@ export class GGMinimap extends MinimapBase {
 }
 
 if (typeof customElements !== "undefined" && !customElements.get("gg-minimap")) {
-  customElements.define("gg-minimap", GGMinimap);
+  if (!customElements.get("gg-minimap")) customElements.define("gg-minimap", GGMinimap);
 }
 
 declare global {

@@ -1,6 +1,6 @@
 {
   "name": "@graph-giraffe/core",
-  "version": "0.8.5",
+  "version": "1.1.0",
   "description": "A GPU-accelerated, WebGL-powered node-editor library with custom texture and plugin-based custom node type support",
   "license": "MIT",
   "type": "module",

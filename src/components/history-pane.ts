@@ -97,7 +97,7 @@ export class HistoryPane extends HTMLElement {
 }
 
 if (!customElements.get("gg-history-pane"))
-  customElements.define("gg-history-pane", HistoryPane);
+  if (!customElements.get("gg-history-pane")) customElements.define("gg-history-pane", HistoryPane);
 
 declare global {
   interface HTMLElementTagNameMap {

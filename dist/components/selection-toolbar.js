@@ -152,6 +152,7 @@ export class SelectionToolbar extends HTMLElement {
     }
 }
 if (!customElements.get("gg-selection-toolbar")) {
-    customElements.define("gg-selection-toolbar", SelectionToolbar);
+    if (!customElements.get("gg-selection-toolbar"))
+        customElements.define("gg-selection-toolbar", SelectionToolbar);
 }
 //# sourceMappingURL=selection-toolbar.js.map

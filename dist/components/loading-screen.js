@@ -153,5 +153,6 @@ export class LoadingScreen extends HTMLElement {
     }
 }
 if (!customElements.get("gg-loading-screen"))
-    customElements.define("gg-loading-screen", LoadingScreen);
+    if (!customElements.get("gg-loading-screen"))
+        customElements.define("gg-loading-screen", LoadingScreen);
 //# sourceMappingURL=loading-screen.js.map

@@ -265,7 +265,7 @@ export class UIControls extends HTMLElement {
 }
 
 if (!customElements.get("gg-ui-controls"))
-  customElements.define("gg-ui-controls", UIControls);
+  if (!customElements.get("gg-ui-controls")) customElements.define("gg-ui-controls", UIControls);
 
 declare global {
   interface HTMLElementTagNameMap {

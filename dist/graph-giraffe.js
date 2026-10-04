@@ -507,8 +507,9 @@ class HistoryPane extends HTMLElement {
   }
 }
 _shadow2 = new WeakMap();
-if (!customElements.get("gg-history-pane"))
-  customElements.define("gg-history-pane", HistoryPane);
+if (!customElements.get("gg-history-pane")) {
+  if (!customElements.get("gg-history-pane")) customElements.define("gg-history-pane", HistoryPane);
+}
 const STYLE_TEMPLATE$4 = `
   :host {
     position: absolute;
@@ -742,7 +743,7 @@ class KebabMenu extends HTMLElement {
 }
 _shadow3 = new WeakMap();
 if (!customElements.get("gg-kebab-menu")) {
-  customElements.define("gg-kebab-menu", KebabMenu);
+  if (!customElements.get("gg-kebab-menu")) customElements.define("gg-kebab-menu", KebabMenu);
 }
 const STYLE_TEMPLATE$3 = `
   :host {
@@ -888,8 +889,9 @@ const _LoadingScreen = class _LoadingScreen extends HTMLElement {
 __publicField(_LoadingScreen, "revealDelayMs", 200);
 __publicField(_LoadingScreen, "observedAttributes", ["hidden"]);
 let LoadingScreen = _LoadingScreen;
-if (!customElements.get("gg-loading-screen"))
-  customElements.define("gg-loading-screen", LoadingScreen);
+if (!customElements.get("gg-loading-screen")) {
+  if (!customElements.get("gg-loading-screen")) customElements.define("gg-loading-screen", LoadingScreen);
+}
 const NODE_LAYOUT = {
   headerHeight: 30,
   padding: 10,
@@ -1677,7 +1679,7 @@ class GGMinimap extends MinimapBase {
 }
 _shadow4 = new WeakMap();
 if (typeof customElements !== "undefined" && !customElements.get("gg-minimap")) {
-  customElements.define("gg-minimap", GGMinimap);
+  if (!customElements.get("gg-minimap")) customElements.define("gg-minimap", GGMinimap);
 }
 const STYLES$2 = (
   /* css */
@@ -1836,7 +1838,7 @@ class MultiSelect extends HTMLElement {
 }
 __publicField(MultiSelect, "observedAttributes", ["disabled", "name"]);
 if (!customElements.get("gg-multi-select")) {
-  customElements.define("gg-multi-select", MultiSelect);
+  if (!customElements.get("gg-multi-select")) customElements.define("gg-multi-select", MultiSelect);
 }
 class GGInputPair extends HTMLElement {
   constructor() {
@@ -1909,7 +1911,7 @@ class GGInputPair extends HTMLElement {
     this.shadowRoot.getElementById("lbl").textContent = text;
   }
 }
-customElements.define("gg-input-pair", GGInputPair);
+if (!customElements.get("gg-input-pair")) customElements.define("gg-input-pair", GGInputPair);
 class GGInputGroup extends HTMLElement {
   constructor() {
     super();
@@ -1947,7 +1949,7 @@ class GGInputGroup extends HTMLElement {
     this.shadowRoot.getElementById("leg").textContent = text;
   }
 }
-customElements.define("gg-input-group", GGInputGroup);
+if (!customElements.get("gg-input-group")) customElements.define("gg-input-group", GGInputGroup);
 class GGPropGroup extends HTMLElement {
   constructor() {
     super();
@@ -2105,7 +2107,7 @@ class GGPropGroup extends HTMLElement {
     );
   }
 }
-customElements.define("gg-prop-group", GGPropGroup);
+if (!customElements.get("gg-prop-group")) customElements.define("gg-prop-group", GGPropGroup);
 const STYLES$1 = (
   /* css */
   `
@@ -2564,7 +2566,7 @@ __publicField(CustomSelect, "observedAttributes", [
   "name"
 ]);
 if (!customElements.get("gg-select")) {
-  customElements.define("gg-select", CustomSelect);
+  if (!customElements.get("gg-select")) customElements.define("gg-select", CustomSelect);
 }
 const STYLE_TEMPLATE$1 = `
   :host {
@@ -2718,7 +2720,7 @@ class SelectionToolbar extends HTMLElement {
 }
 _shadow5 = new WeakMap();
 if (!customElements.get("gg-selection-toolbar")) {
-  customElements.define("gg-selection-toolbar", SelectionToolbar);
+  if (!customElements.get("gg-selection-toolbar")) customElements.define("gg-selection-toolbar", SelectionToolbar);
 }
 const PI = 3.141592653589793;
 if (typeof CanvasRenderingContext2D.prototype.roundRect !== "function") {
@@ -3880,7 +3882,7 @@ __publicField(TextureSelect, "observedAttributes", [
   "kind"
 ]);
 if (!customElements.get("gg-texture-select")) {
-  customElements.define("gg-texture-select", TextureSelect);
+  if (!customElements.get("gg-texture-select")) customElements.define("gg-texture-select", TextureSelect);
 }
 const STYLE_TEMPLATE = `
       :host {
@@ -4144,8 +4146,9 @@ let UIControls$1 = (_a = class extends HTMLElement {
     `;
   }
 }, _shadow6 = new WeakMap(), _a);
-if (!customElements.get("gg-ui-controls"))
-  customElements.define("gg-ui-controls", UIControls$1);
+if (!customElements.get("gg-ui-controls")) {
+  if (!customElements.get("gg-ui-controls")) customElements.define("gg-ui-controls", UIControls$1);
+}
 class GeometryNode {
   constructor(gl, meshType) {
     __publicField(this, "vertexBuffer", null);

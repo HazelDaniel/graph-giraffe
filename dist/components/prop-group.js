@@ -70,7 +70,8 @@ class GGInputPair extends HTMLElement {
         this.shadowRoot.getElementById("lbl").textContent = text;
     }
 }
-customElements.define("gg-input-pair", GGInputPair);
+if (!customElements.get("gg-input-pair"))
+    customElements.define("gg-input-pair", GGInputPair);
 class GGInputGroup extends HTMLElement {
     constructor() {
         super();
@@ -108,7 +109,8 @@ class GGInputGroup extends HTMLElement {
         this.shadowRoot.getElementById("leg").textContent = text;
     }
 }
-customElements.define("gg-input-group", GGInputGroup);
+if (!customElements.get("gg-input-group"))
+    customElements.define("gg-input-group", GGInputGroup);
 export class GGPropGroup extends HTMLElement {
     constructor() {
         super();
@@ -269,5 +271,6 @@ export class GGPropGroup extends HTMLElement {
         }));
     }
 }
-customElements.define("gg-prop-group", GGPropGroup);
+if (!customElements.get("gg-prop-group"))
+    customElements.define("gg-prop-group", GGPropGroup);
 //# sourceMappingURL=prop-group.js.map

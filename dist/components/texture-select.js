@@ -485,6 +485,7 @@ export class TextureSelect extends HTMLElement {
     }
 }
 if (!customElements.get('gg-texture-select')) {
-    customElements.define('gg-texture-select', TextureSelect);
+    if (!customElements.get('gg-texture-select'))
+        customElements.define('gg-texture-select', TextureSelect);
 }
 //# sourceMappingURL=texture-select.js.map

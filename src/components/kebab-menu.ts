@@ -245,7 +245,7 @@ export class KebabMenu extends HTMLElement {
 }
 
 if (!customElements.get("gg-kebab-menu")) {
-  customElements.define("gg-kebab-menu", KebabMenu);
+  if (!customElements.get("gg-kebab-menu")) customElements.define("gg-kebab-menu", KebabMenu);
 }
 
 declare global {
